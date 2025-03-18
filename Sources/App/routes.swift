@@ -9,79 +9,9 @@
 import Vapor
 import Foundation
 
-actor ConnectionState {
-    var streamSid: String?
-    var latestMediaTimestamp: Int? = 0
-    var lastAssistantItem: String?
-    var markQueue: [String] = []
-    var responseStartTimestampTwilio: Int?
-}
-
-// Extend actor to update state safely
-extension ConnectionState {
-    func updateTimestamp(_ timestamp: Int?) {
-        latestMediaTimestamp = timestamp
-    }
-    
-    func updateStreamSid(_ sid: String) {
-        streamSid = sid
-    }
-    
-    func updateResponseStartTimestampTwilio(_ timestamp: Int?) {
-        responseStartTimestampTwilio = timestamp
-    }
-    
-    func updateLastAssistantItem(_ item: String?) {
-        lastAssistantItem = item
-    }
-    
-    func removeFirstFromMarkQueue() {
-        if !markQueue.isEmpty {
-            markQueue.removeFirst()
-        }
-    }
-    
-    func removeAllFromMarkQueue() {
-        markQueue = []
-    }
-    
-    func appendToMarkQueue(_ item: String) {
-        markQueue.append(item)
-    }
-}
 
 func routes(_ app: Application) throws {
-    // Constants
-    let systemMessage = """
-        You are a helpful and professional AI assistant who is trained to help users record their daily health measurements over the phone. \
-        You will ask for today's Blood Pressure measurement, today's heart rate measurement and today's weight measurement. \
-        After each response of the user, you swiftly reply the recorded answer. After all the measurements are recorded, \
-        you will ask the user to confirm the data by reading the data back to them. If the user confirms the data, \
-        you will say 'Thank you for using our service. Goodbye!' and end the call.
-        In the beginning, start by opening the conversation with 'Hello and welcome to our health data entry service, who am I speaking to?'.
-        """
-    let voice = "alloy"
-    
-    let logEventTypes = [
-        "error",
-        "response.content.done",
-        "rate_limits.updated",
-        "response.done",
-        "input_audio_buffer.committed",
-        "input_audio_buffer.speech_stopped",
-        "input_audio_buffer.speech_started",
-        "session.created"
-    ]
-    
-    let showTimingMath = false
-    
-    app.get { req async in
-        "It works!"
-    }
-
     app.post("incoming-call") { req async -> Response in
-        req.logger.info("\(req.headers)")
-        req.logger.info("\(req.headers.first(name: "host") ?? "")")
         let twimlResponse =
         """
         <?xml version="1.0" encoding="UTF-8"?>
@@ -91,7 +21,6 @@ func routes(_ app: Application) throws {
             </Connect>
         </Response>
         """
-        req.logger.info("\(twimlResponse)")
         return Response(
             status: .ok,
             headers: ["Content-Type": "text/xml"],
@@ -100,9 +29,9 @@ func routes(_ app: Application) throws {
     }
     
     app.webSocket("voice-stream") { req, connection async in
-        req.logger.info("Client connected!")
         let state = ConnectionState()
         
+        // Handle incoming messages from Twilio
         connection.onText { connection, text async in
             do {
                 guard let data = text.data(using: .utf8) else { return }
@@ -114,18 +43,9 @@ func routes(_ app: Application) throws {
                         req.logger.error("Start event missing start data")
                         return
                     }
-                    
                     await state.updateStreamSid(start.streamSid)
                     await state.updateResponseStartTimestampTwilio(nil)
                     await state.updateTimestamp(0)
-                    req.logger.info("Incoming stream started: \(start.streamSid)")
-                    
-                case "mark":
-                    let markQueue = await state.markQueue
-                    if !markQueue.isEmpty {
-                        await state.removeFirstFromMarkQueue()
-                    }
-                    
                 default:
                     req.logger.info("Received non-media event: \(twilioEvent.event)")
                 }
@@ -140,7 +60,6 @@ func routes(_ app: Application) throws {
             return
         }
         
-        // Create OpenAI WebSocket connection
         let openAIWSURL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
         guard let _ = URL(string: openAIWSURL) else {
             req.logger.info("Invalid OpenAI WebSocket URL")
@@ -153,38 +72,152 @@ func routes(_ app: Application) throws {
         
         do {
             let _ = try await WebSocket.connect(to: openAIWSURL, headers: headers, on: req.eventLoop) { ws async in
-                // Connected WebSocket.
-                req.logger.info("Connected to the OpenAI Realtime API!")
-                req.logger.info("\(ws)")
                 initializeSession(ws: ws)
                 
+                // Handle incoming messages from Twilio
+                connection.onText { connection, text async in
+                    do {
+                        guard let data = text.data(using: .utf8) else { return }
+                                let twilioEvent = try JSONDecoder().decode(TwilioEvent.self, from: data)
+                        switch twilioEvent.event {
+                        case "media":
+                            guard let media = twilioEvent.media else {
+                                            req.logger.error("Media event missing media data")
+                                            return
+                                        }
+                            // Convert timestamp from String to Int
+                            guard let timestampInt = Int(media.timestamp) else {
+                                req.logger.error("Failed to convert timestamp to Int")
+                                return
+                            }
+                            await state.updateTimestamp(timestampInt)
+                            let audioAppend: [String: String] = [
+                                "type": "input_audio_buffer.append",
+                                "audio": media.payload
+                            ]
+                            let jsonData = try JSONSerialization.data(withJSONObject: audioAppend)
+                            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                                try await ws.send(jsonString)
+                            }
+                        case "mark":
+                            let markQueue = await state.markQueue
+                            if !markQueue.isEmpty {
+                                await state.removeFirstFromMarkQueue()
+                            }
+                        default:
+                            req.logger.info("Received non-media event: \(twilioEvent.event)")
+                        }
+                    } catch {
+                        req.logger.info("Error processing message: \(error)")
+                    }
+                }
+                
+                // Handle incoming messages from OpenAI
                 ws.onText { ws, text async in
-                    req.logger.info("Received message from OpenAI: \(text)")
                     do {
                         guard let jsonData = text.data(using: .utf8) else {
                             throw Abort(.badRequest, reason: "Failed to convert string to data")
                         }
-                        req.logger.info("\(jsonData.debugDescription)")
                         let response = try JSONDecoder().decode(OpenAIResponse.self, from: jsonData)
                         
-                        if logEventTypes.contains(response.type) {
+                        if Constants.LOG_EVENT_TYPES.contains(response.type) {
                             print("Received event: \(response.type)", response)
                         }
                         
+                        // Handling for function calls
+                        if response.type == "response.function_call_arguments.done" {
+                                if response.name == "save_blood_pressure"  {
+                                    do {
+                                        let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
+                                        if let parsedArgs = try? JSONDecoder().decode(BloodPressureArgs.self, from: argumentsData) {
+                                            
+                                            let saveResult = HealthDataService.saveBloodPressure(parsedArgs.bloodPressure, logger: req.logger)
+                                            
+                                            let functionResponse: [String: Any] = [
+                                                "type": "conversation.item.create",
+                                                "item": [
+                                                    "type": "function_call_output",
+                                                    "call_id": response.callId ?? "",
+                                                    "output": saveResult ? 
+                                                        "Blood pressure saved successfully." :
+                                                        "Failed to save blood pressure. Please try again."
+                                                ]
+                                            ]
+                                            let responseRequest: [String: Any] = [
+                                                "type": "response.create"
+                                            ]
+                                            
+                                            try await sendJSON(functionResponse, ws)
+                                            try await sendJSON(responseRequest, ws)
+                                            
+                                            await state.updateResponseStartTimestampTwilio(nil)
+                                            await state.updateLastAssistantItem(nil)
+                                        }
+                                    } catch {
+                                        req.logger.error("Error processing blood pressure: \(error)")
+                                        // Send error response back to OpenAI
+                                        let errorResponse: [String: Any] = [
+                                            "type": "function_response",
+                                            "id": response.callId ?? "",
+                                            "error": [
+                                                "message": "Failed to process blood pressure"
+                                            ]
+                                        ]
+                                        try await sendJSON(errorResponse, ws)
+                                    }
+                            }
+                            if response.name == "save_heart_rate"  {
+                                do {
+                                    let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
+                                    if let parsedArgs = try? JSONDecoder().decode(HeartRateArgs.self, from: argumentsData) {
+                                        
+                                        let saveResult = HealthDataService.saveHeartRate(parsedArgs.heartRate, logger: req.logger)
+                                        
+                                        let functionResponse: [String: Any] = [
+                                            "type": "conversation.item.create",
+                                            "item": [
+                                                "type": "function_call_output",
+                                                "call_id": response.callId ?? "",
+                                                "output": saveResult ? 
+                                                    "Heart rate saved successfully." :
+                                                    "Failed to save heart rate. Please try again."
+                                            ]
+                                        ]
+                                        let responseRequest: [String: Any] = [
+                                            "type": "response.create"
+                                        ]
+                                        
+                                        try await sendJSON(functionResponse, ws)
+                                        try await sendJSON(responseRequest, ws)
+                                        
+                                        await state.updateResponseStartTimestampTwilio(nil)
+                                        await state.updateLastAssistantItem(nil)
+                                    }
+                                } catch {
+                                    req.logger.error("Error processing heart rate: \(error)")
+                                    // Send error response back to OpenAI
+                                    let errorResponse: [String: Any] = [
+                                        "type": "function_response",
+                                        "id": response.callId ?? "",
+                                        "error": [
+                                            "message": "Failed to process heart rate"
+                                        ]
+                                    ]
+                                    try await sendJSON(errorResponse, ws)
+                                }
+                            }
+                        }
+                        // Handling for Audio
                         if response.type == "response.audio.delta", let delta = response.delta {
-                            req.logger.info("Audio delta received")
                             let streamSid = await state.streamSid
-                            req.logger.info("streamSid: \(streamSid ?? "")")
                             let audioDelta: [String: Any] = [
                                 "event": "media",
                                 "streamSid": streamSid ?? "",
                                 "media": ["payload": delta]
                             ]
-                            req.logger.info("\(audioDelta)")
                             let jsonData = try JSONSerialization.data(withJSONObject: audioDelta)
                             if let jsonString = String(data: jsonData, encoding: .utf8) {
                                 try await connection.send(jsonString)
-                                req.logger.info("Sent Audio delta to Connection WS")
                             }
                             
                             // First delta from a new response starts the elapsed time counter
@@ -194,9 +227,7 @@ func routes(_ app: Application) throws {
                                 await state.updateResponseStartTimestampTwilio(latestMediaTimestamp)
                                 
                                 let responseStartTimestampTwilio = await state.responseStartTimestampTwilio
-                                if showTimingMath {
-                                    req.logger.info("Setting start timestamp for new response: \(responseStartTimestampTwilio!)ms")
-                                }
+                                req.logger.info("Setting start timestamp for new response: \(responseStartTimestampTwilio ?? 0)ms")
                             }
                             
                             if let itemId = response.itemId {
@@ -205,10 +236,9 @@ func routes(_ app: Application) throws {
                             
                             try await sendMark(ws: connection, streamSid: streamSid)
                         }
-                        
+                        // Handling for interuptions of the caller
                         if response.type == "input_audio_buffer.speech_started" {
-                            req.logger.info("Speech started")
-                            await handleSpeechStartedEvent(ws: ws)
+                            try await handleSpeechStartedEvent(ws: ws)
                         }
                         
                         if response.type == "error", let error = response.error {
@@ -219,47 +249,6 @@ func routes(_ app: Application) throws {
                     }
                 }
                 
-                connection.onText { connection, text async in
-                    do {
-                        guard let data = text.data(using: .utf8) else { return }
-                                let twilioEvent = try JSONDecoder().decode(TwilioEvent.self, from: data)
-                        
-                        switch twilioEvent.event {
-                        case "media":
-                            guard let media = twilioEvent.media else {
-                                            req.logger.error("Media event missing media data")
-                                            return
-                                        }
-                            
-                            req.logger.info("Successfully parsed media event - timestamp: \(media.timestamp), payload length: \(media.payload.count)")
-                            
-                            // Convert timestamp from String to Int
-                            guard let timestampInt = Int(media.timestamp) else {
-                                req.logger.error("Failed to convert timestamp to Int")
-                                return
-                            }
-    
-                            await state.updateTimestamp(timestampInt)
-                            
-                            let audioAppend: [String: String] = [
-                                "type": "input_audio_buffer.append",
-                                "audio": media.payload
-                            ]
-                            
-                            let jsonData = try JSONSerialization.data(withJSONObject: audioAppend)
-                            if let jsonString = String(data: jsonData, encoding: .utf8) {
-                                try await ws.send(jsonString)
-                                req.logger.info("Sent message to OpenAPI WS successfully")
-                            }
-                        default:
-                            req.logger.info("Received non-media event: \(twilioEvent.event)")
-                        }
-                    } catch {
-                        req.logger.info("Error processing message: \(error)")
-                    }
-                }
-                
-                // Handle WebSocket disconnect
                 ws.onClose.whenComplete { _ in
                     req.logger.info("Disconnected from the OpenAI Realtime API")
                 }
@@ -274,44 +263,91 @@ func routes(_ app: Application) throws {
             req.logger.error("Error connecting to the OpenAI Realtime API: \(error)")
         }
         
-        // Initialize OpenAI session
         @Sendable func initializeSession(ws: WebSocket) {
             let sessionUpdate: [String: Any] = [
                 "type": "session.update",
+                "event_id": "event_\(String(UUID().uuidString.prefix(8)))",
                 "session": [
-                    "turn_detection": ["type": "server_vad"],
-                    "input_audio_format": "g711_ulaw",
+                    "modalities": ["text", "audio"],
+                    "instructions": Constants.SYSTEM_MESSAGE,
+                    "voice": Constants.VOICE,
                     "output_audio_format": "g711_ulaw",
-                    "voice": voice,
-                    "instructions": systemMessage,
-                    "modalities": ["text", "audio"]
+                    "input_audio_format": "g711_ulaw",
+                    "turn_detection": ["type": "server_vad"],
+                    "tools": [
+                        [
+                            "type": "function",
+                            "name": "save_blood_pressure",
+                            "description": "Saves the blood pressure measurement of the patient to the database.",
+                            "parameters": [
+                                "type": "object",
+                                "properties": [
+                                    "bloodPressure": [
+                                        "type": "string",
+                                        "description": "Blood pressure in mmHg/mmHg"
+                                    ]
+                                ],
+                                "required": ["bloodPressure"],
+                                "additionalProperties": false
+                            ]
+                        ],
+                        [
+                            "type": "function", 
+                            "name": "save_heart_rate",
+                            "description": "Saves the heart rate measurement of the patient to the database.",
+                            "parameters": [
+                                "type": "object",
+                                "properties": [
+                                    "heartRate": [
+                                        "type": "string",
+                                        "description": "Heart rate in beats per minute"
+                                    ]
+                                ],
+                                "required": ["heartRate"],
+                                "additionalProperties": false
+                            ]
+                        ]
+                    ],
+                    "tool_choice": "auto"
                 ]
             ]
             
             do {
                 let jsonData = try JSONSerialization.data(withJSONObject: sessionUpdate)
-                req.logger.info("\(jsonData)")
                 if let jsonString = String(data: jsonData, encoding: .utf8) {
                     ws.send(jsonString)
-                    req.logger.info("Initialized Realtime API session!")
+                    let responseRequest: [String: Any] = [
+                        "type": "response.create"
+                    ]
+                    let responseData = try JSONSerialization.data(withJSONObject: responseRequest)
+                    if let jsonString = String(data: responseData, encoding: .utf8) {
+                        ws.send(jsonString)
+                    }
                 }
             } catch {
-                req.logger.info("Failed to serialize session update: \(error)")
+                req.logger.error("Failed to serialize session update: \(error)")
             }
         }
         
-        // Handle speech started event
-        @Sendable func handleSpeechStartedEvent(ws: WebSocket) async {
+        @Sendable func handleSpeechStartedEvent(ws: WebSocket) async throws {
             let markQueue = await state.markQueue
-            guard !markQueue.isEmpty,
-                  let responseStart = await state.responseStartTimestampTwilio,
-                  let lastItem = await state.lastAssistantItem else {
+            let responseStart = await state.responseStartTimestampTwilio
+            let lastItem = await state.lastAssistantItem
+            let streamSid = await state.streamSid
+            
+            guard !markQueue.isEmpty, 
+                  let responseStart = responseStart,
+                  let lastItem = lastItem,
+                  let streamSid = streamSid else {
+                req.logger.info("Speech started but missing required state for interruption")
                 return
             }
             
-            let latestMediaTimestamp = await state.latestMediaTimestamp
-            let elapsedTime = latestMediaTimestamp ?? 0 - responseStart
+            let latestMediaTimestamp = await state.latestMediaTimestamp ?? 0
+            let elapsedTime = latestMediaTimestamp - responseStart
+            req.logger.info("Calculating elapsed time for truncation: \(latestMediaTimestamp) - \(responseStart) = \(elapsedTime)ms")
             
+            // Send truncate event to OpenAI
             let truncateEvent: [String: Any] = [
                 "type": "conversation.item.truncate",
                 "item_id": lastItem,
@@ -320,18 +356,20 @@ func routes(_ app: Application) throws {
             ]
             
             do {
-                let jsonData = try JSONSerialization.data(withJSONObject: truncateEvent)
-                if let jsonString = String(data: jsonData, encoding: .utf8) {
-                    try await ws.send(jsonString)
-                }
+                try await sendJSON(truncateEvent, ws)
+                
+                let clearEvent: [String: Any] = [
+                    "event": "clear",
+                    "streamSid": streamSid
+                ]
+                try await sendJSON(clearEvent, connection)
+                
+                await state.removeAllFromMarkQueue()
+                await state.updateLastAssistantItem(nil)
+                await state.updateResponseStartTimestampTwilio(nil)
             } catch {
-                req.logger.info("Failed to serialize truncate event: \(error)")
+                req.logger.error("Failed to handle speech started event: \(error)")
             }
-            
-            // Reset state
-            await state.removeAllFromMarkQueue()
-            await state.updateLastAssistantItem(nil)
-            await state.updateResponseStartTimestampTwilio(nil)
         }
         
         @Sendable func sendJSON(_ object: [String: Any], _ ws: WebSocket) async throws {
@@ -355,49 +393,4 @@ func routes(_ app: Application) throws {
             await state.appendToMarkQueue("responsePart")
         }
     }
-}
-
-// Supporting structures
-struct OpenAIResponse: Codable {
-    let type: String
-    let delta: String?
-    let itemId: String?
-    let error: OpenAIError?
-    
-    enum CodingKeys: String, CodingKey {
-        case type
-        case delta
-        case itemId = "item_id"
-        case error
-    }
-}
-
-struct OpenAIError: Codable {
-    let message: String
-    let code: String?
-}
-
-
-struct TwilioEvent: Decodable {
-    let event: String
-    let media: MediaData?
-    let start: StartData?
-    
-    // Add custom decoding if needed
-    enum CodingKeys: String, CodingKey {
-        case event
-        case media
-        case start
-    }
-}
-
-struct MediaData: Decodable {
-    let timestamp: String
-    let payload: String
-    let chunk: String
-    let track: String
-}
-
-struct StartData: Decodable {
-    let streamSid: String
 }
