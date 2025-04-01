@@ -10,13 +10,15 @@ import Foundation
 
 /// Model for storing health data measurements
 struct HealthData: Codable {
-    var bloodPressure: String?
-    var heartRate: String?
-    var weight: String?
+    var bloodPressureSystolic: Int?
+    var bloodPressureDiastolic: Int?
+    var heartRate: Int?
+    var weight: Double?
     var timestamp: Date
     
-    init(bloodPressure: String? = nil, heartRate: String? = nil, weight: String? = nil) {
-        self.bloodPressure = bloodPressure
+    init(bloodPressureSystolic: Int? = nil, bloodPressureDiastolic: Int? = nil, heartRate: Int? = nil, weight: Double? = nil) {
+        self.bloodPressureSystolic = bloodPressureSystolic
+        self.bloodPressureDiastolic = bloodPressureDiastolic
         self.heartRate = heartRate
         self.weight = weight
         self.timestamp = Date()

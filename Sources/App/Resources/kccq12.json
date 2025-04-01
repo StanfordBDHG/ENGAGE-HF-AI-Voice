@@ -1,0 +1,29 @@
+{
+    "title": "KCCQ-12",
+    "items": [
+        {
+            "linkId": "a459b804-35bf-4792-f1eb-0b52c4e176e1",
+            "text": "Showering/bathing",
+            "answerOptions": [
+                {"id": "c973b297-4561-4b8c-c8c6-fb559ca15169", "code": "1", "display": "Extremely Limited"},
+                {"id": "1a8c0f4f-12a7-458d-8881-0a0750117ff0", "code": "2", "display": "Quite a bit Limited"},
+                {"id": "1e372729-1834-41c4-8cda-9a8196a77971", "code": "3", "display": "Moderately Limited"},
+                {"id": "cb3c686a-42a0-4c68-8b8d-f2621129adef", "code": "4", "display": "Slightly Limited"},
+                {"id": "4c04162f-e529-406b-a0fa-d636ad1bf6d7", "code": "5", "display": "Not at all Limited"},
+                {"id": "c4f351f5-33d6-477a-f9ba-f68a1ae0df6d", "code": "6", "display": "Limited for other reasons or did not do the activity"}
+            ]
+        },
+        {
+            "linkId": "cf9c5031-1ed5-438a-fc7d-dc69234015a0",
+            "text": "Walking 1 block on level ground",
+            "answerOptions": [
+                {"id": "c973b297-4561-4b8c-c8c6-fb559ca15169", "code": "1", "display": "Extremely Limited"},
+                {"id": "1a8c0f4f-12a7-458d-8881-0a0750117ff0", "code": "2", "display": "Quite a bit Limited"},
+                {"id": "1e372729-1834-41c4-8cda-9a8196a77971", "code": "3", "display": "Moderately Limited"},
+                {"id": "cb3c686a-42a0-4c68-8b8d-f2621129adef", "code": "4", "display": "Slightly Limited"},
+                {"id": "4c04162f-e529-406b-a0fa-d636ad1bf6d7", "code": "5", "display": "Not at all Limited"},
+                {"id": "c4f351f5-33d6-477a-f9ba-f68a1ae0df6d", "code": "6", "display": "Limited for other reasons or did not do the activity"}
+            ]
+        }
+    ]
+}

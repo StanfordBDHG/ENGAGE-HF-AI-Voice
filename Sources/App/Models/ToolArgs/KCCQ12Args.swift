@@ -6,6 +6,6 @@
 // SPDX-License-Identifier: MIT
 //
 
-struct HeartRateArgs: Codable {
-    let heartRate: String
+struct KCCQ12Args: Codable {
+    let answers: [String: String]
 }

@@ -78,13 +78,13 @@ func routes(_ app: Application) throws {
                 connection.onText { connection, text async in
                     do {
                         guard let data = text.data(using: .utf8) else { return }
-                                let twilioEvent = try JSONDecoder().decode(TwilioEvent.self, from: data)
+                        let twilioEvent = try JSONDecoder().decode(TwilioEvent.self, from: data)
                         switch twilioEvent.event {
                         case "media":
                             guard let media = twilioEvent.media else {
-                                            req.logger.error("Media event missing media data")
-                                            return
-                                        }
+                                req.logger.error("Media event missing media data")
+                                return
+                            }
                             // Convert timestamp from String to Int
                             guard let timestampInt = Int(media.timestamp) else {
                                 req.logger.error("Failed to convert timestamp to Int")
@@ -126,48 +126,54 @@ func routes(_ app: Application) throws {
                         
                         // Handling for function calls
                         if response.type == "response.function_call_arguments.done" {
-                                if response.name == "save_blood_pressure"  {
-                                    do {
-                                        let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
-                                        if let parsedArgs = try? JSONDecoder().decode(BloodPressureArgs.self, from: argumentsData) {
-                                            
-                                            let saveResult = HealthDataService.saveBloodPressure(parsedArgs.bloodPressure, logger: req.logger)
-                                            
-                                            let functionResponse: [String: Any] = [
-                                                "type": "conversation.item.create",
-                                                "item": [
-                                                    "type": "function_call_output",
-                                                    "call_id": response.callId ?? "",
-                                                    "output": saveResult ? 
-                                                        "Blood pressure saved successfully." :
-                                                        "Failed to save blood pressure. Please try again."
-                                                ]
-                                            ]
-                                            let responseRequest: [String: Any] = [
-                                                "type": "response.create"
-                                            ]
-                                            
-                                            try await sendJSON(functionResponse, ws)
-                                            try await sendJSON(responseRequest, ws)
-                                            
-                                            await state.updateResponseStartTimestampTwilio(nil)
-                                            await state.updateLastAssistantItem(nil)
-                                        }
-                                    } catch {
-                                        req.logger.error("Error processing blood pressure: \(error)")
-                                        // Send error response back to OpenAI
-                                        let errorResponse: [String: Any] = [
-                                            "type": "function_response",
-                                            "id": response.callId ?? "",
-                                            "error": [
-                                                "message": "Failed to process blood pressure"
+                            if response.name == "save_blood_pressure"  {
+                                do {
+                                    req.logger.info("Attempting to save blood pressure...")
+                                    let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
+                                    if let parsedArgs = try? JSONDecoder().decode(BloodPressureArgs.self, from: argumentsData) {
+                                        
+                                        let saveResult = HealthDataService.saveBloodPressure(
+                                            bloodPressureSystolic: parsedArgs.systolicBloodPressure,
+                                            bloodPressureDiastolic: parsedArgs.diastolicBloodPressure,
+                                            logger: req.logger
+                                        )
+                                        
+                                        let functionResponse: [String: Any] = [
+                                            "type": "conversation.item.create",
+                                            "item": [
+                                                "type": "function_call_output",
+                                                "call_id": response.callId ?? "",
+                                                "output": saveResult ?
+                                                "Blood pressure saved successfully." :
+                                                    "Failed to save blood pressure. Please try again."
                                             ]
                                         ]
-                                        try await sendJSON(errorResponse, ws)
+                                        let responseRequest: [String: Any] = [
+                                            "type": "response.create"
+                                        ]
+                                        
+                                        try await sendJSON(functionResponse, ws)
+                                        try await sendJSON(responseRequest, ws)
+                                        
+                                        await state.updateResponseStartTimestampTwilio(nil)
+                                        await state.updateLastAssistantItem(nil)
                                     }
+                                } catch {
+                                    req.logger.error("Error processing blood pressure: \(error)")
+                                    // Send error response back to OpenAI
+                                    let errorResponse: [String: Any] = [
+                                        "type": "function_response",
+                                        "id": response.callId ?? "",
+                                        "error": [
+                                            "message": "Failed to process blood pressure"
+                                        ]
+                                    ]
+                                    try await sendJSON(errorResponse, ws)
+                                }
                             }
                             if response.name == "save_heart_rate"  {
                                 do {
+                                    req.logger.info("Attempting to save heart rate...")
                                     let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
                                     if let parsedArgs = try? JSONDecoder().decode(HeartRateArgs.self, from: argumentsData) {
                                         
@@ -178,8 +184,8 @@ func routes(_ app: Application) throws {
                                             "item": [
                                                 "type": "function_call_output",
                                                 "call_id": response.callId ?? "",
-                                                "output": saveResult ? 
-                                                    "Heart rate saved successfully." :
+                                                "output": saveResult ?
+                                                "Heart rate saved successfully." :
                                                     "Failed to save heart rate. Please try again."
                                             ]
                                         ]
@@ -201,6 +207,141 @@ func routes(_ app: Application) throws {
                                         "id": response.callId ?? "",
                                         "error": [
                                             "message": "Failed to process heart rate"
+                                        ]
+                                    ]
+                                    try await sendJSON(errorResponse, ws)
+                                }
+                            }
+                            if response.name == "save_weight" {
+                                do {
+                                    req.logger.info("Attempting to save weight...")
+                                    let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
+                                    if let parsedArgs = try? JSONDecoder().decode(WeightArgs.self, from: argumentsData) {
+                                        
+                                        let saveResult = HealthDataService.saveWeight(parsedArgs.weight, logger: req.logger)
+                                        
+                                        let functionResponse: [String: Any] = [
+                                            "type": "conversation.item.create",
+                                            "item": [
+                                                "type": "function_call_output",
+                                                "call_id": response.callId ?? "",
+                                                "output": saveResult ?
+                                                "Weight saved successfully." :
+                                                    "Failed to save weight. Please try again."
+                                            ]
+                                        ]
+                                        let responseRequest: [String: Any] = [
+                                            "type": "response.create"
+                                        ]
+                                        
+                                        try await sendJSON(functionResponse, ws)
+                                        try await sendJSON(responseRequest, ws)
+                                        
+                                        await state.updateResponseStartTimestampTwilio(nil)
+                                        await state.updateLastAssistantItem(nil)
+                                    }
+                                } catch {
+                                    req.logger.error("Error processing weight: \(error)")
+                                    // Send error response back to OpenAI
+                                    let errorResponse: [String: Any] = [
+                                        "type": "function_response",
+                                        "id": response.callId ?? "",
+                                        "error": [
+                                            "message": "Failed to process weight"
+                                        ]
+                                    ]
+                                    try await sendJSON(errorResponse, ws)
+                                }
+                            }
+                            if response.name == "get_kccq12_questions" {
+                                let questions = KCCQ12Service.getQuestions()
+                                
+                                let functionResponse: [String: Any] = [
+                                    "type": "conversation.item.create",
+                                    "item": [
+                                        "type": "function_call_output",
+                                        "call_id": response.callId ?? "",
+                                        "output": questions
+                                    ]
+                                ]
+                                req.logger.info("KCCQ-12 questions functionResponse: \(functionResponse)")
+                                
+                                let responseRequest: [String: Any] = [
+                                    "type": "response.create"
+                                ]
+                                
+                                try await sendJSON(functionResponse, ws)
+                                try await sendJSON(responseRequest, ws)
+                                
+                                await state.updateResponseStartTimestampTwilio(nil)
+                                await state.updateLastAssistantItem(nil)
+                                
+                                // Log the connection state after function response
+                                req.logger.info("Function response sent, connection state: \(ws.isClosed ? "closed" : "open")")
+                            }
+                            if response.name == "save_kccq12_survey" {
+                                do {
+                                    req.logger.info("Attempting to save KCCQ12 Survey...")
+                                    req.logger.info("Raw arguments from OpenAI: \(String(describing: response.arguments))")
+                                    guard let arguments = response.arguments else {
+                                        req.logger.error("Arguments are nil")
+                                        throw Abort(.badRequest, reason: "No arguments provided")
+                                    }
+                                    let argumentsData = arguments.data(using: .utf8) ?? Data()
+                                    
+                                    // Try to print as UTF8 string
+                                    if let dataAsString = String(data: argumentsData, encoding: .utf8) {
+                                        req.logger.info("Data as UTF8 string: '\(dataAsString)'")
+                                    } else {
+                                        req.logger.error("Could not convert data back to UTF8 string")
+                                    }
+                                   
+                                    req.logger.info("\(argumentsData)")
+                                    req.logger.info("\(argumentsData.debugDescription)")
+                                    if let parsedArgs = try? JSONDecoder().decode(KCCQ12Args.self, from: argumentsData) {
+                                        req.logger.info("Parsed arguments: \(parsedArgs)")
+                                        
+                                        if let questionnaireResponse = KCCQ12Service.createQuestionnaireResponse(answers: parsedArgs.answers) {
+                                            req.logger.info("questionnaireResponse: \(questionnaireResponse)")
+                                            let saveResult = try KCCQ12Service.saveQuestionnaireResponse(questionnaireResponse, logger: req.logger)
+                                            
+                                            let functionResponse: [String: Any] = [
+                                                "type": "conversation.item.create",
+                                                "item": [
+                                                    "type": "function_call_output",
+                                                    "call_id": response.callId ?? "",
+                                                    "output": saveResult ?
+                                                    "KCCQ-12 survey responses saved successfully. Thank you for completing the survey." :
+                                                        "Failed to save KCCQ-12 survey responses. Please try again."
+                                                ]
+                                            ]
+                                            let responseRequest: [String: Any] = [
+                                                "type": "response.create"
+                                            ]
+                                            
+                                            try await sendJSON(functionResponse, ws)
+                                            try await sendJSON(responseRequest, ws)
+                                            
+                                            await state.updateResponseStartTimestampTwilio(nil)
+                                            await state.updateLastAssistantItem(nil)
+                                        }
+                                    } else {
+                                            req.logger.error("Failed to parse KCCQ12Args")
+                                            do {
+                                                let parsedArgs = try JSONDecoder().decode(KCCQ12Args.self, from: argumentsData)
+                                            } catch let decodingError {
+                                                req.logger.error("Decoding error details: \(decodingError)")
+                                            }
+                                            // ... error handling ...
+                                        }
+                                } catch {
+                                    req.logger.error("Error processing KCCQ-12 survey: \(error)")
+                                    // Send error response back to OpenAI
+                                    let errorResponse: [String: Any] = [
+                                        "type": "function_response",
+                                        "id": response.callId ?? "",
+                                        "error": [
+                                            "message": "Failed to process KCCQ-12 survey"
                                         ]
                                     ]
                                     try await sendJSON(errorResponse, ws)
@@ -269,7 +410,7 @@ func routes(_ app: Application) throws {
                 "event_id": "event_\(String(UUID().uuidString.prefix(8)))",
                 "session": [
                     "modalities": ["text", "audio"],
-                    "instructions": Constants.SYSTEM_MESSAGE,
+                    "instructions": Constants.SYSTEM_MESSAGE_ONLY_KCCQ12,
                     "voice": Constants.VOICE,
                     "output_audio_format": "g711_ulaw",
                     "input_audio_format": "g711_ulaw",
@@ -282,28 +423,76 @@ func routes(_ app: Application) throws {
                             "parameters": [
                                 "type": "object",
                                 "properties": [
-                                    "bloodPressure": [
-                                        "type": "string",
+                                    "bloodPressureSystolic": [
+                                        "type": "number",
+                                        "description": "Blood pressure in mmHg/mmHg"
+                                    ],
+                                    "bloodPressureDiastolic": [
+                                        "type": "number",
                                         "description": "Blood pressure in mmHg/mmHg"
                                     ]
                                 ],
-                                "required": ["bloodPressure"],
+                                "required": ["bloodPressureSystolic", "bloodPressureDiastolic"],
                                 "additionalProperties": false
                             ]
                         ],
                         [
-                            "type": "function", 
+                            "type": "function",
                             "name": "save_heart_rate",
                             "description": "Saves the heart rate measurement of the patient to the database.",
                             "parameters": [
                                 "type": "object",
                                 "properties": [
                                     "heartRate": [
-                                        "type": "string",
+                                        "type": "number",
                                         "description": "Heart rate in beats per minute"
                                     ]
                                 ],
                                 "required": ["heartRate"],
+                                "additionalProperties": false
+                            ]
+                        ],
+                        [
+                            "type": "function",
+                            "name": "save_weight",
+                            "description": "Saves the weight measurement of the patient to the database.",
+                            "parameters": [
+                                "type": "object",
+                                "properties": [
+                                    "weight": [
+                                        "type": "number",
+                                        "description": "Weight in pounds"
+                                    ]
+                                ],
+                                "required": ["weight"],
+                                "additionalProperties": false
+                            ]
+                        ],
+                        [
+                            "type": "function",
+                            "name": "get_kccq12_questions",
+                            "description": "Retrieves the questions for the KCCQ-12 heart failure quality of life survey.",
+                            "parameters": [
+                                "type": "object",
+                                "properties": [:],
+                            ]
+                        ],
+                        [
+                            "type": "function",
+                            "name": "save_kccq12_survey",
+                            "description": "Conducts the KCCQ-12 heart failure quality of life survey and saves patient responses.",
+                            "parameters": [
+                                "type": "object",
+                                "properties": [
+                                    "answers": [
+                                        "type": "object",
+                                        "description": "A dictionary where keys are KCCQ-12 question linkIds and values are the corresponding answer codes (1-6).",
+                                        "additionalProperties": [
+                                            "type": "string"
+                                        ]
+                                    ]
+                                ],
+                                "required": ["answers"],
                                 "additionalProperties": false
                             ]
                         ]
@@ -335,8 +524,8 @@ func routes(_ app: Application) throws {
             let lastItem = await state.lastAssistantItem
             let streamSid = await state.streamSid
             
-            guard !markQueue.isEmpty, 
-                  let responseStart = responseStart,
+            guard !markQueue.isEmpty,
+                    let responseStart = responseStart,
                   let lastItem = lastItem,
                   let streamSid = streamSid else {
                 req.logger.info("Speech started but missing required state for interruption")

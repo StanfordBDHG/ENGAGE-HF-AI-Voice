@@ -8,7 +8,7 @@
 
 import Vapor
 
-// configures your application
+
 public func configure(_ app: Application) async throws {
     // Environment variables
     guard let openAIKey = Environment.get("OPENAI_API_KEY") else {
