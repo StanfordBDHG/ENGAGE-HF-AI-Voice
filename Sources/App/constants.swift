@@ -27,7 +27,7 @@ struct Constants {
     - Store the question's linkId and response code in memory
     - Briefly confirm their answer before moving to the next question
 
-    4. After ALL questions have been answered, call save_kccq12_survey with the complete set of answers in this format:
+    4. After all questions have been answered, call save_kccq12_survey with the complete set of answers in this format:
     {
       "answers": {
         "questionLinkId1": "responseCode1",
@@ -59,7 +59,7 @@ struct Constants {
     - Store the question's linkId and response code in memory
     - Briefly confirm their answer before moving to the next question
 
-    4. After ALL questions have been answered, call save_kccq12_survey with the complete set of answers in this format:
+    4. After all questions have been answered, call save_kccq12_survey with the complete set of answers in this format:
     {
       "answers": {
         "questionLinkId1": "responseCode1",

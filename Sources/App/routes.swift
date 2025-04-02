@@ -301,7 +301,7 @@ func routes(_ app: Application) throws {
                                     if let parsedArgs = try? JSONDecoder().decode(KCCQ12Args.self, from: argumentsData) {
                                         req.logger.info("Parsed arguments: \(parsedArgs)")
                                         
-                                        if let questionnaireResponse = KCCQ12Service.createQuestionnaireResponse(answers: parsedArgs.answers) {
+                                        if let questionnaireResponse = KCCQ12Service.createQuestionnaireResponse(answers: parsedArgs.answers, logger: req.logger) {
                                             req.logger.info("questionnaireResponse: \(questionnaireResponse)")
                                             let saveResult = try KCCQ12Service.saveQuestionnaireResponse(questionnaireResponse, logger: req.logger)
                                             

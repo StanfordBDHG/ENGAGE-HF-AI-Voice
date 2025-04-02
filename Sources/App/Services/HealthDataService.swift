@@ -98,6 +98,11 @@ struct HealthDataService {
         }
     }
 
+    /// Save weight measurement to the health data file
+    /// - Parameters:
+    ///   - weight: The weight value to save
+    ///   - logger: The logger to use for logging
+    /// - Returns: A boolean indicating whether the save was successful
     static func saveWeight(_ weight: Double, logger: Logger) -> Bool {
         do {
             logger.info("Attempting to save weight to: \(healthDataFilePath)")

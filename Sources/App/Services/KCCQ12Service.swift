@@ -45,8 +45,11 @@ class KCCQ12Service {
     /// Creates a QestionnaireResponse object
     /// - Parameters:
     ///   - answers: A answers dictionary including the answers with questionIDs and answerIds as key/value pairs
+    ///   - logger: The logger to use for logging
     /// - Returns: A QuestionnaireResponse object
-    static func createQuestionnaireResponse(answers: [String: String]) -> QuestionnaireResponse? {
+    static func createQuestionnaireResponse(answers: [String: String], logger: Logger) -> QuestionnaireResponse? {
+        logger.info("Creating QuestionnaireResponse with \(answers.count) answers")
+        
         let response = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
         response.authored = FHIRPrimitive(stringLiteral: Date().ISO8601Format())
         
@@ -62,6 +65,7 @@ class KCCQ12Service {
         }
         response.item = items
         
+        logger.info("Successfully created QuestionnaireResponse with \(items.count) items")
         return response
     }
     
@@ -81,7 +85,7 @@ class KCCQ12Service {
         
         try jsonData.write(to: URL(fileURLWithPath: kccq12FilePath))
         
-        logger.info("Questionnaire data saved successfully to \(kccq12FilePath)")
+        logger.info("Successfully saved questionnaire data to \(kccq12FilePath)")
         return true
     }
 }
