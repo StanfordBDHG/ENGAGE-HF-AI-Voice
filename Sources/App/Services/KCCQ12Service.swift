@@ -10,6 +10,72 @@ import Foundation
 import ModelsR4
 import Vapor
 
+
+// Add a struct to wrap the question and progress
+struct QuestionWithProgress: Codable {
+    let question: QuestionnaireItem
+    let progress: String
+    
+    enum CodingKeys: String, CodingKey {
+        case question, progress
+    }
+}
+
+/// Actor to manage concurrent access to questions
+private actor QuestionManager {
+    var remainingQuestions: [QuestionnaireItem] = []
+    var totalQuestions: Int = 0
+    
+    
+    func initializeQuestions(_ questions: [QuestionnaireItem], logger: Logger) {
+        let items = flattenQuestionnaireItems(questions)
+        totalQuestions = items.count
+        logger.info("Initializing remaining questions array with \(totalQuestions) questions")
+        remainingQuestions = items
+    }
+    
+    func getNextQuestionAsJSON(logger: Logger) async throws -> String? {
+        guard !remainingQuestions.isEmpty else { return nil }
+        logger.info("remainingQuestions: \(remainingQuestions.count)")
+        logger.info("\(remainingQuestions.map { $0.linkId })")
+        let nextQuestion = remainingQuestions.removeFirst()
+        
+        let currentQuestion = totalQuestions - remainingQuestions.count
+        let progressString = "Question \(currentQuestion) of \(totalQuestions)"
+
+        let questionWithProgress = QuestionWithProgress(question: nextQuestion, progress: progressString)
+        
+        let encoder = JSONEncoder()
+        let jsonData = try encoder.encode(questionWithProgress)
+        
+        return String(data: jsonData, encoding: .utf8)
+    }
+    
+    func getCurrentCount() -> Int {
+        remainingQuestions.count
+    }
+    
+    func isEmpty() -> Bool {
+        remainingQuestions.isEmpty
+    }
+    
+    private func flattenQuestionnaireItems(_ items: [QuestionnaireItem]) -> [QuestionnaireItem] {
+        var flattenedItems: [QuestionnaireItem] = []
+        
+        for item in items {
+            if item.type.value == .choice {
+                flattenedItems.append(item)
+            }
+            
+            if let nestedItems = item.item {
+                flattenedItems.append(contentsOf: flattenQuestionnaireItems(nestedItems))
+            }
+        }
+        
+        return flattenedItems
+    }
+}
+
 /// Service for managing KCCQ12 data storage
 class KCCQ12Service {
     private static let dataDirectory: String = {
@@ -21,25 +87,54 @@ class KCCQ12Service {
     private static let kccq12FilePath: String = {
         return "\(dataDirectory)/kccq12.json"
     }()
-
-    /// Load questions from the KCCQ12 file
-    /// - Returns: A string in JSON format
-    static func getQuestions() -> String {
-        guard let path = Bundle.module.path(forResource: "kccq12", ofType: "json"),
-              let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-              let jsonString = String(data: data, encoding: .utf8) else {
-            return "{}"
+    
+    private static let questionManager = QuestionManager()
+    
+    /// Initialize the questions from the KCCQ12 file
+    static func initializeQuestions(logger: Logger) async {
+        if let questionnaire = loadQuestionnaire(logger: logger) {
+            await questionManager.initializeQuestions(questionnaire.item ?? [], logger: logger)
+        } else {
+            logger.info("Questions could not be loaded and initialized")
         }
-        return jsonString
     }
     
-    private static func loadQuestionnaire() -> Questionnaire? {
+    /// Get the next question from the questionnaire
+    /// - Returns: The next question as a JSON string if available, nil if no more questions
+    static func getNextQuestion(logger: Logger) async -> String? {
+        if await questionManager.isEmpty() {
+            await initializeQuestions(logger: logger)
+        }
+        do {
+            guard let questionJSON = try await questionManager.getNextQuestionAsJSON(logger: logger) else {
+                logger.error("No more questions available")
+                return nil
+            }
+            return questionJSON
+        } catch {
+            logger.error("Failed to process next question")
+            return nil
+        }
+    }
+    
+    private static func loadQuestionnaire(logger: Logger) -> Questionnaire? {
         guard let path = Bundle.module.path(forResource: "kccq12", ofType: "json"),
               let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            logger.info("Could not read data from kccq12 file")
             return nil
         }
         
-        return try? JSONDecoder().decode(Questionnaire.self, from: data)
+        do {
+            let questionnaire = try JSONDecoder().decode(Questionnaire.self, from: data)
+            logger.info("Successfully decoded questionnaire")
+            return questionnaire
+        } catch {
+            logger.error("Failed to decode questionnaire: \(error)")
+            if let dataString = String(data: data, encoding: .utf8) {
+                logger.debug("Raw JSON data: \(dataString)")
+            }
+            return nil
+        }
     }
     
     /// Creates a QestionnaireResponse object
@@ -89,3 +184,4 @@ class KCCQ12Service {
         return true
     }
 }
+

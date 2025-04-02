@@ -253,18 +253,19 @@ func routes(_ app: Application) throws {
                                     try await sendJSON(errorResponse, ws)
                                 }
                             }
-                            if response.name == "get_kccq12_questions" {
-                                let questions = KCCQ12Service.getQuestions()
+                            if response.name == "get_kccq12_question" {
+                                let question = await KCCQ12Service.getNextQuestion(logger: req.logger)
                                 
                                 let functionResponse: [String: Any] = [
                                     "type": "conversation.item.create",
-                                    "item": [
+                                    "item": [                                        
                                         "type": "function_call_output",
                                         "call_id": response.callId ?? "",
-                                        "output": questions
+                                        "output": question ?? "No more questions available. Please use save_kccq12_survey to save your responses."                                        
                                     ]
                                 ]
-                                req.logger.info("KCCQ-12 questions functionResponse: \(functionResponse)")
+                                
+                                req.logger.info("KCCQ-12 question functionResponse: \(functionResponse)")
                                 
                                 let responseRequest: [String: Any] = [
                                     "type": "response.create"
@@ -295,7 +296,7 @@ func routes(_ app: Application) throws {
                                     } else {
                                         req.logger.error("Could not convert data back to UTF8 string")
                                     }
-                                   
+                                    
                                     req.logger.info("\(argumentsData)")
                                     req.logger.info("\(argumentsData.debugDescription)")
                                     if let parsedArgs = try? JSONDecoder().decode(KCCQ12Args.self, from: argumentsData) {
@@ -326,14 +327,14 @@ func routes(_ app: Application) throws {
                                             await state.updateLastAssistantItem(nil)
                                         }
                                     } else {
-                                            req.logger.error("Failed to parse KCCQ12Args")
-                                            do {
-                                                let parsedArgs = try JSONDecoder().decode(KCCQ12Args.self, from: argumentsData)
-                                            } catch let decodingError {
-                                                req.logger.error("Decoding error details: \(decodingError)")
-                                            }
-                                            // ... error handling ...
+                                        req.logger.error("Failed to parse KCCQ12Args")
+                                        do {
+                                            let _ = try JSONDecoder().decode(KCCQ12Args.self, from: argumentsData)
+                                        } catch let decodingError {
+                                            req.logger.error("Decoding error details: \(decodingError)")
                                         }
+                                        // ... error handling ...
+                                    }
                                 } catch {
                                     req.logger.error("Error processing KCCQ-12 survey: \(error)")
                                     // Send error response back to OpenAI
@@ -410,7 +411,7 @@ func routes(_ app: Application) throws {
                 "event_id": "event_\(String(UUID().uuidString.prefix(8)))",
                 "session": [
                     "modalities": ["text", "audio"],
-                    "instructions": Constants.SYSTEM_MESSAGE_ONLY_KCCQ12,
+                    "instructions": Constants.SYSTEM_MESSAGE,
                     "voice": Constants.VOICE,
                     "output_audio_format": "g711_ulaw",
                     "input_audio_format": "g711_ulaw",
@@ -423,16 +424,16 @@ func routes(_ app: Application) throws {
                             "parameters": [
                                 "type": "object",
                                 "properties": [
-                                    "bloodPressureSystolic": [
+                                    "systolicBloodPressure": [
                                         "type": "number",
                                         "description": "Blood pressure in mmHg/mmHg"
                                     ],
-                                    "bloodPressureDiastolic": [
+                                    "diastolicBloodPressure": [
                                         "type": "number",
                                         "description": "Blood pressure in mmHg/mmHg"
                                     ]
                                 ],
-                                "required": ["bloodPressureSystolic", "bloodPressureDiastolic"],
+                                "required": ["systolicBloodPressure", "diastolicBloodPressure"],
                                 "additionalProperties": false
                             ]
                         ],
@@ -470,8 +471,8 @@ func routes(_ app: Application) throws {
                         ],
                         [
                             "type": "function",
-                            "name": "get_kccq12_questions",
-                            "description": "Retrieves the questions for the KCCQ-12 heart failure quality of life survey.",
+                            "name": "get_kccq12_question",
+                            "description": "Retrieves the next question and current progress from the KCCQ-12 heart failure quality of life survey. This function should be called repeatedly to get each question one at a time. When no more questions are available, it will return a message indicating that the survey is complete and the save_kccq12_survey function should be called.",
                             "parameters": [
                                 "type": "object",
                                 "properties": [:],
@@ -525,7 +526,7 @@ func routes(_ app: Application) throws {
             let streamSid = await state.streamSid
             
             guard !markQueue.isEmpty,
-                    let responseStart = responseStart,
+                  let responseStart = responseStart,
                   let lastItem = lastItem,
                   let streamSid = streamSid else {
                 req.logger.info("Speech started but missing required state for interruption")
