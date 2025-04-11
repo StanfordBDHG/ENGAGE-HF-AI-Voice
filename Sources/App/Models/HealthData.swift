@@ -8,7 +8,6 @@
 
 import Foundation
 
-/// Model for storing health data measurements
 struct HealthData: Codable {
     var bloodPressureSystolic: Int?
     var bloodPressureDiastolic: Int?

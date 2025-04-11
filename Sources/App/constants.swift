@@ -49,27 +49,15 @@ struct Constants {
     - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
     - Listen to the patient's response
     - Confirm their answer and map it to the correct response code
-    - Store the question's linkId and response code in memory
-    - Briefly confirm their answer before moving to the next question
+    - After the answer is confirmed, save the question's linkId and response code using the save_kccq12_response function
+    - Move to the next question
 
-    3. After all questions have been answered (when get_kccq12_question returns "No more questions available"), call save_kccq12_survey with the complete set of answers in this format:
-    {
-      "answers": {
-        "questionLinkId1": "responseCode1",
-        "questionLinkId2": "responseCode2",
-        ...etc
-      }
-    }
-
-    4. Be supportive and understanding throughout the survey.
-
-    After the KCCQ-12 survey is complete and you saved the responses, you will say 'Thank you for using our service. Goodbye!' and end the call.
+    3. After the KCCQ-12 survey is complete, you will say 'Thank you for using our service. Goodbye!' and end the call.
 
     IMPORTANT: 
     - Call get_kccq12_question for each question individually
-    - Do not call save_kccq12_survey until you have collected ALL answers
+    - Call save_kccq12_response after each response in confirmed
     - Don't let the user end the call before ALL answers are collected
-    - The answers must be formatted exactly as shown above
     - The function will show you progress (e.g., "Question 1 of 13") to help track completion
     """
 }

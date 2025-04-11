@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
-struct KCCQ12Args: Codable {
-    let answers: [String: String]
+struct KCCQ12ResponseArgs: Codable {
+    let linkId: String
+    let code: String
 }

@@ -117,6 +117,8 @@ class KCCQ12Service {
         }
     }
     
+    /// Load the questionnaire from the file
+    /// - Returns: The FHIR `Questionnaire` object loaded from the JSON file
     private static func loadQuestionnaire(logger: Logger) -> Questionnaire? {
         guard let path = Bundle.module.path(forResource: "kccq12", ofType: "json"),
               let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
@@ -137,51 +139,73 @@ class KCCQ12Service {
         }
     }
     
-    /// Creates a QestionnaireResponse object
-    /// - Parameters:
-    ///   - answers: A answers dictionary including the answers with questionIDs and answerIds as key/value pairs
-    ///   - logger: The logger to use for logging
-    /// - Returns: A QuestionnaireResponse object
-    static func createQuestionnaireResponse(answers: [String: String], logger: Logger) -> QuestionnaireResponse? {
-        logger.info("Creating QuestionnaireResponse with \(answers.count) answers")
+    /// Load the questionnaire response from the file
+    /// - Returns: The FHIR `QuestionnaireResponse` object loaded from the JSON file
+    private static func loadQuestionnaireResponse(logger: Logger) -> QuestionnaireResponse {
+        logger.info("Loading questionnaire response from file")
+        let fileManager = FileManager.default
         
-        let response = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
-        response.authored = FHIRPrimitive(stringLiteral: Date().ISO8601Format())
-        
-        var items: [QuestionnaireResponseItem] = []
-        
-        for (linkId, answerValue) in answers {
-            let responseItem = QuestionnaireResponseItem(linkId: FHIRPrimitive(FHIRString(linkId)))
-            let answerItem = QuestionnaireResponseItemAnswer()
-            answerItem.value = .string(FHIRPrimitive(FHIRString(answerValue)))
-            responseItem.answer = [answerItem]
-            
-            items.append(responseItem)
+        guard fileManager.fileExists(atPath: kccq12FilePath) else {
+            return QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
         }
-        response.item = items
         
-        logger.info("Successfully created QuestionnaireResponse with \(items.count) items")
-        return response
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: kccq12FilePath))
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(QuestionnaireResponse.self, from: data)
+        } catch {
+            return QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+        }
     }
     
-    /// Saves a QestionnaireResponse object to the KCCQ12 data file
+    /// Save or update a response to a question to the file
     /// - Parameters:
-    ///   - response: The QuestionnaireResponse object that can be generated using `createQuestionnaireResponse`
-    ///   - logger: The logger to use for logging
-    /// - Returns: A boolean indicating whether the save was successful
-    static func saveQuestionnaireResponse(_ response: QuestionnaireResponse, logger: Logger) throws -> Bool {
-        logger.info("Saving KCCQ-12 questionnaire response")
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = .prettyPrinted
-        
-        let jsonData = try encoder.encode(response)
-        logger.info("\(jsonData.debugDescription)")
-        
-        try jsonData.write(to: URL(fileURLWithPath: kccq12FilePath))
-        
-        logger.info("Successfully saved questionnaire data to \(kccq12FilePath)")
-        return true
+    ///   - linkId: The question's identifier
+    ///   - code: The answer code
+    /// - Returns: The FHIR `QuestionnaireResponse` object loaded from the JSON file
+    static func saveQuestionnaireResponse(linkId: String, code: String, logger: Logger) -> Bool {
+        do {
+            logger.info("Attempting to save questionnaire response for linkId: \(linkId) with code: \(code)")
+            
+            // Create directory if it doesn't exist
+            try FileManager.default.createDirectory(
+                atPath: dataDirectory,
+                withIntermediateDirectories: true
+            )
+            
+            let response = loadQuestionnaireResponse(logger: logger)
+            
+            // Create or update the answer for the given linkId
+            let responseItem = QuestionnaireResponseItem(linkId: FHIRPrimitive(FHIRString(linkId)))
+            let answerItem = QuestionnaireResponseItemAnswer()
+            answerItem.value = .string(FHIRPrimitive(FHIRString(code)))
+            responseItem.answer = [answerItem]
+            
+            if let index = response.item?.firstIndex(where: { $0.linkId.value?.string == linkId }) {
+                response.item?[index] = responseItem
+                logger.info("Updated existing response for linkId: \(linkId)")
+            } else {
+                if let _ = response.item {
+                    response.item?.append(responseItem)
+                } else {
+                    response.item = [responseItem]
+                }
+                logger.info("Added new response for linkId: \(linkId)")
+            }
+            
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = .prettyPrinted
+            
+            let jsonData = try encoder.encode(response)
+            try jsonData.write(to: URL(fileURLWithPath: kccq12FilePath))
+            
+            logger.info("Successfully saved questionnaire response to \(kccq12FilePath)")
+            return true
+        } catch {
+            logger.error("Failed to save questionnaire response: \(error)")
+            return false
+        }
     }
 }
-
