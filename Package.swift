@@ -41,7 +41,7 @@ let package = Package(
             name: "AppTests",
             dependencies: [
                 .target(name: "App"),
-                .product(name: "VaporTesting", package: "vapor"),
+                .product(name: "VaporTesting", package: "vapor")
             ],
             plugins: [] + swiftLintPlugin()
         )

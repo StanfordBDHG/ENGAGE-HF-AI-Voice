@@ -13,7 +13,7 @@ import VaporTesting
 
 @Suite("App Tests")
 struct AppTests {
-    private func withApp(_ test: (Application) async throws -> ()) async throws {
+    private func withApp(_ test: (Application) async throws -> Void) async throws {
         let app = try await Application.make(.testing)
         do {
             try await configure(app)
