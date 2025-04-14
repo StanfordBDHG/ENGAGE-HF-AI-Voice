@@ -22,4 +22,4 @@ struct HealthData: Codable {
         self.weight = weight
         self.timestamp = Date()
     }
-} 
+}

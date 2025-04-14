@@ -11,14 +11,14 @@ import ModelsR4
 import Vapor
 
 
-// Add a struct to wrap the question and progress
+/// A struct to wrap the question and progress
 struct QuestionWithProgress: Codable {
-    let question: QuestionnaireItem
-    let progress: String
-    
     enum CodingKeys: String, CodingKey {
         case question, progress
     }
+
+    let question: QuestionnaireItem
+    let progress: String
 }
 
 /// Actor to manage concurrent access to questions
@@ -35,7 +35,10 @@ private actor QuestionManager {
     }
     
     func getNextQuestionAsJSON(logger: Logger) async throws -> String? {
-        guard !remainingQuestions.isEmpty else { return nil }
+        guard !remainingQuestions.isEmpty else {
+            logger.info("No more questions available")
+            return nil
+        }
         logger.info("remainingQuestions: \(remainingQuestions.count)")
         logger.info("\(remainingQuestions.map { $0.linkId })")
         let nextQuestion = remainingQuestions.removeFirst()
@@ -77,7 +80,7 @@ private actor QuestionManager {
 }
 
 /// Service for managing KCCQ12 data storage
-class KCCQ12Service {
+enum KCCQ12Service {
     private static let dataDirectory: String = {
         let fileManager = FileManager.default
         let currentDirectoryPath = fileManager.currentDirectoryPath
@@ -85,7 +88,7 @@ class KCCQ12Service {
     }()
     
     private static let kccq12FilePath: String = {
-        return "\(dataDirectory)/kccq12.json"
+        "\(dataDirectory)/kccq12.json"
     }()
     
     private static let questionManager = QuestionManager()
@@ -186,7 +189,7 @@ class KCCQ12Service {
                 response.item?[index] = responseItem
                 logger.info("Updated existing response for linkId: \(linkId)")
             } else {
-                if let _ = response.item {
+                if response.item != nil {
                     response.item?.append(responseItem)
                 } else {
                     response.item = [responseItem]

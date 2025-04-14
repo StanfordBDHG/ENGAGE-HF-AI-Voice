@@ -6,18 +6,6 @@
 // SPDX-License-Identifier: MIT
 //
 
-struct TwilioEvent: Decodable {
-    let event: String
-    let media: MediaData?
-    let start: StartData?
-    
-    enum CodingKeys: String, CodingKey {
-        case event
-        case media
-        case start
-    }
-}
-
 struct MediaData: Decodable {
     let timestamp: String
     let payload: String
@@ -27,4 +15,16 @@ struct MediaData: Decodable {
 
 struct StartData: Decodable {
     let streamSid: String
+}
+
+struct TwilioEvent: Decodable {
+    enum CodingKeys: String, CodingKey {
+        case event
+        case media
+        case start
+    }
+
+    let event: String
+    let media: MediaData?
+    let start: StartData?
 }

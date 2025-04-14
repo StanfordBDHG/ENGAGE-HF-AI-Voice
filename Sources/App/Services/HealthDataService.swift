@@ -9,8 +9,9 @@
 import Foundation
 import Vapor
 
+
 /// Service for managing health data storage
-struct HealthDataService {
+enum HealthDataService {
     private static let dataDirectory: String = {
         let fileManager = FileManager.default
         let currentDirectoryPath = fileManager.currentDirectoryPath
@@ -18,7 +19,7 @@ struct HealthDataService {
     }()
     
     private static let healthDataFilePath: String = {
-        return "\(dataDirectory)/health_data.json"
+        "\(dataDirectory)/health_data.json"
     }()
     
     /// Save blood pressure measurement to the health data file
@@ -134,7 +135,7 @@ struct HealthDataService {
         }
     }
 
-    private static func loadHealthData() throws -> [HealthData]? {
+    private static func loadHealthData() throws -> [HealthData] {
         let fileManager = FileManager.default
         
         guard fileManager.fileExists(atPath: healthDataFilePath) else {
@@ -160,4 +161,4 @@ struct HealthDataService {
         logger.info("Health data saved successfully to \(healthDataFilePath)")
         return true
     }
-} 
+}

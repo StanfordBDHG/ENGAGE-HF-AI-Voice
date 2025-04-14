@@ -1,7 +1,7 @@
 // swift-tools-version:6.0
 
 //
-// This source file is part of the TemplatePackage open source project
+// This source file is part of the ENGAGE-HF-AI-Voice open source project
 // 
 // SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 // 
@@ -32,9 +32,9 @@ let package = Package(
                 .product(name: "ModelsR4", package: "FHIRModels")
             ],
             resources: [
-                .process("Resources/kccq12.json")
+                .process("Resources/kccq12.json"),
+                .process("Resources/sessionConfig.json")
             ],
-            swiftSettings: swiftSettings,
             plugins: [] + swiftLintPlugin()
         ),
         .testTarget(
@@ -43,7 +43,6 @@ let package = Package(
                 .target(name: "App"),
                 .product(name: "VaporTesting", package: "vapor"),
             ],
-            swiftSettings: swiftSettings,
             plugins: [] + swiftLintPlugin()
         )
     ]
@@ -66,8 +65,3 @@ func swiftLintPackage() -> [PackageDescription.Package.Dependency] {
         []
     }
 }
-
-var swiftSettings: [SwiftSetting] { [
-    .enableExperimentalFeature("StrictConcurrency"),
-] }
-
