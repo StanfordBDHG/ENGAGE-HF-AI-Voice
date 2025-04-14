@@ -1,6 +1,15 @@
+//
+// This source file is part of the ENGAGE-HF-AI-Voice open source project
+//
+// SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
+//
+// SPDX-License-Identifier: MIT
+//
+
 @testable import App
-import VaporTesting
 import Testing
+import VaporTesting
+
 
 @Suite("App Tests")
 struct AppTests {
@@ -9,20 +18,18 @@ struct AppTests {
         do {
             try await configure(app)
             try await test(app)
-        }
-        catch {
+        } catch {
             try await app.asyncShutdown()
             throw error
         }
         try await app.asyncShutdown()
     }
     
-    @Test("Test Hello World Route")
+    @Test("Test Incomming Call Route")
     func helloWorld() async throws {
         try await withApp { app in
-            try await app.testing().test(.GET, "hello", afterResponse: { res async in
+            try await app.testing().test(.POST, "incoming-call", afterResponse: { res async in
                 #expect(res.status == .ok)
-                #expect(res.body.string == "Hello, world!")
             })
         }
     }
