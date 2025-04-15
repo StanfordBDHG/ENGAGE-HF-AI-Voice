@@ -249,7 +249,7 @@ func routes(_ app: Application) throws {
                 req.logger.info("Attempting to save blood pressure...")
                 let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
                 if let parsedArgs = try? JSONDecoder().decode(BloodPressureArgs.self, from: argumentsData) {
-                    let saveResult = HealthDataService.saveBloodPressure(
+                    let saveResult = VitalSignsService.saveBloodPressure(
                         bloodPressureSystolic: parsedArgs.systolicBloodPressure,
                         bloodPressureDiastolic: parsedArgs.diastolicBloodPressure,
                         logger: req.logger
@@ -295,7 +295,7 @@ func routes(_ app: Application) throws {
                 req.logger.info("Attempting to save heart rate...")
                 let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
                 if let parsedArgs = try? JSONDecoder().decode(HeartRateArgs.self, from: argumentsData) {
-                    let saveResult = HealthDataService.saveHeartRate(parsedArgs.heartRate, logger: req.logger)
+                    let saveResult = VitalSignsService.saveHeartRate(parsedArgs.heartRate, logger: req.logger)
                     
                     let functionResponse: [String: Any] = [
                         "type": "conversation.item.create",
@@ -337,7 +337,7 @@ func routes(_ app: Application) throws {
                 req.logger.info("Attempting to save weight...")
                 let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
                 if let parsedArgs = try? JSONDecoder().decode(WeightArgs.self, from: argumentsData) {
-                    let saveResult = HealthDataService.saveWeight(parsedArgs.weight, logger: req.logger)
+                    let saveResult = VitalSignsService.saveWeight(parsedArgs.weight, logger: req.logger)
                     
                     let functionResponse: [String: Any] = [
                         "type": "conversation.item.create",

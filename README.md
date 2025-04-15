@@ -69,6 +69,13 @@ To run the server locally using Xcode:
      ```
 
 2. Build and run the server in Xcode.
+3. Start [ngrok](https://ngrok.com/) to expose the local server:
+   ```bash
+    ngrok http http://127.0.0.1:5000
+    ```
+4. In your Twilio Console, update the "A call comes in" webhook URL to match the forwarding address from ngrok, appending `/incoming-call`.
+Example: `https://your-ngrok-url.ngrok-free.app/incoming-call`
+5. Call your Twilio number and talk to the AI.
 
 ### Docker
 
@@ -84,7 +91,13 @@ To run the server using Docker:
    docker compose build
    docker compose up app
    ```
-
+4. Start [ngrok](https://ngrok.com/) to expose the local server:
+   ```bash
+    ngrok http http://127.0.0.1:8080
+    ```
+5. In your Twilio Console, update the "A call comes in" webhook URL to match the forwarding address from ngrok, appending `/incoming-call`.
+Example: `https://your-ngrok-url.ngrok-free.app/incoming-call`
+6. Call your Twilio number and talk to the AI.
 ---
 
 ## License

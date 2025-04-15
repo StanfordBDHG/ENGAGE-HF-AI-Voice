@@ -6,7 +6,7 @@
             "text",
             "audio"
         ],
-        "instructions": "{{KCCQ12_INSTRUCTIONS}}",
+        "instructions": "{{SYSTEM_PROMPT}}",
         "voice": "alloy",
         "output_audio_format": "g711_ulaw",
         "input_audio_format": "g711_ulaw",

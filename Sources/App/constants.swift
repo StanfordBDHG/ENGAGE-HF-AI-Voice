@@ -71,12 +71,12 @@ enum Constants {
         }
         
         // Escape newlines and quotes in the system message
-        let escapedMessage = systemMessageOnlyKccq12
+        let escapedMessage = systemMessage
             .replacingOccurrences(of: "\n", with: "\\n")
             .replacingOccurrences(of: "\"", with: "\\\"")
         
         return jsonString.replacingOccurrences(
-            of: "{{KCCQ12_INSTRUCTIONS}}",
+            of: "{{SYSTEM_PROMPT}}",
             with: escapedMessage
         )
     }

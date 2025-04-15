@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct HealthData: Codable {
+struct VitalSigns: Codable {
     var bloodPressureSystolic: Int?
     var bloodPressureDiastolic: Int?
     var heartRate: Int?
