@@ -22,15 +22,14 @@ jobs:
     name: Build and Test Swift Package macOS
     uses: StanfordBDHG/.github/.github/workflows/xcodebuild-or-fastlane.yml@v2
     with:
+      runsonlabels: '["macOS", "self-hosted"]'
       scheme: App
-      resultBundle: App-macOS.xcresult
-      destination: 'platform=macOS,arch=arm64'
-      artifactname: App-macOS.xcresult
+      artifactname: App.xcresult
   uploadcoveragereport:
     name: Upload Coverage Report
     needs: [packagemacos]
     uses: StanfordBDHG/.github/.github/workflows/create-and-upload-coverage-report.yml@v2
     with:
-      coveragereports: App-macOS.xcresult
+      coveragereports: App.xcresult
     secrets:
       token: ${{ secrets.CODECOV_TOKEN }}
