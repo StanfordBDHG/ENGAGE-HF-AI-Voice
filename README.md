@@ -16,17 +16,81 @@ SPDX-License-Identifier: MIT
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FStanfordBDHG%2FSwiftPackageTemplate%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/StanfordBDHG/SwiftPackageTemplate)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FStanfordBDHG%2FSwiftPackageTemplate%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/StanfordBDHG/SwiftPackageTemplate)
 
+**Engage HF AI-Voice** is a [Vapor](https://vapor.codes/) server that integrates Twilio with OpenAI’s real-time API (ChatGPT-4o) to enable voice-based conversations for healthcare data collection.
+
+### Key Features
+
+- **Twilio + OpenAI Integration**  
+  Receives and streams audio to and from Twilio, relaying it in real-time to OpenAI's API.
+
+- **Conversational AI on FHIR Questionnaires**  
+  Configures ChatGPT-4o to conduct voice conversations based on a FHIR Questionnaire (e.g., `kccq12.json`) and records user responses in FHIR format on disk.
+
+- **Customizable AI Behavior**  
+  Includes function calling and system prompts to tailor the conversation flow and data handling.
+
+---
+
+## Configuration
+
+You can customize the server in several ways:
+
+- **Custom FHIR Questionnaire**  
+  Replace the default FHIR R4 questionnaire (`Sources/App/Resources/kccq12.json`) with your own to change the conversation content.
+
+- **System Message (AI Behavior)**  
+  Edit the `systemMessage` constant in  
+  `Sources/App/constants.swift`  
+  This message sets the behavior of the AI and is passed to OpenAI during session initialization.
+
+- **Session Configuration (Voice, Functions, etc.)**  
+  Modify `sessionConfig.json` in  
+  `Sources/App/Resources/`  
+  This file controls OpenAI-specific parameters such as:
+  - Which voice model to use
+  - The available function calls (e.g., saving responses)
+  - Other ChatGPT session settings
+
+---
 
 ## Setup
+You can either run the server in Xcode or using Docker.
 
-Before running the server locally, you need to add your OpenAPI key to the environment variables. 
-To do this, add a `OPENAI_API_KEY` environment variable in the scheme editor under the Arguments tab in the Run section.
+### Xcode
 
-After this, you can run the server in Xcode.
+To run the server locally using Xcode:
+
+1. Add your OpenAI API key as an environment variable:
+   - Open the **Scheme Editor** (`Product > Scheme > Edit Scheme…`)
+   - Select the **Run** section and go to the **Arguments** tab.
+   - Add a new environment variable:  
+     ```
+     OPENAI_API_KEY=your_key_here
+     ```
+
+2. Build and run the server in Xcode.
+
+### Docker
+
+To run the server using Docker:
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Open the **.env** file and insert your OpenAI API Key.
+3. Build and start the server:
+   ```bash
+   docker compose build
+   docker compose up app
+   ```
+
+---
 
 ## License
 This project is licensed under the MIT License. See [Licenses](https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/tree/main/LICENSES) for more information.
 
+---
 
 ## Contributors
 This project is developed as part of the Stanford Byers Center for Biodesign at Stanford University.
