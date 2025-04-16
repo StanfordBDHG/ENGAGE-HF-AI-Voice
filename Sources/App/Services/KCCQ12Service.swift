@@ -27,11 +27,15 @@ private actor QuestionManager {
     var totalQuestions: Int = 0
     
     
-    func initializeQuestions(_ questions: [QuestionnaireItem], logger: Logger) {
+    func initializeQuestions(_ questions: [QuestionnaireItem], phoneNumber: String, logger: Logger) {
         let items = flattenQuestionnaireItems(questions)
+        let answeredQuestionLinkIds = KCCQ12Service
+            .loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+            .item?.map { $0.linkId.value?.string } ?? []
+        let filteredItems = items.filter { !answeredQuestionLinkIds.contains($0.linkId.value?.string) }
         totalQuestions = items.count
-        logger.info("Initializing remaining questions array with \(totalQuestions) questions")
-        remainingQuestions = items
+        logger.info("Initializing remaining questions with \(filteredItems.count) questions")
+        remainingQuestions = filteredItems
     }
     
     func getNextQuestionAsJSON(logger: Logger) async throws -> String? {
@@ -41,10 +45,9 @@ private actor QuestionManager {
         }
         logger.info("remainingQuestions: \(remainingQuestions.count)")
         logger.info("\(remainingQuestions.map { $0.linkId })")
-        let nextQuestion = remainingQuestions.removeFirst()
-        
-        let currentQuestion = totalQuestions - remainingQuestions.count
-        let progressString = "Question \(currentQuestion) of \(totalQuestions)"
+        let nextQuestion = remainingQuestions[0]
+
+        let progressString = "Question \(totalQuestions - remainingQuestions.count + 1) of \(totalQuestions)"
 
         let questionWithProgress = QuestionWithProgress(question: nextQuestion, progress: progressString)
         
@@ -54,12 +57,12 @@ private actor QuestionManager {
         return String(data: jsonData, encoding: .utf8)
     }
     
-    func getCurrentCount() -> Int {
-        remainingQuestions.count
-    }
-    
     func isEmpty() -> Bool {
         remainingQuestions.isEmpty
+    }
+    
+    func removeRemainingQuestion(linkId: String) {
+        remainingQuestions.removeAll { $0.linkId.value?.string == linkId }
     }
     
     private func flattenQuestionnaireItems(_ items: [QuestionnaireItem]) -> [QuestionnaireItem] {
@@ -87,16 +90,68 @@ enum KCCQ12Service {
         return "\(currentDirectoryPath)/Data"
     }()
     
-    private static let kccq12FilePath: String = {
-        "\(dataDirectory)/kccq12.json"
+    private static let kccq12DirectoryPath: String = {
+        "\(dataDirectory)/kccq12_questionnairs/"
     }()
-    
+
     private static let questionManager = QuestionManager()
     
+    
+    private static func hashPhoneNumber (_ phoneNumber: String) -> String {
+        // swiftlint:disable:next force_unwrapping
+        let data = phoneNumber.data(using: .utf8)!
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
+    }
+    
+    private static func kccq12FilePath(phoneNumber: String) -> String {
+        "\(kccq12DirectoryPath)\(hashPhoneNumber(phoneNumber)).json"
+    }
+    
+    /// Creats the file to save KCCQ12 responses
+    /// - Parameters:
+    ///   - phoneNumber: The caller's phone number
+    ///   - logger: The logger to use for logging
+    static func setupKCCQ12File(phoneNumber: String, logger: Logger) {
+        logger.info("Attempting to create KCCQ12 file at: \(kccq12FilePath(phoneNumber: phoneNumber))")
+        do {
+            // Create directory if it doesn't exist
+            try FileManager.default.createDirectory(
+                atPath: kccq12DirectoryPath,
+                withIntermediateDirectories: true
+            )
+            
+            let filePath = kccq12FilePath(phoneNumber: phoneNumber)
+            
+            // Check if file already exists
+            if FileManager.default.fileExists(atPath: filePath) {
+                logger.info("KCCQ12 file already exists for this participant")
+                return
+            }
+            
+            // Create initial kccq12 QuestionnaireResponse with phoneNumber in subject
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
+            
+            // Write to file
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = .prettyPrinted
+            let jsonData = try encoder.encode(questionnaireResponse)
+            try jsonData.write(to: URL(fileURLWithPath: filePath))
+            logger.info("Created new KCCQ12 file for this participant")
+            
+            return
+        } catch {
+            logger.error("Failed to setup vital signs file: \(error)")
+            return
+        }
+    }
+    
     /// Initialize the questions from the KCCQ12 file
-    static func initializeQuestions(logger: Logger) async {
+    static func initializeQuestions(phoneNumber: String, logger: Logger) async {
         if let questionnaire = loadQuestionnaire(logger: logger) {
-            await questionManager.initializeQuestions(questionnaire.item ?? [], logger: logger)
+            await questionManager.initializeQuestions(questionnaire.item ?? [], phoneNumber: phoneNumber, logger: logger)
         } else {
             logger.info("Questions could not be loaded and initialized")
         }
@@ -104,9 +159,9 @@ enum KCCQ12Service {
     
     /// Get the next question from the questionnaire
     /// - Returns: The next question as a JSON string if available, nil if no more questions
-    static func getNextQuestion(logger: Logger) async -> String? {
+    static func getNextQuestion(phoneNumber: String, logger: Logger) async -> String? {
         if await questionManager.isEmpty() {
-            await initializeQuestions(logger: logger)
+            await initializeQuestions(phoneNumber: phoneNumber, logger: logger)
         }
         do {
             guard let questionJSON = try await questionManager.getNextQuestionAsJSON(logger: logger) else {
@@ -144,21 +199,25 @@ enum KCCQ12Service {
     
     /// Load the questionnaire response from the file
     /// - Returns: The FHIR `QuestionnaireResponse` object loaded from the JSON file
-    private static func loadQuestionnaireResponse(logger: Logger) -> QuestionnaireResponse {
+    static func loadQuestionnaireResponse(phoneNumber: String, logger: Logger) -> QuestionnaireResponse {
         logger.info("Loading questionnaire response from file")
         let fileManager = FileManager.default
         
-        guard fileManager.fileExists(atPath: kccq12FilePath) else {
-            return QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+        guard fileManager.fileExists(atPath: kccq12FilePath(phoneNumber: phoneNumber)) else {
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
+            return questionnaireResponse
         }
         
         do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: kccq12FilePath))
+            let data = try Data(contentsOf: URL(fileURLWithPath: kccq12FilePath(phoneNumber: phoneNumber)))
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(QuestionnaireResponse.self, from: data)
         } catch {
-            return QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
+            return questionnaireResponse
         }
     }
     
@@ -167,17 +226,11 @@ enum KCCQ12Service {
     ///   - linkId: The question's identifier
     ///   - code: The answer code
     /// - Returns: The FHIR `QuestionnaireResponse` object loaded from the JSON file
-    static func saveQuestionnaireResponse(linkId: String, code: String, logger: Logger) -> Bool {
+    static func saveQuestionnaireResponse(linkId: String, code: String, phoneNumber: String, logger: Logger) async -> Bool {
         do {
             logger.info("Attempting to save questionnaire response for linkId: \(linkId) with code: \(code)")
             
-            // Create directory if it doesn't exist
-            try FileManager.default.createDirectory(
-                atPath: dataDirectory,
-                withIntermediateDirectories: true
-            )
-            
-            let response = loadQuestionnaireResponse(logger: logger)
+            let response = loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
             
             // Create or update the answer for the given linkId
             let responseItem = QuestionnaireResponseItem(linkId: FHIRPrimitive(FHIRString(linkId)))
@@ -202,13 +255,25 @@ enum KCCQ12Service {
             encoder.outputFormatting = .prettyPrinted
             
             let jsonData = try encoder.encode(response)
-            try jsonData.write(to: URL(fileURLWithPath: kccq12FilePath))
+            try jsonData.write(to: URL(fileURLWithPath: kccq12FilePath(phoneNumber: phoneNumber)))
             
-            logger.info("Successfully saved questionnaire response to \(kccq12FilePath)")
+            await questionManager.removeRemainingQuestion(linkId: linkId)
+            
+            logger.info("Successfully saved questionnaire response to \(kccq12FilePath(phoneNumber: phoneNumber))")
             return true
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")
             return false
         }
+    }
+
+    /// Count the number of answered questions
+    /// - Parameters:
+    ///   - phoneNumber: The phone number of the caller
+    ///   - logger: The logger to use for logging
+    /// - Returns: The number of answered questions
+    static func countAnsweredQuestions(phoneNumber: String, logger: Logger) -> Int {
+        let response = loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+        return response.item?.count ?? 0
     }
 }

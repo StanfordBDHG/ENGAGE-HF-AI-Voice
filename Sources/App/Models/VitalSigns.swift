@@ -14,12 +14,20 @@ struct VitalSigns: Codable {
     var heartRate: Int?
     var weight: Double?
     var timestamp: Date
+    var phoneNumber: String?
     
-    init(bloodPressureSystolic: Int? = nil, bloodPressureDiastolic: Int? = nil, heartRate: Int? = nil, weight: Double? = nil) {
+    init(
+        bloodPressureSystolic: Int? = nil,
+        bloodPressureDiastolic: Int? = nil,
+        heartRate: Int? = nil,
+        weight: Double? = nil,
+        phoneNumber: String? = nil
+    ) {
         self.bloodPressureSystolic = bloodPressureSystolic
         self.bloodPressureDiastolic = bloodPressureDiastolic
         self.heartRate = heartRate
         self.weight = weight
         self.timestamp = Date()
+        self.phoneNumber = phoneNumber
     }
 }

@@ -104,6 +104,12 @@
                     ],
                     "additionalProperties": false
                 }
+            }, 
+            {
+                "type": "function",
+                "name": "count_answered_kccq12_questions",
+                "description": "Counts the number of questions that have already been answered.",
+                "parameters": {}
             }
         ],
         "tool_choice": "auto"

@@ -26,7 +26,7 @@ struct AppTests {
     }
     
     @Test("Test Incomming Call Route")
-    func helloWorld() async throws {
+    func incomingCall() async throws {
         try await withApp { app in
             try await app.testing().test(.POST, "incoming-call", afterResponse: { res async in
                 #expect(res.status == .ok)

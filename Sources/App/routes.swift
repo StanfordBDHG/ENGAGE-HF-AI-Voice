@@ -15,24 +15,41 @@ import Vapor
 // swiftlint:disable:next function_body_length
 func routes(_ app: Application) throws {
     app.post("incoming-call") { req async -> Response in
-        let twimlResponse =
-        """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <Response>
-            <Connect>
-                <Stream url="wss://\(req.headers.first(name: "host") ?? "")/voice-stream" />
-            </Connect>
-        </Response>
-        """
-        return Response(
-            status: .ok,
-            headers: ["Content-Type": "text/xml"],
-            body: .init(string: twimlResponse)
-        )
+        req.logger.info("\(req.content)")
+        do {
+            let callerPhoneNumber = try req.content.get(String.self, at: "From") ?? "Unknown caller"
+            // swiftlint:disable:next force_unwrapping
+            let encodedCallerPhoneNumber = callerPhoneNumber.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            // Create files for responses of caller
+            VitalSignsService.setupVitalSignsFile(phoneNumber: callerPhoneNumber, logger: req.logger)
+            KCCQ12Service.setupKCCQ12File(phoneNumber: callerPhoneNumber, logger: req.logger)
+            
+            let twimlResponse =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Response>
+                <Connect>
+                    <Stream url="wss://\(req.headers.first(name: "host") ?? "")/voice-stream/\(encodedCallerPhoneNumber)" />
+                </Connect>
+            </Response>
+            """
+            return Response(
+                status: .ok,
+                headers: ["Content-Type": "text/xml"],
+                body: .init(string: twimlResponse)
+            )
+        } catch {
+            req.logger.info("Could not find phone number")
+            return Response(status: .badRequest)
+        }
     }
     
     // swiftlint:disable:next closure_body_length
-    app.webSocket("voice-stream") { req, twilioWs async in
+    app.webSocket("voice-stream", ":phoneNumber") { req, twilioWs async in
+        guard let callerPhoneNumber = req.parameters.get("phoneNumber") else {
+            req.logger.info("Caller phone number not provided")
+            return
+        }
         let state = ConnectionState()
         
         // Handle incoming start messages from Twilio
@@ -64,7 +81,7 @@ func routes(_ app: Application) throws {
                 
                 // Handle incoming messages from OpenAI
                 openAIWs.onText { openAIWs, text async in
-                    await handleOpenAIMessage(twilioWs: twilioWs, openAIWs: openAIWs, text: text)
+                    await handleOpenAIMessage(twilioWs: twilioWs, openAIWs: openAIWs, text: text, phoneNumber: callerPhoneNumber)
                 }
                 
                 openAIWs.onClose.whenComplete { _ in
@@ -166,7 +183,7 @@ func routes(_ app: Application) throws {
         }
         
         @Sendable
-        func handleOpenAIMessage(twilioWs: WebSocket, openAIWs: WebSocket, text: String) async {
+        func handleOpenAIMessage(twilioWs: WebSocket, openAIWs: WebSocket, text: String, phoneNumber: String) async {
             do {
                 guard let jsonData = text.data(using: .utf8) else {
                     throw Abort(.badRequest, reason: "Failed to convert string to data")
@@ -177,7 +194,7 @@ func routes(_ app: Application) throws {
                     print("Received event: \(response.type)", response)
                 }
                 
-                try await handleOpenAIFunctionCall(response: response, openAIWs: openAIWs)
+                try await handleOpenAIFunctionCall(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 
                 
                 // Handling for Audio
@@ -224,19 +241,21 @@ func routes(_ app: Application) throws {
         }
         
         @Sendable
-        func handleOpenAIFunctionCall(response: OpenAIResponse, openAIWs: WebSocket) async throws {
+        func handleOpenAIFunctionCall(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             if response.type == "response.function_call_arguments.done" {
                 switch response.name {
                 case "save_blood_pressure":
-                    try await saveBloodPressure(response: response, openAIWs: openAIWs)
+                    try await saveBloodPressure(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 case "save_heart_rate":
-                    try await saveHeartRate(response: response, openAIWs: openAIWs)
+                    try await saveHeartRate(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 case "save_weight":
-                    try await saveWeight(response: response, openAIWs: openAIWs)
+                    try await saveWeight(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 case "get_kccq12_question":
-                    try await getKCCQ12Question(response: response, openAIWs: openAIWs)
+                    try await getKCCQ12Question(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 case "save_kccq12_response":
-                    try await saveKCCQ12Response(response: response, openAIWs: openAIWs)
+                    try await saveKCCQ12Response(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+                case "count_answered_kccq12_questions":
+                    try await countAnsweredKCCQ12Questions(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 default:
                     req.logger.error("Unknown function call: \(String(describing: response.name))")
                 }
@@ -244,7 +263,7 @@ func routes(_ app: Application) throws {
         }
         
         @Sendable
-        func saveBloodPressure(response: OpenAIResponse, openAIWs: WebSocket) async throws {
+        func saveBloodPressure(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             do {
                 req.logger.info("Attempting to save blood pressure...")
                 let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
@@ -252,6 +271,7 @@ func routes(_ app: Application) throws {
                     let saveResult = VitalSignsService.saveBloodPressure(
                         bloodPressureSystolic: parsedArgs.systolicBloodPressure,
                         bloodPressureDiastolic: parsedArgs.diastolicBloodPressure,
+                        phoneNumber: phoneNumber,
                         logger: req.logger
                     )
                     
@@ -290,12 +310,12 @@ func routes(_ app: Application) throws {
         }
         
         @Sendable
-        func saveHeartRate(response: OpenAIResponse, openAIWs: WebSocket) async throws {
+        func saveHeartRate(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             do {
                 req.logger.info("Attempting to save heart rate...")
                 let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
                 if let parsedArgs = try? JSONDecoder().decode(HeartRateArgs.self, from: argumentsData) {
-                    let saveResult = VitalSignsService.saveHeartRate(parsedArgs.heartRate, logger: req.logger)
+                    let saveResult = VitalSignsService.saveHeartRate(parsedArgs.heartRate, phoneNumber: phoneNumber, logger: req.logger)
                     
                     let functionResponse: [String: Any] = [
                         "type": "conversation.item.create",
@@ -332,12 +352,12 @@ func routes(_ app: Application) throws {
         }
         
         @Sendable
-        func saveWeight(response: OpenAIResponse, openAIWs: WebSocket) async throws {
+        func saveWeight(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             do {
                 req.logger.info("Attempting to save weight...")
                 let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
                 if let parsedArgs = try? JSONDecoder().decode(WeightArgs.self, from: argumentsData) {
-                    let saveResult = VitalSignsService.saveWeight(parsedArgs.weight, logger: req.logger)
+                    let saveResult = VitalSignsService.saveWeight(parsedArgs.weight, phoneNumber: phoneNumber, logger: req.logger)
                     
                     let functionResponse: [String: Any] = [
                         "type": "conversation.item.create",
@@ -374,8 +394,8 @@ func routes(_ app: Application) throws {
         }
         
         @Sendable
-        func getKCCQ12Question(response: OpenAIResponse, openAIWs: WebSocket) async throws {
-            let question = await KCCQ12Service.getNextQuestion(logger: req.logger)
+        func getKCCQ12Question(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
+            let question = await KCCQ12Service.getNextQuestion(phoneNumber: phoneNumber, logger: req.logger)
             
             let functionResponse: [String: Any] = [
                 "type": "conversation.item.create",
@@ -403,7 +423,7 @@ func routes(_ app: Application) throws {
         }
         
         @Sendable
-        func saveKCCQ12Response(response: OpenAIResponse, openAIWs: WebSocket) async throws {
+        func saveKCCQ12Response(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             do {
                 req.logger.info("Attempting to save KCCQ12 Response...")
                 guard let arguments = response.arguments else {
@@ -411,18 +431,15 @@ func routes(_ app: Application) throws {
                 }
                 let argumentsData = arguments.data(using: .utf8) ?? Data()
                 
-                // Try to print as UTF8 string
-                if let dataAsString = String(data: argumentsData, encoding: .utf8) {
-                    req.logger.info("Data as UTF8 string: '\(dataAsString)'")
-                } else {
-                    req.logger.error("Could not convert data back to UTF8 string")
-                }
-                
-                req.logger.info("Arguments: \(argumentsData.debugDescription)")
                 if let parsedArgs = try? JSONDecoder().decode(KCCQ12ResponseArgs.self, from: argumentsData) {
                     req.logger.info("Parsed arguments: \(parsedArgs)")
                     
-                    let saveResult = KCCQ12Service.saveQuestionnaireResponse(linkId: parsedArgs.linkId, code: parsedArgs.code, logger: req.logger)
+                    let saveResult = await KCCQ12Service.saveQuestionnaireResponse(
+                        linkId: parsedArgs.linkId,
+                        code: parsedArgs.code,
+                        phoneNumber: phoneNumber,
+                        logger: req.logger
+                    )
                     
                     let functionResponse: [String: Any] = [
                         "type": "conversation.item.create",
@@ -461,6 +478,29 @@ func routes(_ app: Application) throws {
                 ]
                 try await sendJSON(errorResponse, openAIWs)
             }
+        }
+
+        @Sendable
+        func countAnsweredKCCQ12Questions(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
+            let count = KCCQ12Service.countAnsweredQuestions(phoneNumber: phoneNumber, logger: req.logger)
+            req.logger.info("Count of answered KCCQ-12 questions: \(count)")
+            let functionResponse: [String: Any] = [
+                "type": "conversation.item.create",
+                "item": [
+                    "type": "function_call_output",
+                    "call_id": response.callId ?? "",
+                    "output": "The patient has answered \(count) questions."
+                ]
+            ]
+            let responseRequest: [String: Any] = [
+                "type": "response.create"
+            ]
+
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
+
+            await state.updateResponseStartTimestampTwilio(nil)
+            await state.updateLastAssistantItem(nil)
         }
         
         @Sendable
