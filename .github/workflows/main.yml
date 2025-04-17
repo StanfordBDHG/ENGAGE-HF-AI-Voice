@@ -23,3 +23,7 @@ jobs:
     name: Build and Test
     uses: ./.github/workflows/build-and-test.yml
     secrets: inherit
+  deployment:
+    name: Deployment
+    uses: ./.github/workflows/deployment.yml
+    secrets: inherit
