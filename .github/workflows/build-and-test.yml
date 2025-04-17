@@ -25,7 +25,7 @@ jobs:
       runsonlabels: '["macOS", "self-hosted"]'
       scheme: App
       artifactname: App.xcresult
-  docker-compose-test:
+  dockercomposetest:
     name: Docker Compose Test
     uses: StanfordBDHG/.github/.github/workflows/docker-compose-test.yml@v2
   uploadcoveragereport:
