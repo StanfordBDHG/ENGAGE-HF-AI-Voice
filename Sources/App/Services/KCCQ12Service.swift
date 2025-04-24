@@ -84,44 +84,23 @@ private actor QuestionManager {
 
 /// Service for managing KCCQ12 data storage
 enum KCCQ12Service {
-    private static let dataDirectory: String = {
-        let fileManager = FileManager.default
-        let currentDirectoryPath = fileManager.currentDirectoryPath
-        return "\(currentDirectoryPath)/Data"
-    }()
-    
-    private static let kccq12DirectoryPath: String = {
-        "\(dataDirectory)/kccq12_questionnairs/"
-    }()
-
     private static let questionManager = QuestionManager()
-    
-    
-    private static func hashPhoneNumber (_ phoneNumber: String) -> String {
-        // swiftlint:disable:next force_unwrapping
-        let data = phoneNumber.data(using: .utf8)!
-        let hash = SHA256.hash(data: data)
-        return hash.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
-    }
-    
-    private static func kccq12FilePath(phoneNumber: String) -> String {
-        "\(kccq12DirectoryPath)\(hashPhoneNumber(phoneNumber)).json"
-    }
+
     
     /// Creats the file to save KCCQ12 responses
     /// - Parameters:
     ///   - phoneNumber: The caller's phone number
     ///   - logger: The logger to use for logging
     static func setupKCCQ12File(phoneNumber: String, logger: Logger) {
-        logger.info("Attempting to create KCCQ12 file at: \(kccq12FilePath(phoneNumber: phoneNumber))")
+        logger.info("Attempting to create KCCQ12 file at: \(FileService.kccq12FilePath(phoneNumber: phoneNumber))")
         do {
             // Create directory if it doesn't exist
             try FileManager.default.createDirectory(
-                atPath: kccq12DirectoryPath,
+                atPath: FileService.kccq12DirectoryPath,
                 withIntermediateDirectories: true
             )
             
-            let filePath = kccq12FilePath(phoneNumber: phoneNumber)
+            let filePath = FileService.kccq12FilePath(phoneNumber: phoneNumber)
             
             // Check if file already exists
             if FileManager.default.fileExists(atPath: filePath) {
@@ -203,14 +182,14 @@ enum KCCQ12Service {
         logger.info("Loading questionnaire response from file")
         let fileManager = FileManager.default
         
-        guard fileManager.fileExists(atPath: kccq12FilePath(phoneNumber: phoneNumber)) else {
+        guard fileManager.fileExists(atPath: FileService.kccq12FilePath(phoneNumber: phoneNumber)) else {
             let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
             questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
             return questionnaireResponse
         }
         
         do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: kccq12FilePath(phoneNumber: phoneNumber)))
+            let data = try Data(contentsOf: URL(fileURLWithPath: FileService.kccq12FilePath(phoneNumber: phoneNumber)))
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(QuestionnaireResponse.self, from: data)
@@ -255,11 +234,11 @@ enum KCCQ12Service {
             encoder.outputFormatting = .prettyPrinted
             
             let jsonData = try encoder.encode(response)
-            try jsonData.write(to: URL(fileURLWithPath: kccq12FilePath(phoneNumber: phoneNumber)))
+            try jsonData.write(to: URL(fileURLWithPath: FileService.kccq12FilePath(phoneNumber: phoneNumber)))
             
             await questionManager.removeRemainingQuestion(linkId: linkId)
             
-            logger.info("Successfully saved questionnaire response to \(kccq12FilePath(phoneNumber: phoneNumber))")
+            logger.info("Successfully saved questionnaire response to \(FileService.kccq12FilePath(phoneNumber: phoneNumber))")
             return true
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")

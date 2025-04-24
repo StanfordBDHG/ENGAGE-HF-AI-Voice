@@ -12,41 +12,20 @@ import Vapor
 
 /// Service for managing vital signs storage
 enum VitalSignsService {
-    private static let dataDirectory: String = {
-        let fileManager = FileManager.default
-        let currentDirectoryPath = fileManager.currentDirectoryPath
-        return "\(currentDirectoryPath)/Data"
-    }()
-    
-    private static let vitalSignsDirectoryPath: String = {
-        "\(dataDirectory)/vital_signs/"
-    }()
-    
-    private static func hashPhoneNumber (_ phoneNumber: String) -> String {
-        // swiftlint:disable:next force_unwrapping
-        let data = phoneNumber.data(using: .utf8)!
-        let hash = SHA256.hash(data: data)
-        return hash.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
-    }
-    
-    private static func vitalSignsFilePath(phoneNumber: String) -> String {
-        "\(vitalSignsDirectoryPath)\(hashPhoneNumber(phoneNumber)).json"
-    }
-    
     /// Creats the file to save vital signs
     /// - Parameters:
     ///   - phoneNumber: The caller's phone number
     ///   - logger: The logger to use for logging
     static func setupVitalSignsFile(phoneNumber: String, logger: Logger) {
-        logger.info("Attempting to create vital signs file at: \(vitalSignsFilePath(phoneNumber: phoneNumber))")
+        logger.info("Attempting to create vital signs file at: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
         do {
             // Create directory if it doesn't exist
             try FileManager.default.createDirectory(
-                atPath: vitalSignsDirectoryPath,
+                atPath: FileService.vitalSignsDirectoryPath,
                 withIntermediateDirectories: true
             )
             
-            let filePath = vitalSignsFilePath(phoneNumber: phoneNumber)
+            let filePath = FileService.vitalSignsFilePath(phoneNumber: phoneNumber)
             
             // Check if file already exists
             if FileManager.default.fileExists(atPath: filePath) {
@@ -57,7 +36,11 @@ enum VitalSignsService {
             // Create initial vital signs array with phone number
             let initialVitalSigns = [VitalSigns(phoneNumber: phoneNumber)]
             let encoder = JSONEncoder()
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            encoder.dateEncodingStrategy = .formatted(formatter)
             encoder.outputFormatting = .prettyPrinted
+            
             let data = try encoder.encode(initialVitalSigns)
             
             // Write to file
@@ -78,7 +61,7 @@ enum VitalSignsService {
     /// - Returns: A boolean indicating whether the save was successful
     static func saveBloodPressure(bloodPressureSystolic: Int, bloodPressureDiastolic: Int, phoneNumber: String, logger: Logger) -> Bool {
         do {
-            logger.info("Attempting to save blood pressure to: \(vitalSignsFilePath(phoneNumber: phoneNumber))")
+            logger.info("Attempting to save blood pressure to: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
             
             var vitalSigns = try loadVitalSigns(phoneNumber: phoneNumber)
             
@@ -113,7 +96,7 @@ enum VitalSignsService {
     /// - Returns: A boolean indicating whether the save was successful
     static func saveHeartRate(_ heartRate: Int, phoneNumber: String, logger: Logger) -> Bool {
         do {
-            logger.info("Attempting to save heart rate to: \(vitalSignsFilePath(phoneNumber: phoneNumber))")
+            logger.info("Attempting to save heart rate to: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
             
             var vitalSigns = try loadVitalSigns(phoneNumber: phoneNumber)
             
@@ -143,7 +126,7 @@ enum VitalSignsService {
     /// - Returns: A boolean indicating whether the save was successful
     static func saveWeight(_ weight: Double, phoneNumber: String, logger: Logger) -> Bool {
         do {
-            logger.info("Attempting to save weight to: \(vitalSignsFilePath(phoneNumber: phoneNumber))")
+            logger.info("Attempting to save weight to: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
             
             var vitalSigns = try loadVitalSigns(phoneNumber: phoneNumber)
             
@@ -169,27 +152,31 @@ enum VitalSignsService {
     private static func loadVitalSigns(phoneNumber: String) throws -> [VitalSigns] {
         let fileManager = FileManager.default
         
-        guard fileManager.fileExists(atPath: vitalSignsFilePath(phoneNumber: phoneNumber)) else {
+        guard fileManager.fileExists(atPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)) else {
             return []
         }
         
-        let data = try Data(contentsOf: URL(fileURLWithPath: vitalSignsFilePath(phoneNumber: phoneNumber)))
+        let data = try Data(contentsOf: URL(fileURLWithPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)))
         
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        decoder.dateDecodingStrategy = .formatted(formatter)
         return try decoder.decode([VitalSigns].self, from: data)
     }
     
     private static func saveVitalSigns(_ vitalSigns: [VitalSigns], phoneNumber: String, logger: Logger) throws -> Bool {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        encoder.dateEncodingStrategy = .formatted(formatter)
         encoder.outputFormatting = .prettyPrinted
         
         let jsonData = try encoder.encode(vitalSigns)
         
-        try jsonData.write(to: URL(fileURLWithPath: vitalSignsFilePath(phoneNumber: phoneNumber)))
+        try jsonData.write(to: URL(fileURLWithPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)))
         
-        logger.info("Vital signs saved successfully to \(vitalSignsFilePath(phoneNumber: phoneNumber))")
+        logger.info("Vital signs saved successfully to \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
         return true
     }
 }

@@ -74,7 +74,7 @@ enum Constants {
         }
         
         // Escape newlines and quotes in the system message
-        let escapedMessage = systemMessageOnlyKccq12 // todo: replace with systemMessage
+        let escapedMessage = systemMessage
             .replacingOccurrences(of: "\n", with: "\\n")
             .replacingOccurrences(of: "\"", with: "\\\"")
         

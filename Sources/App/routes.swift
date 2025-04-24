@@ -17,7 +17,7 @@ func routes(_ app: Application) throws {
     app.post("incoming-call") { req async -> Response in
         req.logger.info("\(req.content)")
         do {
-            let callerPhoneNumber = try req.content.get(String.self, at: "From") ?? "Unknown caller"
+            let callerPhoneNumber = try req.content.get(String.self, at: "From")
             // swiftlint:disable:next force_unwrapping
             let encodedCallerPhoneNumber = callerPhoneNumber.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
             // Create files for responses of caller
@@ -267,6 +267,7 @@ func routes(_ app: Application) throws {
             do {
                 req.logger.info("Attempting to save blood pressure...")
                 let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
+                req.logger.info("\(argumentsData)")
                 if let parsedArgs = try? JSONDecoder().decode(BloodPressureArgs.self, from: argumentsData) {
                     let saveResult = VitalSignsService.saveBloodPressure(
                         bloodPressureSystolic: parsedArgs.systolicBloodPressure,
