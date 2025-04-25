@@ -10,14 +10,12 @@ SPDX-License-Identifier: MIT
        
 -->
 
-The template repository contains a template Swift Package, including a continuous integration setup.
+A Vapor server integrating Twilio with OpenAI to enable AI-powered voice conversations for healthcare data collection.
 
 ## Overview
 
-Please follow the steps in the README.md file to customize the code to your needs.
+ENGAGE-HF-AI-Voice connects Twilio's telephony services with OpenAI's real-time API to conduct voice-based FHIR questionnaires. The system:
 
-## Types
-
-### Template Package
-
-- ``TemplatePackage``
+- Streams audio between Twilio and OpenAI in real-time
+- Conducts structured healthcare conversations based on FHIR questionnaires
+- Records patient responses in FHIR-compatible format
