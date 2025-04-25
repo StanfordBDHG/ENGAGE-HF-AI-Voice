@@ -33,8 +33,10 @@ struct AppTests {
                 "incoming-call",
                 beforeRequest: { req in
                     try req.content.encode(["From": "+15551234567"])
+                    app.logger.info("Request prepared with phone number")
                 },
                 afterResponse: { res async in
+                    app.logger.info("Received response with status: \(res.status)")
                     #expect(res.status == .ok)
                 }
             )
