@@ -22,7 +22,6 @@ jobs:
     name: Build and Test Swift Package macOS
     uses: StanfordBDHG/.github/.github/workflows/xcodebuild-or-fastlane.yml@v2
     with:
-      runsonlabels: '["macOS", "self-hosted"]'
       scheme: ENGAGE-HF-AI-Voice
       destination: 'platform=macOS,arch=arm64'
       artifactname: ENGAGE-HF-AI-Voice.xcresult
