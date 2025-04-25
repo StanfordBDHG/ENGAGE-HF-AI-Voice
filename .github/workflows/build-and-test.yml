@@ -26,6 +26,7 @@ jobs:
       scheme: ENGAGE-HF-AI-Voice
       destination: 'platform=macOS,arch=arm64'
       artifactname: ENGAGE-HF-AI-Voice.xcresult
+      resultBundle: ENGAGE-HF-AI-Voice.xcresult
   dockercomposetest:
     name: Docker Compose Test
     uses: StanfordBDHG/.github/.github/workflows/docker-compose-test.yml@v2
