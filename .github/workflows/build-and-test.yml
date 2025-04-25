@@ -20,11 +20,11 @@ jobs:
     uses: StanfordBDHG/.github/.github/workflows/swiftlint.yml@v2
   packagemacos:
     name: Build and Test Swift Package macOS
-    uses: ./.github/workflows/xcodebuild-or-fastlane.yml
+    uses: StanfordBDHG/.github/.github/workflows/xcodebuild-or-fastlane.yml@v2
     with:
       runsonlabels: '["macOS", "self-hosted"]'
-      scheme: App
-      artifactname: App.xcresult
+      scheme: ENGAGE-HF-AI-Voice
+      artifactname: ENGAGE-HF-AI-Voice.xcresult
   dockercomposetest:
     name: Docker Compose Test
     uses: StanfordBDHG/.github/.github/workflows/docker-compose-test.yml@v2
@@ -33,6 +33,6 @@ jobs:
     needs: [packagemacos]
     uses: StanfordBDHG/.github/.github/workflows/create-and-upload-coverage-report.yml@v2
     with:
-      coveragereports: App.xcresult
+      coveragereports: ENGAGE-HF-AI-Voice.xcresult
     secrets:
       token: ${{ secrets.CODECOV_TOKEN }}
