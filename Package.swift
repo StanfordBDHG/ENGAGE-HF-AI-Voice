@@ -15,7 +15,7 @@ import PackageDescription
 let package = Package(
     name: "ENGAGE-HF-AI-Voice",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v13)
     ],
     dependencies: [
         .package(url: "https://github.com/vapor/vapor.git", from: "4.110.1"),
