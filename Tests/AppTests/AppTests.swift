@@ -28,9 +28,16 @@ struct AppTests {
     @Test("Test Incomming Call Route")
     func incomingCall() async throws {
         try await withApp { app in
-            try await app.testing().test(.POST, "incoming-call", afterResponse: { res async in
-                #expect(res.status == .ok)
-            })
+            try await app.testing().test(
+                .POST,
+                "incoming-call",
+                beforeRequest: { req in
+                    try req.content.encode(["From": "+15551234567"])
+                },
+                afterResponse: { res async in
+                    #expect(res.status == .ok)
+                }
+            )
         }
     }
 }
