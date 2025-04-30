@@ -18,22 +18,25 @@ jobs:
   swiftlint:
     name: SwiftLint
     uses: StanfordBDHG/.github/.github/workflows/swiftlint.yml@v2
-  packagemacos:
-    name: Build and Test Swift Package macOS
+  buildandtest:
+    name: Build and Test
     uses: StanfordBDHG/.github/.github/workflows/xcodebuild-or-fastlane.yml@v2
     permissions:
-      contents: write
+      contents: read
     with:
       scheme: ENGAGE-HF-AI-Voice
+      runsonlabels: '["macOS", "self-hosted"]'
       destination: 'platform=macOS,arch=arm64'
       artifactname: ENGAGE-HF-AI-Voice.xcresult
       resultBundle: ENGAGE-HF-AI-Voice.xcresult
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   dockercomposetest:
     name: Docker Compose Test
     uses: StanfordBDHG/.github/.github/workflows/docker-compose-test.yml@v2
   uploadcoveragereport:
     name: Upload Coverage Report
-    needs: [packagemacos]
+    needs: [buildandtest]
     uses: StanfordBDHG/.github/.github/workflows/create-and-upload-coverage-report.yml@v2
     with:
       coveragereports: ENGAGE-HF-AI-Voice.xcresult
