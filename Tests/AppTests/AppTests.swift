@@ -14,8 +14,7 @@ import XCTest
 final class AppTests: XCTestCase {
     private func withApp(_ test: (Application) async throws -> Void) async throws {
         let app = try await Application.make(.testing)
-        // Set up mock OpenAI key
-        app.storage[OpenAIKeyStorageKey.self] = "mock-key"
+       
         do {
             try await configure(app)
             try await test(app)
