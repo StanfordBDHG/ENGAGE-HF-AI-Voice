@@ -7,14 +7,14 @@
 //
 
 @testable import App
-import Testing
+import XCTest
 import VaporTesting
 
-
-@Suite("App Tests")
-struct AppTests {
+final class AppTests: XCTestCase {
     private func withApp(_ test: (Application) async throws -> Void) async throws {
         let app = try await Application.make(.testing)
+        // Set up mock OpenAI key
+        app.storage[OpenAIKeyStorageKey.self] = "mock-key"
         do {
             try await configure(app)
             try await test(app)
@@ -25,19 +25,26 @@ struct AppTests {
         try await app.asyncShutdown()
     }
     
-    @Test("Test Incoming Call Route")
-    func incomingCall() async throws {
+    func testIncomingCall() async throws {
         try await withApp { app in
+            // Set up mock host header
+            var headers = HTTPHeaders()
+            headers.add(name: "host", value: "localhost:8080")
+            headers.add(name: "Content-Type", value: "application/json")
+            
             try await app.testing().test(
                 .POST,
                 "incoming-call",
+                headers: headers,
                 beforeRequest: { req in
                     try req.content.encode(["From": "+15551234567"])
                     app.logger.info("Request prepared with phone number")
                 },
                 afterResponse: { res async in
                     app.logger.info("Received response with status: \(res.status)")
-                    #expect(res.status == .ok)
+                    XCTAssertEqual(res.status, .ok)
+                    // Verify response is XML
+                    XCTAssertEqual(res.headers.first(name: "Content-Type"), "text/xml")
                 }
             )
         }
