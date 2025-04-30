@@ -18,7 +18,7 @@ jobs:
   swiftlint:
     name: SwiftLint
     uses: StanfordBDHG/.github/.github/workflows/swiftlint.yml@v2
-  buildandtest:
+  buildandtestmacos:
     name: Build and Test
     uses: StanfordBDHG/.github/.github/workflows/xcodebuild-or-fastlane.yml@v2
     permissions:
@@ -36,7 +36,7 @@ jobs:
     uses: StanfordBDHG/.github/.github/workflows/docker-compose-test.yml@v2
   uploadcoveragereport:
     name: Upload Coverage Report
-    needs: [buildandtest]
+    needs: [buildandtestmacos]
     uses: StanfordBDHG/.github/.github/workflows/create-and-upload-coverage-report.yml@v2
     with:
       coveragereports: ENGAGE-HF-AI-Voice.xcresult
