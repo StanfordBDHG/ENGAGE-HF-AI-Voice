@@ -7,8 +7,9 @@
 //
 
 @testable import App
-import XCTest
 import VaporTesting
+import XCTest
+
 
 final class AppTests: XCTestCase {
     private func withApp(_ test: (Application) async throws -> Void) async throws {
@@ -34,7 +35,7 @@ final class AppTests: XCTestCase {
             
             try await app.testing().test(
                 .POST,
-                "incoming-call",
+                "test",
                 headers: headers,
                 beforeRequest: { req in
                     try req.content.encode(["From": "+15551234567"])
