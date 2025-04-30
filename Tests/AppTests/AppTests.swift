@@ -25,7 +25,7 @@ struct AppTests {
         try await app.asyncShutdown()
     }
     
-    @Test("Test Incomming Call Route")
+    @Test("Test Incoming Call Route")
     func incomingCall() async throws {
         try await withApp { app in
             try await app.testing().test(

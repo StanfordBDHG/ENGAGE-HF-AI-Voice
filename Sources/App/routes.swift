@@ -20,9 +20,12 @@ func routes(_ app: Application) throws {
             let callerPhoneNumber = try req.content.get(String.self, at: "From")
             // swiftlint:disable:next force_unwrapping
             let encodedCallerPhoneNumber = callerPhoneNumber.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            
+#if !DEBUG && !TESTING
             // Create files for responses of caller
             VitalSignsService.setupVitalSignsFile(phoneNumber: callerPhoneNumber, logger: req.logger)
             KCCQ12Service.setupKCCQ12File(phoneNumber: callerPhoneNumber, logger: req.logger)
+#endif
             
             let twimlResponse =
             """
