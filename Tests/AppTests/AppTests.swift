@@ -24,6 +24,15 @@ struct AppTests {
         }
         try await app.asyncShutdown()
     }
+
+    @Test("Test Health Route")
+    func health() async throws {
+        try await withApp { app in
+            try await app.testing().test(.GET, "health") { res in
+                #expect(res.status == .ok)
+            }
+        }
+    }
     
     @Test("Test Incoming Call Route")
     func incomingCall() async throws {

@@ -21,3 +21,8 @@ jobs:
     name: Build and Test
     uses: ./.github/workflows/build-and-test.yml
     secrets: inherit
+  # TODO: for testing purposes, remove deployment job from PR workflow eventually
+  deployment:
+    name: Deployment
+    uses: ./.github/workflows/deployment.yml
+    secrets: inherit

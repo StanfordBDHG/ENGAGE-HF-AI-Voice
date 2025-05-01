@@ -14,6 +14,10 @@ import Vapor
 
 // swiftlint:disable:next function_body_length
 func routes(_ app: Application) throws {
+    app.get("health") { _ -> HTTPStatus in
+        .ok
+    }
+    
     app.post("incoming-call") { req async -> Response in
         req.logger.info("\(req.content)")
         do {
