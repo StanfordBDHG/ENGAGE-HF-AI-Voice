@@ -11,7 +11,7 @@ version: '3.8'
 
 services:
   app:
-    image: ghcr.io/StanfordBDHG/engage-hf-ai-voice:latest
+    image: ghcr.io/stanfordbdhg/engage-hf-ai-voice:latest
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     ports:
