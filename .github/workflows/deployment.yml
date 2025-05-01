@@ -14,9 +14,8 @@ on:
 jobs:
   buildandpush:
     name: Build and Push to Container Registry
+
     uses: StanfordBDHG/.github/.github/workflows/docker-build-and-push.yml@v2
     secrets: inherit
     with:
-      image_name: ghcr.io/stanfordbdhg/engage-hf-ai-voice
-      image_tag: latest
-      dry_run: false
+      imageName: ghcr.io/stanfordbdhg/engage-hf-ai-voice
