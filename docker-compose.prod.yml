@@ -22,3 +22,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+  watchtower:
+    image: containrrr/watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup=true
