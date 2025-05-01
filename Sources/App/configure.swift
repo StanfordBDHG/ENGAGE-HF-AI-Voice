@@ -11,9 +11,15 @@ import Vapor
 /// Configure the application
 public func configure(_ app: Application) async throws {
     // Environment variables
-    guard let openAIKey = Environment.get("OPENAI_API_KEY") else {
-        app.logger.error("Missing OpenAI API key. Please set it in the .env file.")
-        exit(1)
+    let openAIKey: String
+    if app.environment == .testing {
+        openAIKey = "dummy-key-for-testing"
+    } else {
+        guard let key = Environment.get("OPENAI_API_KEY") else {
+            app.logger.error("Missing OpenAI API key. Please set it in the .env file.")
+            exit(1)
+        }
+        openAIKey = key
     }
     
     // Store API key in application storage for access in routes

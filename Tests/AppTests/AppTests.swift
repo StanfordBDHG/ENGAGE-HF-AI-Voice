@@ -30,7 +30,7 @@ struct AppTests {
         try await withApp { app in
             try await app.testing().test(
                 .POST,
-                "test",
+                "incoming-call",
                 beforeRequest: { req in
                     try req.content.encode(["From": "+15551234567"])
                     app.logger.info("Request prepared with phone number")

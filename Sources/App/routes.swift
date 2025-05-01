@@ -14,13 +14,6 @@ import Vapor
 
 // swiftlint:disable:next function_body_length
 func routes(_ app: Application) throws {
-    app.post("test"){ req async -> Response in
-        return Response(
-            status: .ok,
-            headers: ["Content-Type": "text/xml"],
-            body: .init(string: "test")
-        )
-    }
     app.post("incoming-call") { req async -> Response in
         req.logger.info("\(req.content)")
         do {
