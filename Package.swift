@@ -1,7 +1,7 @@
 // swift-tools-version:6.0
 
 //
-// This source file is part of the TemplatePackage open source project
+// This source file is part of the ENGAGE-HF-AI-Voice open source project
 // 
 // SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 // 
@@ -13,28 +13,35 @@ import PackageDescription
 
 
 let package = Package(
-    name: "TemplatePackage",
+    name: "ENGAGE-HF-AI-Voice",
     platforms: [
-        .iOS(.v17),
-        .watchOS(.v10),
-        .visionOS(.v1),
-        .tvOS(.v17),
-        .macOS(.v14)
-    ],
-    products: [
-        .library(name: "TemplatePackage", targets: ["TemplatePackage"])
+        .macOS(.v13)
     ],
     dependencies: [
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.110.1"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
+        .package(url: "https://github.com/apple/FHIRModels.git", .upToNextMajor(from: "0.6.0"))
     ] + swiftLintPackage(),
     targets: [
-        .target(
-            name: "TemplatePackage",
+        .executableTarget(
+            name: "App",
+            dependencies: [
+                .product(name: "Vapor", package: "vapor"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOPosix", package: "swift-nio"),
+                .product(name: "ModelsR4", package: "FHIRModels")
+            ],
+            resources: [
+                .process("Resources/kccq12.json"),
+                .process("Resources/sessionConfig.json")
+            ],
             plugins: [] + swiftLintPlugin()
         ),
         .testTarget(
-            name: "TemplatePackageTests",
+            name: "AppTests",
             dependencies: [
-                .target(name: "TemplatePackage")
+                .target(name: "App"),
+                .product(name: "VaporTesting", package: "vapor")
             ],
             plugins: [] + swiftLintPlugin()
         )

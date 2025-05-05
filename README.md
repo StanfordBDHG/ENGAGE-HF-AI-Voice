@@ -1,6 +1,6 @@
 <!--
                   
-This source file is part of the TemplatePackage open source project
+This source file is part of the ENGAGE-HF-AI-Voice open source project
 
 SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 
@@ -8,7 +8,7 @@ SPDX-License-Identifier: MIT
              
 -->
 
-# TemplatePackage
+# ENGAGE HF AI-Voice
 
 [![Build and Test](https://github.com/StanfordBDHG/SwiftPackageTemplate/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/StanfordBDHG/SwiftPackageTemplate/actions/workflows/build-and-test.yml)
 [![codecov](https://codecov.io/gh/StanfordBDHG/SwiftPackageTemplate/branch/main/graph/badge.svg?token=X7BQYSUKOH)](https://codecov.io/gh/StanfordBDHG/SwiftPackageTemplate)
@@ -16,40 +16,98 @@ SPDX-License-Identifier: MIT
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FStanfordBDHG%2FSwiftPackageTemplate%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/StanfordBDHG/SwiftPackageTemplate)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FStanfordBDHG%2FSwiftPackageTemplate%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/StanfordBDHG/SwiftPackageTemplate)
 
+**Engage HF AI-Voice** is a [Vapor](https://vapor.codes/) server that integrates Twilio with OpenAI’s real-time API (ChatGPT-4o) to enable voice-based conversations for healthcare data collection.
 
-## How To Use This Template
+### Key Features
 
-The template repository contains a template Swift Package, including a continuous integration setup. 
+- **Twilio + OpenAI Integration**  
+  Receives and streams audio to and from Twilio, relaying it in real-time to OpenAI's API.
 
-Follow these steps to customize it to your needs:
-1. Rename the Swift Package. Be sure that you update the name in the `build-and-test.yml` GitHub Action accordingly. If you have multiple targets in your Swift Package, you need to pass the name of the Swift Package followed by an `-Package` as the scheme to the GitHub Action, e.g., `StanfordProject-Package` if your Swift Package is named `StanfordProject`.
-2. If your Swift Package does not provide any user interface or does not require an iOS application environment to function, you can remove the `UITests` application from the `Tests` folder. You need to update the `build-and-test.yml` GitHub Action accordingly by removing the GitHub Action that builds and tests the application, removing the dependency from the code coverage upload step, and removing the UI test `.xresult` input from the code coverage test. 
-3. If your Swift Package uses UI test, you need to ...
-   - ... add it to the scheme editor (*Scheme > Edit Scheme*) and your targets to the "Build" configuration and ensure that it is built before the test app target when building for the "Test" configuration. It is not required to enable building for other configurations like "Analyze", "Run", "Profile", or "Archive".
-   - ... add it as a linked framework in the main target configuration (In your Xcode project settings, select your *test app target > General > Frameworks, Libraries, and Embedded Comments*).
-   - ... add ensure that the targets are all added in the code coverage settings of your .xctestplan file in the Xcode Project (*Shared Settings > Code Coverage > Code Coverage*).
-4. You will either need to add the [CodeCov GitHub App](https://github.com/apps/codecov) or add a codecov.io token to your [GitHub Actions Secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-an-environment) following the instructions of the [Codecov GitHub Action](https://github.com/marketplace/actions/codecov#usage). The StanfordBDHG organization already has the [CodeCov GitHub App](https://github.com/apps/codecov) installed. If you do not want to cover test coverage data, you can remove the code coverage job in the `build-and-test.yml` GitHub Action.
-5. Adjust this README.md to describe your project and adjust the badges at the top to point to the correct GitHub Action of your repository and Codecov badge.
-6. The Swift Package template includes a Swift Package Index configuration file to automatically build the package and [host the documentation on the Swift Package Index website](https://blog.swiftpackageindex.com/posts/auto-generating-auto-hosting-and-auto-updating-docc-documentation/). Adjust the `.spi.yml` file to include all targets that you want to build documentation for. You can follow the [instructions of the Swift Package Index](https://swiftpackageindex.com/add-a-package) to include your Swift Package in the Swift Package Index. You can link to the [API documentation](https://swiftpackageindex.com/StanfordBDHG/SwiftPackageTemplate/documentation) from your README file.
-7. Adjust the CITATION.cff file to amend information about the new Swift Package ([learn more about CITATION files on GitHub](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)) and [register the Swift Package on Zenodo](https://docs.github.com/en/repositories/archiving-a-github-repository/referencing-and-citing-content). 
+- **Conversational AI on FHIR Questionnaires**  
+  Configures ChatGPT-4o to conduct voice conversations based on a FHIR Questionnaire (e.g., `kccq12.json`) and records user responses in FHIR format on disk.
 
+- **Customizable AI Behavior**  
+  Includes function calling and system prompts to tailor the conversation flow and data handling.
 
-## Installation
+---
 
-The project can be added to your Xcode project or Swift Package using the [Swift Package Manager](https://github.com/apple/swift-package-manager).
+## Configuration
 
-**Xcode:** For an Xcode project, follow the instructions on [adding package dependencies to your app](https://developer.apple.com/documentation/xcode/adding-package-dependencies-to-your-app).
+You can customize the server in several ways:
 
-**Swift Package:** You can follow the [Swift Package Manager documentation about defining dependencies](https://github.com/apple/swift-package-manager/blob/main/Documentation/Usage.md#defining-dependencies) to add this project as a dependency to your Swift Package.
+- **Custom FHIR Questionnaire**  
+  Replace the default FHIR R4 questionnaire (`Sources/App/Resources/kccq12.json`) with your own to change the conversation content.
 
+- **System Message (AI Behavior)**  
+  Edit the `systemMessage` constant in  
+  `Sources/App/constants.swift`  
+  This message sets the behavior of the AI and is passed to OpenAI during session initialization.
+
+- **Session Configuration (Voice, Functions, etc.)**  
+  Modify `sessionConfig.json` in  
+  `Sources/App/Resources/`  
+  This file controls OpenAI-specific parameters such as:
+  - Which voice model to use
+  - The available function calls (e.g., saving responses)
+  - Other ChatGPT session settings
+
+---
+
+## Setup
+You can either run the server in Xcode or using Docker.
+
+### Xcode
+
+To run the server locally using Xcode:
+
+1. Add your OpenAI API key as an environment variable:
+   - Open the **Scheme Editor** (`Product > Scheme > Edit Scheme…`)
+   - Select the **Run** section and go to the **Arguments** tab.
+   - Add a new environment variable:  
+     ```
+     OPENAI_API_KEY=your_key_here
+     ```
+
+2. Build and run the server in Xcode.
+3. Start [ngrok](https://ngrok.com/) to expose the local server:
+   ```bash
+    ngrok http http://127.0.0.1:5000
+    ```
+4. In your Twilio Console, update the "A call comes in" webhook URL to match the forwarding address from ngrok, appending `/incoming-call`.
+Example: `https://your-ngrok-url.ngrok-free.app/incoming-call`
+5. Call your Twilio number and talk to the AI.
+
+### Docker
+
+To run the server using Docker:
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Open the **.env** file and insert your OpenAI API Key.
+3. Build and start the server:
+   ```bash
+   docker compose build
+   docker compose up app
+   ```
+4. Start [ngrok](https://ngrok.com/) to expose the local server:
+   ```bash
+    ngrok http http://127.0.0.1:8080
+    ```
+5. In your Twilio Console, update the "A call comes in" webhook URL to match the forwarding address from ngrok, appending `/incoming-call`.
+Example: `https://your-ngrok-url.ngrok-free.app/incoming-call`
+6. Call your Twilio number and talk to the AI.
+---
 
 ## License
-This project is licensed under the MIT License. See [Licenses](https://github.com/StanfordBDHG/TemplatePackage/tree/main/LICENSES) for more information.
+This project is licensed under the MIT License. See [Licenses](https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/tree/main/LICENSES) for more information.
 
+---
 
 ## Contributors
 This project is developed as part of the Stanford Byers Center for Biodesign at Stanford University.
-See [CONTRIBUTORS.md](https://github.com/StanfordBDHG/TemplatePackage/tree/main/CONTRIBUTORS.md) for a full list of all TemplatePackage contributors.
+See [CONTRIBUTORS.md](https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/tree/main/CONTRIBUTORS.md) for a full list of all ENGAGE-HF-AI-Voice contributors.
 
 ![Stanford Byers Center for Biodesign Logo](https://raw.githubusercontent.com/StanfordBDHG/.github/main/assets/biodesign-footer-light.png#gh-light-mode-only)
 ![Stanford Byers Center for Biodesign Logo](https://raw.githubusercontent.com/StanfordBDHG/.github/main/assets/biodesign-footer-dark.png#gh-dark-mode-only)

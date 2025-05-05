@@ -1,0 +1,117 @@
+{
+    "type": "session.update",
+    "event_id": "event_12345678",
+    "session": {
+        "modalities": [
+            "text",
+            "audio"
+        ],
+        "instructions": "{{SYSTEM_PROMPT}}",
+        "voice": "alloy",
+        "output_audio_format": "g711_ulaw",
+        "input_audio_format": "g711_ulaw",
+        "turn_detection": {
+            "type": "server_vad"
+        },
+        "tools": [
+            {
+                "type": "function",
+                "name": "save_blood_pressure",
+                "description": "Saves the blood pressure measurement of the patient to the database.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "systolicBloodPressure": {
+                            "type": "number",
+                            "description": "Blood pressure in mmHg/mmHg"
+                        },
+                        "diastolicBloodPressure": {
+                            "type": "number",
+                            "description": "Blood pressure in mmHg/mmHg"
+                        }
+                    },
+                    "required": [
+                        "systolicBloodPressure",
+                        "diastolicBloodPressure"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "type": "function",
+                "name": "save_heart_rate",
+                "description": "Saves the heart rate measurement of the patient to the database.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "heartRate": {
+                            "type": "number",
+                            "description": "Heart rate in beats per minute"
+                        }
+                    },
+                    "required": [
+                        "heartRate"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "type": "function",
+                "name": "save_weight",
+                "description": "Saves the weight measurement of the patient to the database.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "weight": {
+                            "type": "number",
+                            "description": "Weight in pounds"
+                        }
+                    },
+                    "required": [
+                        "weight"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "type": "function",
+                "name": "get_kccq12_question",
+                "description": "Retrieves the next question and current progress from the KCCQ-12 heart failure quality of life survey. This function should be called repeatedly to get each question one at a time. When no more questions are available, it will return a message indicating that the survey is complete.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
+            {
+                "type": "function",
+                "name": "save_kccq12_response",
+                "description": "Saves a patient response of the KCCQ-12 heart failure quality of life survey. This function should be called after a response is recorded to save it.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "linkId": {
+                            "type": "string",
+                            "description": "The KCCQ-12 question's linkId"
+                        },
+                        "code": {
+                            "type": "string",
+                            "description": "The KCCQ-12 question's corresponding answer code."
+                        }
+                    },
+                    "required": [
+                        "linkId",
+                        "code"
+                    ],
+                    "additionalProperties": false
+                }
+            }, 
+            {
+                "type": "function",
+                "name": "count_answered_kccq12_questions",
+                "description": "Counts the number of questions that have already been answered.",
+                "parameters": {}
+            }
+        ],
+        "tool_choice": "auto"
+    }
+}

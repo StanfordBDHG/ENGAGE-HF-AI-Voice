@@ -1,5 +1,5 @@
 #
-# This source file is part of the TemplatePackage open source project
+# This source file is part of the ENGAGE-HF-AI-Voice open source project
 #
 # SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 #
@@ -22,4 +22,8 @@ jobs:
   buildandtest:
     name: Build and Test
     uses: ./.github/workflows/build-and-test.yml
+    secrets: inherit
+  deployment:
+    name: Deployment
+    uses: ./.github/workflows/deployment.yml
     secrets: inherit
