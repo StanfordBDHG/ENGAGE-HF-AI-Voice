@@ -3,6 +3,8 @@
 #
 # SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 #
+# This file is based on the Vapor template found at https://github.com/vapor/template
+#
 # SPDX-License-Identifier: MIT
 # 
 
