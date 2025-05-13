@@ -9,6 +9,7 @@
 @testable import App
 import Testing
 import VaporTesting
+import ModelsR4
 
 
 @Suite("App Tests")
@@ -50,5 +51,49 @@ struct AppTests {
                 }
             )
         }
+    }
+    
+    @Test("Test Symptom Score Calculation")
+    func testNonEndpointFunction() async throws {
+        try await withApp { app in
+            
+            await KCCQ12Service.setQuestionnaireResponseLoader(MockQuestionnaireResponseLoader())
+            
+            let score = await KCCQ12Service.computeSymptomScore(phoneNumber: "1234567890", logger: app.logger)
+            print(score)
+            #expect(score == 48.4375, "Score should be 48.4375 with mocked responses")
+        }
+    }
+    
+    
+}
+
+final class MockQuestionnaireResponseLoader: QuestionnaireResponseLoader {
+    func loadQuestionnaireResponse(phoneNumber: String, logger: Logger) async -> QuestionnaireResponse {
+        let mockResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+        mockResponse.item = [
+            createResponseItem(linkId: "a459b804-35bf-4792-f1eb-0b52c4e176e1", value: "3"),
+            createResponseItem(linkId: "cf9c5031-1ed5-438a-fc7d-dc69234015a0", value: "2"),
+            createResponseItem(linkId: "1fad0f81-b2a9-4c8f-9a78-4b2a5d7aef07", value: "2"),
+            createResponseItem(linkId: "692bda7d-a616-43d1-8dc6-8291f6460ab2", value: "3"),
+            createResponseItem(linkId: "b1734b9e-1d16-4238-8556-5ae3fa0ba913", value: "4"),
+            createResponseItem(linkId: "57f37fb3-a0ad-4b1f-844e-3f67d9b76946", value: "5"),
+            createResponseItem(linkId: "396164df-d045-4c56-d710-513297bdc6f2", value: "2"),
+            createResponseItem(linkId: "75e3f62e-e37d-48a2-f4d9-af2db8922da0", value: "3"),
+            createResponseItem(linkId: "fce3a16e-c6d8-4bac-8ab5-8f4aee4adc08", value: "4"),
+            createResponseItem(linkId: "8649bc8c-f908-487d-87a4-a97106b1a4c3", value: "2"),
+            createResponseItem(linkId: "1eee7259-da1c-4cba-80a9-e67e684573a1", value: "3"),
+            createResponseItem(linkId: "883a22a8-2f6e-4b41-84b7-0028ed543192", value: "4")
+        ]
+        
+        return mockResponse
+    }
+    
+    private func createResponseItem(linkId: String, value: String) -> QuestionnaireResponseItem {
+        let item = QuestionnaireResponseItem(linkId: FHIRPrimitive(FHIRString(linkId)))
+        let answer = QuestionnaireResponseItemAnswer()
+        answer.value = .string(FHIRPrimitive(FHIRString(value)))
+        item.answer = [answer]
+        return item
     }
 }

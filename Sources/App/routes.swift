@@ -488,7 +488,7 @@ func routes(_ app: Application) throws {
 
         @Sendable
         func countAnsweredKCCQ12Questions(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            let count = KCCQ12Service.countAnsweredQuestions(phoneNumber: phoneNumber, logger: req.logger)
+            let count = await KCCQ12Service.countAnsweredQuestions(phoneNumber: phoneNumber, logger: req.logger)
             req.logger.info("Count of answered KCCQ-12 questions: \(count)")
             let functionResponse: [String: Any] = [
                 "type": "conversation.item.create",
