@@ -11,8 +11,6 @@ import ModelsR4
 import Vapor
 
 
-extension QuestionnaireResponse: @unchecked Sendable {}
-
 /// A struct to wrap the question and progress
 struct QuestionWithProgress: Codable {
     enum CodingKeys: String, CodingKey {
@@ -119,7 +117,7 @@ private actor QuestionManager {
     }
     
     func loadQuestionnaireResponse(_ phoneNumber: String, _ logger: Logger) async -> QuestionnaireResponse {
-        return await questionnaireResponseLoader.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+        await questionnaireResponseLoader.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
     }
 }
 
@@ -223,7 +221,7 @@ enum KCCQ12Service {
     /// Load the questionnaire response from the file
     /// - Returns: The FHIR `QuestionnaireResponse` object loaded from the JSON file
     static func loadQuestionnaireResponse(phoneNumber: String, logger: Logger) async -> QuestionnaireResponse {
-        return await questionManager.loadQuestionnaireResponse(phoneNumber, logger)
+        await questionManager.loadQuestionnaireResponse(phoneNumber, logger)
     }
     
     /// Save or update a response to a question to the file
@@ -401,3 +399,5 @@ enum KCCQ12Service {
         return intValue
     }
 }
+
+extension QuestionnaireResponse: @unchecked @retroactive Sendable {}
