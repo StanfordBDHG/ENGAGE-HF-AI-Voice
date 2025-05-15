@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
-struct HeartRateArgs: Codable {
-    let heartRate: Int
-}
+import ModelsR4
+
+
+extension QuestionnaireResponse: @unchecked @retroactive Sendable {}

@@ -17,12 +17,16 @@ enum FileService {
         return "\(currentDirectoryPath)/Data"
     }()
     
+    static let vitalSignsDirectoryPath: String = {
+        "\(dataDirectory)/vital_signs/"
+    }()
+    
     static let kccq12DirectoryPath: String = {
         "\(dataDirectory)/kccq12_questionnairs/"
     }()
     
-    static let vitalSignsDirectoryPath: String = {
-        "\(dataDirectory)/vital_signs/"
+    static let q17DirectoryPath: String = {
+        "\(dataDirectory)/q17/"
     }()
     
     static func vitalSignsFilePath(phoneNumber: String) -> String {
@@ -31,6 +35,10 @@ enum FileService {
     
     static func kccq12FilePath(phoneNumber: String) -> String {
         "\(kccq12DirectoryPath)\(hashPhoneNumber(phoneNumber)).json"
+    }
+    
+    static func q17FilePath(phoneNumber: String) -> String {
+        "\(q17DirectoryPath)\(hashPhoneNumber(phoneNumber)).json"
     }
     
     private static func hashPhoneNumber (_ phoneNumber: String) -> String {

@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
-struct BloodPressureArgs: Codable {
-    let systolicBloodPressure: Int
-    let diastolicBloodPressure: Int
+struct VitalSignResponseArgs: Codable {
+    let linkId: String
+    let answer: Int
 }

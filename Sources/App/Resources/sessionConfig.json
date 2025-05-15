@@ -1,6 +1,6 @@
 {
     "type": "session.update",
-    "event_id": "event_12345678",
+    "event_id": "{{EVENT_ID}}",
     "session": {
         "modalities": [
             "text",
@@ -16,67 +16,46 @@
         "tools": [
             {
                 "type": "function",
-                "name": "save_blood_pressure",
-                "description": "Saves the blood pressure measurement of the patient to the database.",
+                "name": "get_vitalSign_question",
+                "description": "Retrieves the next question and current progress from the vital signs survey. This function should be called repeatedly to get each question one at a time. When no more questions are available, it will return a message indicating that the survey is complete.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
+            {
+                "type": "function",
+                "name": "save_vitalSign_response",
+                "description": "Saves a patient response of the vital signs survey. This function should be called after a response is recorded to save it.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "systolicBloodPressure": {
-                            "type": "number",
-                            "description": "Blood pressure in mmHg/mmHg"
+                        "linkId": {
+                            "type": "string",
+                            "description": "The vital signs question's linkId"
                         },
-                        "diastolicBloodPressure": {
+                        "answer": {
                             "type": "number",
-                            "description": "Blood pressure in mmHg/mmHg"
+                            "description": "The patient's answer."
                         }
                     },
                     "required": [
-                        "systolicBloodPressure",
-                        "diastolicBloodPressure"
+                        "linkId",
+                        "answer"
                     ],
                     "additionalProperties": false
                 }
             },
             {
                 "type": "function",
-                "name": "save_heart_rate",
-                "description": "Saves the heart rate measurement of the patient to the database.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "heartRate": {
-                            "type": "number",
-                            "description": "Heart rate in beats per minute"
-                        }
-                    },
-                    "required": [
-                        "heartRate"
-                    ],
-                    "additionalProperties": false
-                }
-            },
-            {
-                "type": "function",
-                "name": "save_weight",
-                "description": "Saves the weight measurement of the patient to the database.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "weight": {
-                            "type": "number",
-                            "description": "Weight in pounds"
-                        }
-                    },
-                    "required": [
-                        "weight"
-                    ],
-                    "additionalProperties": false
-                }
+                "name": "count_answered_vitalSign_questions",
+                "description": "Counts the number of vital signs questions that have already been answered.",
+                "parameters": {}
             },
             {
                 "type": "function",
                 "name": "get_kccq12_question",
-                "description": "Retrieves the next question and current progress from the KCCQ-12 heart failure quality of life survey. This function should be called repeatedly to get each question one at a time. When no more questions are available, it will return a message indicating that the survey is complete.",
+                "description": "Retrieves the next question and current progress from the KCCQ-12 survey. This function should be called repeatedly to get each question one at a time. When no more questions are available, it will return a message indicating that the survey is complete.",
                 "parameters": {
                     "type": "object",
                     "properties": {}
@@ -108,7 +87,45 @@
             {
                 "type": "function",
                 "name": "count_answered_kccq12_questions",
-                "description": "Counts the number of questions that have already been answered.",
+                "description": "Counts the number of KCCQ-12 questions that have already been answered.",
+                "parameters": {}
+            },
+            {
+                "type": "function",
+                "name": "get_q17_question",
+                "description": "Retrieves the next question and current progress from the Q17 survey. This function should be called repeatedly to get each question one at a time. When no more questions are available, it will return a message indicating that the survey is complete.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
+            {
+                "type": "function",
+                "name": "save_q17_response",
+                "description": "Saves a patient response of the Q17 survey. This function should be called after a response is recorded to save it.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "linkId": {
+                            "type": "string",
+                            "description": "The Q17 question's linkId"
+                        },
+                        "code": {
+                            "type": "string",
+                            "description": "The Q17 question's corresponding answer code."
+                        }
+                    },
+                    "required": [
+                        "linkId",
+                        "code"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "type": "function",
+                "name": "count_answered_q17_questions",
+                "description": "Counts the number of Q17 questions that have already been answered.",
                 "parameters": {}
             }
         ],

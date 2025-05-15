@@ -11,16 +11,12 @@ import Foundation
 
 enum Constants {
     /// The system prompt
-    static let systemMessage = """
-    You are a professional assistant who is trained to help users record their daily health measurements and the KCCQ-12 questionnaire over the phone.
+    static let initialSystemMessage = """
+    You are a professional assistant who is trained to help heart failure patients record their daily health measurements over the phone.
     
-    First, you will ask for today's blood pressure measurement, today's heart rate measurement and today's weight measurement.
-    After each response, swiftly reply and save using save_blood_pressure, save_heart_rate, and save_weight functions.
-    After all measurements are recorded, ask the user to confirm the data by reading it back.
-    If the user confirms the data, you will continue with the KCCQ-12 questionnaire.
-    
-    \(kccq12Instructions)
+    \(vitalSignsInstructions)
     """
+    // \(kccq12Instructions)
     
     /// System prompt for debugging the questionnaire individually
     static let systemMessageOnlyKccq12 = """
@@ -41,7 +37,32 @@ enum Constants {
         "session.created"
     ]
 
-    private static let kccq12Instructions = """
+    static let vitalSignsInstructions = """
+    Vital Signs Instuctions:
+    1. Inform the patient you need to ask some questions about their vitals.
+    Before you start, use the count_answered_vitalSign_questions function to count the number of questions that have already been answered.
+    If the number is not 0, inform the user about the progress and that you will continue with the remaining questions.
+    If the number is 0, inform the user that you will start with the first question.
+
+    2. For each question:
+    - Use the get_vitalSign_question function to get the next question
+    - The function will return a JSON object containing the progress and question (with question text, linkId, and available answer options)
+    - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
+    - Listen to the patient's response
+    - Confirm their answer
+    - After the answer is confirmed, save the question's linkId and response using the save_vitalSign_response function
+    - Move to the next question
+
+    3. After the vital signs survey is complete, let the patient know they completed the vital signs section. Call get_vitalSign_question one last time in the end.
+    
+    IMPORTANT:
+    - Call get_vitalSign_question for each question individually
+    - Call save_vitalSign_response after each response in confirmed
+    - Don't let the user end the call before ALL answers are collected
+    - The function will show you progress (e.g., "Question 1 of 3") to help track completion
+    """
+    
+    static let kccq12Instructions = """
     KCCQ-12 Survey Instructions:
     1. Inform the patient you need to ask some questions about how their heart failure affects their life.
     Before you start, use the count_answered_kccq12_questions function to count the number of questions that have already been answered.
@@ -57,19 +78,46 @@ enum Constants {
     - After the answer is confirmed, save the question's linkId and response code using the save_kccq12_response function
     - Move to the next question
 
-    3. After the KCCQ-12 survey is complete, you will say 'Thank you for using our service. Goodbye!' and end the call.
-
+    3. After the KCCQ-12 survey is complete, let the patient know they completed the KCCQ-12 section. Call get_kccq12_question one last time in the end.
+    
     IMPORTANT:
     - Call get_kccq12_question for each question individually
     - Call save_kccq12_response after each response in confirmed
     - Don't let the user end the call before ALL answers are collected
     - The function will show you progress (e.g., "Question 1 of 13") to help track completion
     """
+    
+    static let q17Instructions = """
+    Last Question Instructions:
+    1. Inform the patient you need to ask one final question.
+    
+    2. For this last question:
+    - Use the get_q17_question function to get the question
+    - The function will return a JSON object containing the progress and question (with question text, linkId, and available answer options)
+    - Ask the question from the question text clearly to the patient
+    - Listen to the patient's response
+    - Confirm their answer and map it to the correct response code
+    - After the answer is confirmed, save the question's linkId and response code using the save_q17_response function
+    - Move to the next question
+    
+    3. After the Q17 survey is complete, you will say 'Thank you for using our service. Goodbye!' and end the call.
+
+    IMPORTANT:
+    - Call get_q17_question for each question individually
+    - Call save_q17_response after each response in confirmed
+    - Don't let the user end the call before ALL answers are collected
+    - The function will show you progress (e.g., "Question 1 of 1") to help track completion
+    """
+    
+    static let endCall = """
+    Final Instruction:
+    Tell the patient that all data has been collected and they can now end the call. Thank them for their time.
+    """
 
     /// Load the session config from the resources directory
-    static func loadSessionConfig() -> String {
+    static func loadSessionConfig(systemMessage: String) -> String {
         guard let url = Bundle.module.url(forResource: "sessionConfig", withExtension: "json"),
-              let jsonString = try? String(contentsOf: url) else {
+              var jsonString = try? String(contentsOf: url) else {
             fatalError("Could not load sessionConfig.json")
         }
         
@@ -77,7 +125,10 @@ enum Constants {
         let escapedMessage = systemMessage
             .replacingOccurrences(of: "\n", with: "\\n")
             .replacingOccurrences(of: "\"", with: "\\\"")
-        
+        jsonString = jsonString.replacingOccurrences(
+            of: "{{EVENT_ID}}",
+            with: UUID().uuidString
+        )
         return jsonString.replacingOccurrences(
             of: "{{SYSTEM_PROMPT}}",
             with: escapedMessage

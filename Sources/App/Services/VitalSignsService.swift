@@ -7,17 +7,119 @@
 //
 
 import Foundation
+import ModelsR4
 import Vapor
 
 
+/// Default implementation of QuestionnaireResponseLoader
+private struct DefaultQuestionnaireResponseLoader: QuestionnaireResponseLoader {
+    func loadQuestionnaireResponse(phoneNumber: String, logger: Logger) async -> QuestionnaireResponse {
+        logger.info("Loading questionnaire response from file")
+        let fileManager = FileManager.default
+        
+        guard fileManager.fileExists(atPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)) else {
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
+            return questionnaireResponse
+        }
+        
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)))
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(QuestionnaireResponse.self, from: data)
+        } catch {
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
+            return questionnaireResponse
+        }
+    }
+}
+
+/// Actor to manage concurrent access to questions
+private actor QuestionManager {
+    var remainingQuestions: [QuestionnaireItem] = []
+    var totalQuestions: Int = 0
+    var questionnaireResponseLoader: QuestionnaireResponseLoader = DefaultQuestionnaireResponseLoader()
+    
+    
+    func initializeQuestions(_ questions: [QuestionnaireItem], phoneNumber: String, logger: Logger) async {
+        let items = flattenQuestionnaireItems(questions)
+        let answeredQuestionLinkIds = await questionnaireResponseLoader
+            .loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+            .item?.map { $0.linkId.value?.string } ?? []
+        let filteredItems = items.filter { !answeredQuestionLinkIds.contains($0.linkId.value?.string) }
+        totalQuestions = items.count
+        logger.info("Initializing remaining questions with \(filteredItems.count) questions")
+        remainingQuestions = filteredItems
+    }
+    
+    func getNextQuestionAsJSON(logger: Logger) async throws -> String? {
+        guard !remainingQuestions.isEmpty else {
+            logger.info("No more questions available")
+            return nil
+        }
+        logger.info("remainingQuestions: \(remainingQuestions.count)")
+        logger.info("\(remainingQuestions.map { $0.linkId })")
+        let nextQuestion = remainingQuestions[0]
+
+        let progressString = "Question \(totalQuestions - remainingQuestions.count + 1) of \(totalQuestions)"
+
+        let questionWithProgress = QuestionWithProgress(question: nextQuestion, progress: progressString)
+        
+        let encoder = JSONEncoder()
+        let jsonData = try encoder.encode(questionWithProgress)
+        
+        return String(data: jsonData, encoding: .utf8)
+    }
+    
+    func isEmpty() -> Bool {
+        remainingQuestions.isEmpty
+    }
+    
+    func removeRemainingQuestion(linkId: String) {
+        remainingQuestions.removeAll { $0.linkId.value?.string == linkId }
+    }
+    
+    private func flattenQuestionnaireItems(_ items: [QuestionnaireItem]) -> [QuestionnaireItem] {
+        var flattenedItems: [QuestionnaireItem] = []
+        
+        for item in items {
+            if item.type.value == .integer {
+                flattenedItems.append(item)
+            }
+            
+            if let nestedItems = item.item {
+                flattenedItems.append(contentsOf: flattenQuestionnaireItems(nestedItems))
+            }
+        }
+        
+        return flattenedItems
+    }
+    
+    func setQuestionnaireResponseLoader(_ loader: QuestionnaireResponseLoader) {
+        questionnaireResponseLoader = loader
+    }
+    
+    func loadQuestionnaireResponse(_ phoneNumber: String, _ logger: Logger) async -> QuestionnaireResponse {
+        await questionnaireResponseLoader.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+    }
+}
+
 /// Service for managing vital signs storage
 enum VitalSignsService {
-    /// Creats the file to save vital signs
+    private static let questionManager = QuestionManager()
+
+    static func setQuestionnaireResponseLoader(_ loader: QuestionnaireResponseLoader) async {
+        await VitalSignsService.questionManager.setQuestionnaireResponseLoader(loader)
+    }
+    
+    /// Creats the file to save VitalSigns response
     /// - Parameters:
     ///   - phoneNumber: The caller's phone number
     ///   - logger: The logger to use for logging
     static func setupVitalSignsFile(phoneNumber: String, logger: Logger) {
-        logger.info("Attempting to create vital signs file at: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
+        logger.info("Attempting to create VitalSigns file at: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
         do {
             // Create directory if it doesn't exist
             try FileManager.default.createDirectory(
@@ -29,154 +131,137 @@ enum VitalSignsService {
             
             // Check if file already exists
             if FileManager.default.fileExists(atPath: filePath) {
-                logger.info("Vital signs file already exists for this participant")
+                logger.info("VitalSigns file already exists for this participant")
                 return
             }
             
-            // Create initial vital signs array with phone number
-            let initialVitalSigns = [VitalSigns(phoneNumber: phoneNumber)]
-            let encoder = JSONEncoder()
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            encoder.dateEncodingStrategy = .formatted(formatter)
-            encoder.outputFormatting = .prettyPrinted
-            
-            let data = try encoder.encode(initialVitalSigns)
+            // Create initial VitalSigns QuestionnaireResponse with phoneNumber in subject
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
             
             // Write to file
-            try data.write(to: URL(fileURLWithPath: filePath))
-            logger.info("Created new vital signs file for this participant")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = .prettyPrinted
+            let jsonData = try encoder.encode(questionnaireResponse)
+            try jsonData.write(to: URL(fileURLWithPath: filePath))
+            logger.info("Created new VitalSigns file for this participant")
             
             return
         } catch {
-            logger.error("Failed to setup vital signs file: \(error)")
+            logger.error("Failed to setup VitalSigns file: \(error)")
             return
         }
     }
     
-    /// Save blood pressure measurement to the vital signs file
-    /// - Parameters:
-    ///   - bloodPressure: The blood pressure value to save
-    ///   - logger: The logger to use for logging
-    /// - Returns: A boolean indicating whether the save was successful
-    static func saveBloodPressure(bloodPressureSystolic: Int, bloodPressureDiastolic: Int, phoneNumber: String, logger: Logger) -> Bool {
-        do {
-            logger.info("Attempting to save blood pressure to: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
-            
-            var vitalSigns = try loadVitalSigns(phoneNumber: phoneNumber)
-            
-            // Check if we have an entry for today
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
-            
-            if let index = vitalSigns.firstIndex(where: { calendar.isDate($0.timestamp, inSameDayAs: today) }) {
-                // Update existing entry for today
-                vitalSigns[index].bloodPressureSystolic = bloodPressureSystolic
-                vitalSigns[index].bloodPressureDiastolic = bloodPressureDiastolic
-                logger.info("Updated existing entry for today")
-            } else {
-                // Create new entry for today
-                vitalSigns.append(VitalSigns(bloodPressureSystolic: bloodPressureSystolic, bloodPressureDiastolic: bloodPressureDiastolic))
-                logger.info("Created new entry for today")
-            }
-            
-            let result = try saveVitalSigns(vitalSigns, phoneNumber: phoneNumber, logger: logger)
-            logger.info("Save result: \(result)")
-            return result
-        } catch {
-            logger.error("Failed to save blood pressure: \(error)")
-            return false
+    /// Initialize the questions from the VitalSigns file
+    static func initializeQuestions(phoneNumber: String, logger: Logger) async {
+        if let questionnaire = loadQuestionnaire(logger: logger) {
+            await questionManager.initializeQuestions(questionnaire.item ?? [], phoneNumber: phoneNumber, logger: logger)
+        } else {
+            logger.info("Questions could not be loaded and initialized")
         }
     }
     
-    /// Save heart rate measurement to the vital signs file
-    /// - Parameters:
-    ///   - heartRate: The heart rate value to save
-    ///   - logger: The logger to use for logging
-    /// - Returns: A boolean indicating whether the save was successful
-    static func saveHeartRate(_ heartRate: Int, phoneNumber: String, logger: Logger) -> Bool {
+    /// Get the next question from the questionnaire
+    /// - Returns: The next question as a JSON string if available, nil if no more questions
+    static func getNextQuestion(phoneNumber: String, logger: Logger) async -> String? {
+        if await questionManager.isEmpty() {
+            await initializeQuestions(phoneNumber: phoneNumber, logger: logger)
+        }
         do {
-            logger.info("Attempting to save heart rate to: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
+            guard let questionJSON = try await questionManager.getNextQuestionAsJSON(logger: logger) else {
+                logger.error("No more questions available")
+                return nil
+            }
+            return questionJSON
+        } catch {
+            logger.error("Failed to process next question")
+            return nil
+        }
+    }
+    
+    /// Load the questionnaire from the file
+    /// - Returns: The FHIR `Questionnaire` object loaded from the JSON file
+    private static func loadQuestionnaire(logger: Logger) -> Questionnaire? {
+        guard let path = Bundle.module.path(forResource: "vitalSigns", ofType: "json"),
+              let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            logger.info("Could not read data from vitalSigns file")
+            return nil
+        }
+        
+        do {
+            let questionnaire = try JSONDecoder().decode(Questionnaire.self, from: data)
+            logger.info("Successfully decoded questionnaire")
+            return questionnaire
+        } catch {
+            logger.error("Failed to decode questionnaire: \(error)")
+            if let dataString = String(data: data, encoding: .utf8) {
+                logger.debug("Raw JSON data: \(dataString)")
+            }
+            return nil
+        }
+    }
+    
+    /// Load the questionnaire response from the file
+    /// - Returns: The FHIR `QuestionnaireResponse` object loaded from the JSON file
+    static func loadQuestionnaireResponse(phoneNumber: String, logger: Logger) async -> QuestionnaireResponse {
+        await questionManager.loadQuestionnaireResponse(phoneNumber, logger)
+    }
+    
+    /// Save or update a response to a question to the file
+    /// - Parameters:
+    ///   - linkId: The question's identifier
+    ///   - answer: The answer
+    /// - Returns: The FHIR `QuestionnaireResponse` object loaded from the JSON file
+    static func saveQuestionnaireResponse(linkId: String, answer: Int, phoneNumber: String, logger: Logger) async -> Bool {
+        do {
+            logger.info("Attempting to save questionnaire response for linkId: \(linkId) with answer: \(answer)")
             
-            var vitalSigns = try loadVitalSigns(phoneNumber: phoneNumber)
+            let response = await loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
             
-            // Check if we have an entry for today
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
+            // Create or update the answer for the given linkId
+            let responseItem = QuestionnaireResponseItem(linkId: FHIRPrimitive(FHIRString(linkId)))
+            let answerItem = QuestionnaireResponseItemAnswer()
+            answerItem.value = .integer(FHIRPrimitive(FHIRInteger(FHIRInteger.IntegerLiteralType(answer))))
+            responseItem.answer = [answerItem]
             
-            if let index = vitalSigns.firstIndex(where: { calendar.isDate($0.timestamp, inSameDayAs: today) }) {
-                // Update existing entry for today
-                vitalSigns[index].heartRate = heartRate
+            if let index = response.item?.firstIndex(where: { $0.linkId.value?.string == linkId }) {
+                response.item?[index] = responseItem
+                logger.info("Updated existing response for linkId: \(linkId)")
             } else {
-                // Create new entry for today
-                vitalSigns.append(VitalSigns(heartRate: heartRate))
+                if response.item != nil {
+                    response.item?.append(responseItem)
+                } else {
+                    response.item = [responseItem]
+                }
+                logger.info("Added new response for linkId: \(linkId)")
             }
             
-            return try saveVitalSigns(vitalSigns, phoneNumber: phoneNumber, logger: logger)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = .prettyPrinted
+            
+            let jsonData = try encoder.encode(response)
+            try jsonData.write(to: URL(fileURLWithPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)))
+            
+            await questionManager.removeRemainingQuestion(linkId: linkId)
+            
+            logger.info("Successfully saved questionnaire response to \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
+            return true
         } catch {
-            logger.error("Failed to save heart rate: \(error)")
+            logger.error("Failed to save questionnaire response: \(error)")
             return false
         }
     }
 
-    /// Save weight measurement to the vital signs file
+    /// Count the number of answered questions
     /// - Parameters:
-    ///   - weight: The weight value to save
+    ///   - phoneNumber: The phone number of the caller
     ///   - logger: The logger to use for logging
-    /// - Returns: A boolean indicating whether the save was successful
-    static func saveWeight(_ weight: Double, phoneNumber: String, logger: Logger) -> Bool {
-        do {
-            logger.info("Attempting to save weight to: \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
-            
-            var vitalSigns = try loadVitalSigns(phoneNumber: phoneNumber)
-            
-            // Check if we have an entry for today
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
-            
-            if let index = vitalSigns.firstIndex(where: { calendar.isDate($0.timestamp, inSameDayAs: today) }) {
-                // Update existing entry for today
-                vitalSigns[index].weight = weight
-            } else {
-                // Create new entry for today
-                vitalSigns.append(VitalSigns(weight: weight))
-            }
-            
-            return try saveVitalSigns(vitalSigns, phoneNumber: phoneNumber, logger: logger)
-        } catch {
-            logger.error("Failed to save weight: \(error)")
-            return false
-        }
-    }
-
-    private static func loadVitalSigns(phoneNumber: String) throws -> [VitalSigns] {
-        let fileManager = FileManager.default
-        
-        guard fileManager.fileExists(atPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)) else {
-            return []
-        }
-        
-        let data = try Data(contentsOf: URL(fileURLWithPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)))
-        
-        let decoder = JSONDecoder()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        decoder.dateDecodingStrategy = .formatted(formatter)
-        return try decoder.decode([VitalSigns].self, from: data)
-    }
-    
-    private static func saveVitalSigns(_ vitalSigns: [VitalSigns], phoneNumber: String, logger: Logger) throws -> Bool {
-        let encoder = JSONEncoder()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        encoder.dateEncodingStrategy = .formatted(formatter)
-        encoder.outputFormatting = .prettyPrinted
-        
-        let jsonData = try encoder.encode(vitalSigns)
-        
-        try jsonData.write(to: URL(fileURLWithPath: FileService.vitalSignsFilePath(phoneNumber: phoneNumber)))
-        
-        logger.info("Vital signs saved successfully to \(FileService.vitalSignsFilePath(phoneNumber: phoneNumber))")
-        return true
+    /// - Returns: The number of answered questions
+    static func countAnsweredQuestions(phoneNumber: String, logger: Logger) async -> Int {
+        let response = await questionManager.loadQuestionnaireResponse(phoneNumber, logger)
+        return response.item?.count ?? 0
     }
 }

@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
-struct WeightArgs: Codable {
-    let weight: Double
+struct Q17ResponseArgs: Codable {
+    let linkId: String
+    let code: String
 }
