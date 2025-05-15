@@ -1,0 +1,156 @@
+{
+    "title": "Patient Vitals",
+    "resourceType": "Questionnaire",
+    "language": "en-US",
+    "status": "draft",
+    "publisher": "Stanford Biodesign Digital Health",
+    "meta": {
+        "profile": [
+            "http://spezi.health/fhir/StructureDefinition/sdf-Questionnaire"
+        ],
+        "tag": [
+            {
+                "system": "urn:ietf:bcp:47",
+                "code": "en-US",
+                "display": "English"
+            }
+        ]
+    },
+    "useContext": [
+        {
+            "code": {
+                "system": "http://hl7.org/fhir/ValueSet/usage-context-type",
+                "code": "focus",
+                "display": "Clinical Focus"
+            },
+            "valueCodeableConcept": {
+                "coding": [
+                    {
+                        "system": "http://snomed.info/sct",
+                        "code": "364075005",
+                        "display": "Heart rate, blood pressure, weight"
+                    }
+                ]
+            }
+        }
+    ],
+    "contact": [
+        {
+            "name": "http://spezi.health"
+        }
+    ],
+    "subjectType": ["Patient"],
+    "url": "http://spezi.health/fhir/questionnaire/vitals-simple",
+    "item": [
+        {
+            "linkId": "introduction",
+            "type": "display",
+            "text": "Please enter your current vital signs. This information will be shared with your care team.",
+            "required": false
+        },
+        {
+            "linkId": "blood-pressure-group",
+            "type": "group",
+            "text": "Blood Pressure",
+            "required": true,
+            "item": [
+                {
+                    "linkId": "systolic",
+                    "type": "integer",
+                    "text": "Systolic Blood Pressure (mmHg)",
+                    "required": true,
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+                            "valueInteger": 60
+                        },
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+                            "valueInteger": 250
+                        },
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-unit",
+                            "valueCoding": {
+                                "system": "http://unitsofmeasure.org",
+                                "code": "mm[Hg]",
+                                "display": "mmHg"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "linkId": "diastolic",
+                    "type": "integer",
+                    "text": "Diastolic Blood Pressure (mmHg)",
+                    "required": true,
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+                            "valueInteger": 40
+                        },
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+                            "valueInteger": 150
+                        },
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-unit",
+                            "valueCoding": {
+                                "system": "http://unitsofmeasure.org",
+                                "code": "mm[Hg]",
+                                "display": "mmHg"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "linkId": "heart-rate",
+            "type": "integer",
+            "text": "Heart Rate (beats per minute)",
+            "required": true,
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+                    "valueInteger": 30
+                },
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+                    "valueInteger": 200
+                },
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-unit",
+                    "valueCoding": {
+                        "system": "http://unitsofmeasure.org",
+                        "code": "/min",
+                        "display": "beats/min"
+                    }
+                }
+            ]
+        },
+        {
+            "linkId": "weight",
+            "type": "decimal",
+            "text": "Weight (pounds)",
+            "required": true,
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+                    "valueDecimal": 50
+                },
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+                    "valueDecimal": 500
+                },
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-unit",
+                    "valueCoding": {
+                        "system": "http://unitsofmeasure.org",
+                        "code": "[lb_av]",
+                        "display": "pounds"
+                    }
+                }
+            ]
+        }
+    ]
+}

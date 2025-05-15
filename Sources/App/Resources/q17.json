@@ -1,0 +1,108 @@
+{
+    "title": "Patient Well-being Comparison",
+    "resourceType": "Questionnaire",
+    "language": "en-US",
+    "status": "draft",
+    "publisher": "Stanford Biodesign Digital Health",
+    "meta": {
+        "profile": [
+            "http://spezi.health/fhir/StructureDefinition/sdf-Questionnaire"
+        ],
+        "tag": [
+            {
+                "system": "urn:ietf:bcp:47",
+                "code": "en-US",
+                "display": "English"
+            }
+        ]
+    },
+    "useContext": [
+        {
+            "code": {
+                "system": "http://hl7.org/fhir/ValueSet/usage-context-type",
+                "code": "focus",
+                "display": "Clinical Focus"
+            },
+            "valueCodeableConcept": {
+                "coding": [
+                    {
+                        "system": "http://snomed.info/sct",
+                        "code": "443998008",
+                        "display": "Assessment of patient well-being"
+                    }
+                ]
+            }
+        }
+    ],
+    "contact": [
+        {
+            "name": "http://spezi.health"
+        }
+    ],
+    "subjectType": ["Patient"],
+    "url": "http://spezi.health/fhir/questionnaire/wellbeing-comparison",
+    "item": [
+        {
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                    "valueCodeableConcept": {
+                        "coding": [
+                            {
+                                "system": "http://hl7.org/fhir/questionnaire-item-control",
+                                "code": "radio-button",
+                                "display": "Radio Button"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "linkId": "wellbeing-comparison",
+            "type": "choice",
+            "text": "How do you feel now compared with 3 months ago?",
+            "required": true,
+            "answerOption": [
+                {
+                    "valueCoding": {
+                        "id": "much-worse",
+                        "code": "1",
+                        "system": "urn:uuid:wellbeing-comparison",
+                        "display": "Much worse"
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "id": "slightly-worse",
+                        "code": "2",
+                        "system": "urn:uuid:wellbeing-comparison",
+                        "display": "Slightly worse"
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "id": "about-same",
+                        "code": "3",
+                        "system": "urn:uuid:wellbeing-comparison",
+                        "display": "About the same"
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "id": "slightly-better",
+                        "code": "4",
+                        "system": "urn:uuid:wellbeing-comparison",
+                        "display": "Slightly better"
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "id": "much-better",
+                        "code": "5",
+                        "system": "urn:uuid:wellbeing-comparison",
+                        "display": "Much better"
+                    }
+                }
+            ]
+        }
+    ]
+}
