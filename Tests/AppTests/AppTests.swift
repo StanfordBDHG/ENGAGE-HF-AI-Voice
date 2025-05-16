@@ -55,7 +55,7 @@ struct AppTests {
         }
         try await app.asyncShutdown()
     }
-
+    
     @Test("Test Health Route")
     func health() async throws {
         try await withApp { app in
@@ -84,13 +84,26 @@ struct AppTests {
     }
     
     @Test("Test Symptom Score Calculation")
-    func testNonEndpointFunction() async throws {
+    func testSymptomScoreCalculation() async throws {
         try await withApp { app in
             await KCCQ12Service.setQuestionnaireResponseLoader(MockQuestionnaireResponseLoader())
             
             let score = await KCCQ12Service.computeSymptomScore(phoneNumber: "1234567890", logger: app.logger)
             print(score)
             #expect(score == 48.4375, "Score should be 48.4375 with mocked responses")
+        }
+    }
+    
+    @Test("Test User Feedback Generation")
+    func testUserFeedback() async throws {
+        try await withApp { _ in
+            let feedback = FeedbackService.feedback()
+            print(feedback)
+            #expect(feedback == """
+            Your blood pressure is high and pulse is normal.
+            Your symptom score is ***, which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            You feel [Q17 response] compared to 3 months ago.
+            """)
         }
     }
 }
