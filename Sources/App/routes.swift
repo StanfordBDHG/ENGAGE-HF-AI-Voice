@@ -258,6 +258,8 @@ func routes(_ app: Application) throws {
             }
         }
         
+        
+        // swiftlint:disable cyclomatic_complexity
         @Sendable
         func handleOpenAIFunctionCall(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             if response.type == "response.function_call_arguments.done" {

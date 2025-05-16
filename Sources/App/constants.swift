@@ -53,7 +53,7 @@ enum Constants {
     - After the answer is confirmed, save the question's linkId and response using the save_vitalSign_response function
     - Move to the next question
 
-    3. After the vital signs survey is complete, let the patient know they completed the vital signs section. 
+    3. After the vital signs survey is complete, let the patient know they completed the vital signs section.
     Call get_vitalSign_question one last time in the end.
     
     IMPORTANT:
@@ -79,7 +79,7 @@ enum Constants {
     - After the answer is confirmed, save the question's linkId and response code using the save_kccq12_response function
     - Move to the next question
 
-    3. After the KCCQ-12 survey is complete, let the patient know they completed the KCCQ-12 section. 
+    3. After the KCCQ-12 survey is complete, let the patient know they completed the KCCQ-12 section.
     Call get_kccq12_question one last time in the end.
     
     IMPORTANT:
