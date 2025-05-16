@@ -101,8 +101,8 @@ struct AppTests {
             print(feedback)
             #expect(feedback == """
             Your blood pressure is high and pulse is normal.
-            Your symptom score is ***, which means your heart failure doesn’t stop you much from doing your normal daily activities.
-            You feel [Q17 response] compared to 3 months ago.
+            Your symptom score is 82, which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            You feel worse compared to 3 months ago.
             """)
         }
     }
