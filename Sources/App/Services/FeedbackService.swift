@@ -6,8 +6,9 @@
 // SPDX-License-Identifier: MIT
 //
 
-import Vapor
 import ModelsR4
+import Vapor
+
 
 // swiftlint:disable:next type_body_length
 enum FeedbackService {
@@ -60,6 +61,7 @@ enum FeedbackService {
         return Int(stringValue.value?.string ?? "")
     }
     
+    // swiftlint:disable:next cyclomatic_complexity
     static func loadVitalSignsFromFile(phoneNumber: String, logger: Logger) async -> VitalSigns? {
         let questionnaireResponse = await VitalSignsService.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         
