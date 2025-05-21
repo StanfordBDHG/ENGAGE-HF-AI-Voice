@@ -6,21 +6,29 @@
 // SPDX-License-Identifier: MIT
 //
 
+import Vapor
+import ModelsR4
 
 // swiftlint:disable:next type_body_length
 enum FeedbackService {
-    static func feedback() -> String {
-        // todo: load required questionnaire responses (q1, q2, symptom score, q17) istead of this mock
-        let systolicBP = 180
-        let diastolicBP = 100
-        let heartRate = 60
-        let symptomScore = 82
-        let conditionChange: PatientData.ConditionChange = .worse
+    struct VitalSigns {
+        let systolicBP: Int
+        let diastolicBP: Int
+        let heartRate: Int
+    }
+    
+    static func feedback(phoneNumber: String, logger: Logger) async -> String {
+        let vitalSigns = await loadVitalSignsFromFile(phoneNumber: phoneNumber, logger: logger)
+        let symptomScore = await loadSymptomScoreFromFile(phoneNumber: phoneNumber, logger: logger)
+        let conditionChange = await loadConditionChangeFromFile(phoneNumber: phoneNumber, logger: logger)
+        guard let vitalSigns, let conditionChange else {
+            return "" // todo throw or smth
+        }
         
         let patientData = PatientData(
-            systolicBP: systolicBP,
-            diastolicBP: diastolicBP,
-            heartRate: heartRate,
+            systolicBP: vitalSigns.systolicBP,
+            diastolicBP: vitalSigns.diastolicBP,
+            heartRate: vitalSigns.heartRate,
             symptomScore: symptomScore,
             conditionChange: conditionChange
         )
@@ -35,6 +43,78 @@ enum FeedbackService {
         let tree = buildTree(data: patientData)
         
         return tree.decide(data: patientDataMap) ?? ""
+    }
+    
+    private static func getAnswerValueFromInt(_ item: QuestionnaireResponseItemAnswer) -> Int? {
+        guard let value = item.value,
+              case .integer(let integerValue) = value else {
+            return nil
+        }
+        return Int(integerValue.value?.integer ?? 0)
+    }
+    private static func getAnswerValueFromString(_ item: QuestionnaireResponseItemAnswer) -> Int? {
+        guard let value = item.value,
+              case .string(let stringValue) = value else {
+            return nil
+        }
+        return Int(stringValue.value?.string ?? "")
+    }
+    
+    static func loadVitalSignsFromFile(phoneNumber: String, logger: Logger) async -> VitalSigns? {
+        let questionnaireResponse = await VitalSignsService.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+        
+        // Extract vital signs from questionnaire response
+        var systolicBP = 0
+        var diastolicBP = 0
+        var heartRate = 0
+        
+        for item in questionnaireResponse.item ?? [] {
+            switch item.linkId.value?.string {
+            case "systolic":
+                if let answer = item.answer?.first {
+                    if let value = getAnswerValueFromInt(answer) {
+                        systolicBP = value
+                    }
+                }
+            case "diastolic":
+                if let answer = item.answer?.first {
+                    if let value = getAnswerValueFromInt(answer) {
+                        diastolicBP = value
+                    }
+                }
+            case "heart-rate":
+                if let answer = item.answer?.first {
+                    if let value = getAnswerValueFromInt(answer) {
+                        heartRate = value
+                    }
+                }
+            default:
+                continue
+            }
+        }
+        
+        // Return nil if any vital sign is missing (still 0)
+        if systolicBP == 0 || diastolicBP == 0 || heartRate == 0 {
+            return nil
+        }
+        
+        return VitalSigns(systolicBP: systolicBP, diastolicBP: diastolicBP, heartRate: heartRate)
+    }
+    
+    static func loadSymptomScoreFromFile(phoneNumber: String, logger: Logger) async -> Double {
+        await KCCQ12Service.computeSymptomScore(phoneNumber: phoneNumber, logger: logger)
+    }
+    
+    static func loadConditionChangeFromFile(phoneNumber: String, logger: Logger) async -> PatientData.ConditionChange? {
+        let questionnaireResponse = await Q17Service.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+        let conditionChange = questionnaireResponse.item?.first?.answer?.first
+        if let conditionChange = conditionChange {
+            if let value = getAnswerValueFromString(conditionChange) {
+                return PatientData.ConditionChange.categorize(condition: value)
+            }
+        }
+        
+        return nil
     }
     
     // swiftlint:disable:next function_body_length
@@ -54,7 +134,7 @@ enum FeedbackService {
         let feedbackNode1121 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are lower than normal.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
@@ -78,7 +158,7 @@ enum FeedbackService {
         let feedbackNode1221 = DecisionNode(
             leafValue: """
             Your blood pressure is low and your pulse is normal.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
@@ -102,7 +182,7 @@ enum FeedbackService {
         let feedbackNode1321 = DecisionNode(
             leafValue: """
             Your pulse is higher than normal and your blood pressure is low.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
@@ -126,7 +206,7 @@ enum FeedbackService {
         let feedbackNode2121 = DecisionNode(
             leafValue: """
             Your blood pressure is normal and pulse is low.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
@@ -150,7 +230,7 @@ enum FeedbackService {
         let feedbackNode2221 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are normal.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
@@ -174,7 +254,7 @@ enum FeedbackService {
         let feedbackNode2321 = DecisionNode(
             leafValue: """
             Your blood pressure is normal and pulse is high.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
@@ -198,7 +278,7 @@ enum FeedbackService {
         let feedbackNode3121 = DecisionNode(
             leafValue: """
             Your blood pressure is high and pulse is low.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
@@ -222,7 +302,7 @@ enum FeedbackService {
         let feedbackNode3221 = DecisionNode(
             leafValue: """
             Your blood pressure is high and pulse is normal.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
@@ -246,7 +326,7 @@ enum FeedbackService {
         let feedbackNode3321 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are high.
-            Your symptom score is \(data.symptomScore), which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )

@@ -282,6 +282,8 @@ func routes(_ app: Application) throws {
                     try await saveQ17Response(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 case "count_answered_q17_questions":
                     try await countAnsweredQ17Questions(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+                case "get_feedback":
+                    try await getFeedback(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 default:
                     req.logger.error("Unknown function call: \(String(describing: response.name))")
                 }
@@ -549,7 +551,7 @@ func routes(_ app: Application) throws {
             
             if question == nil {
                 // when there are no questions left, we also update the session instructions
-                await updateSession(webSocket: openAIWs, systemMessage: Constants.endCall)
+                await updateSession(webSocket: openAIWs, systemMessage: Constants.feedback)
             } else {
                 try await sendJSON(functionResponse, openAIWs)
             }
@@ -602,7 +604,7 @@ func routes(_ app: Application) throws {
                     await state.updateLastAssistantItem(nil)
                 } else {
                     do {
-                        _ = try JSONDecoder().decode(Q17ResponseArgs.self, from: argumentsData) // todo Args
+                        _ = try JSONDecoder().decode(Q17ResponseArgs.self, from: argumentsData)
                     } catch let decodingError as DecodingError {
                         req.logger.error("Decoding error details: \(decodingError)")
                     }
@@ -641,6 +643,35 @@ func routes(_ app: Application) throws {
 
             await state.updateResponseStartTimestampTwilio(nil)
             await state.updateLastAssistantItem(nil)
+        }
+        
+        @Sendable
+        func getFeedback(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
+            let feedback = await FeedbackService.feedback(phoneNumber: phoneNumber, logger: req.logger)
+            
+            let functionResponse: [String: Any] = [
+                "type": "conversation.item.create",
+                "item": [
+                    "type": "function_call_output",
+                    "call_id": response.callId ?? "",
+                    "output": feedback
+                ]
+            ]
+            
+            req.logger.info("Feedback functionResponse: \(functionResponse)")
+            
+            let responseRequest: [String: Any] = [
+                "type": "response.create"
+            ]
+            
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
+            
+            await state.updateResponseStartTimestampTwilio(nil)
+            await state.updateLastAssistantItem(nil)
+            
+            // Log the connection state after function response
+            req.logger.info("Function response sent, connection state: \(openAIWs.isClosed ? "closed" : "open")")
         }
         
         @Sendable

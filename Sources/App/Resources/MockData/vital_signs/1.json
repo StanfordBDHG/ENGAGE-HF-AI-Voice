@@ -1,0 +1,41 @@
+{
+    "status" : "completed",
+    "subject" : {
+        "reference" : "+16502341234"
+    },
+    "item" : [
+        {
+            "linkId" : "systolic",
+            "answer" : [
+                {
+                    "valueInteger" : 120
+                }
+            ]
+        },
+        {
+            "linkId" : "diastolic",
+            "answer" : [
+                {
+                    "valueInteger" : 80
+                }
+            ]
+        },
+        {
+            "linkId" : "heart-rate",
+            "answer" : [
+                {
+                    "valueInteger" : 65
+                }
+            ]
+        },
+        {
+            "linkId" : "weight",
+            "answer" : [
+                {
+                    "valueInteger" : 180
+                }
+            ]
+        }
+    ],
+    "resourceType" : "QuestionnaireResponse"
+}

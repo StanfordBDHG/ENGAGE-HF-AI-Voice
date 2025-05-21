@@ -102,7 +102,8 @@ enum Constants {
     - After the answer is confirmed, save the question's linkId and response code using the save_q17_response function
     - Move to the next question
     
-    3. After the Q17 survey is complete, you will say 'Thank you for using our service. Goodbye!' and end the call.
+    3. After the Q17 survey is complete, let the patient know they completed the last section.
+    Call get_q17_question one last time in the end.
 
     IMPORTANT:
     - Call get_q17_question for each question individually
@@ -111,9 +112,11 @@ enum Constants {
     - The function will show you progress (e.g., "Question 1 of 1") to help track completion
     """
     
-    static let endCall = """
+    static let feedback = """
     Final Instruction:
-    Tell the patient that all data has been collected and they can now end the call. Thank them for their time.
+    Use the get_feedback function to get the final patient feedback.
+    Read the feedback to the patient.
+    After that, thank the patient for their time and tell them that they can now end the call.
     """
 
     /// Load the session config from the resources directory

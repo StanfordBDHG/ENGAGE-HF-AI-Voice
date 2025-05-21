@@ -12,9 +12,14 @@ import Vapor
 
 enum FileService {
     private static let dataDirectory: String = {
+#if DEBUG
+        return Bundle.module.bundlePath + "/Contents/Resources/MockData"
+#else
+        
         let fileManager = FileManager.default
         let currentDirectoryPath = fileManager.currentDirectoryPath
         return "\(currentDirectoryPath)/Data"
+#endif
     }()
     
     static let vitalSignsDirectoryPath: String = {
@@ -42,6 +47,9 @@ enum FileService {
     }
     
     private static func hashPhoneNumber (_ phoneNumber: String) -> String {
+#if DEBUG
+        return "1"
+#else
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: Date())
@@ -51,5 +59,6 @@ enum FileService {
         let data = combinedString.data(using: .utf8)!
         let hash = SHA256.hash(data: data)
         return hash.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
+#endif
     }
 }

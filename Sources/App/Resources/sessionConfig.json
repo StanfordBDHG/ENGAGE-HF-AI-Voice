@@ -127,6 +127,15 @@
                 "name": "count_answered_q17_questions",
                 "description": "Counts the number of Q17 questions that have already been answered.",
                 "parameters": {}
+            },
+            {
+                "type": "function",
+                "name": "get_feedback",
+                "description": "Retrieves the patient feedback.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
             }
         ],
         "tool_choice": "auto"

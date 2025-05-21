@@ -35,7 +35,8 @@ let package = Package(
                 .process("Resources/vitalSigns.json"),
                 .process("Resources/kccq12.json"),
                 .process("Resources/q17.json"),
-                .process("Resources/sessionConfig.json")
+                .process("Resources/sessionConfig.json"),
+                .copy("Resources/MockData")
             ],
             plugins: [] + swiftLintPlugin()
         ),

@@ -72,7 +72,7 @@ struct AppTests {
                 .POST,
                 "incoming-call",
                 beforeRequest: { req in
-                    try req.content.encode(["From": "+15551234567"])
+                    try req.content.encode(["From": "+16502341234"])
                     app.logger.info("Request prepared with phone number")
                 },
                 afterResponse: { res async in
@@ -88,20 +88,20 @@ struct AppTests {
         try await withApp { app in
             await KCCQ12Service.setQuestionnaireResponseLoader(MockQuestionnaireResponseLoader())
             
-            let score = await KCCQ12Service.computeSymptomScore(phoneNumber: "1234567890", logger: app.logger)
-            print(score)
+            let score = await KCCQ12Service.computeSymptomScore(phoneNumber: "+16502341234", logger: app.logger)
+            
             #expect(score == 48.4375, "Score should be 48.4375 with mocked responses")
         }
     }
     
     @Test("Test User Feedback Generation")
     func testUserFeedback() async throws {
-        try await withApp { _ in
-            let feedback = FeedbackService.feedback()
-            print(feedback)
+        try await withApp { app in
+            let feedback = await FeedbackService.feedback(phoneNumber: "+16502341234", logger: app.logger)
+            
             #expect(feedback == """
-            Your blood pressure is high and pulse is normal.
-            Your symptom score is 82, which means your heart failure doesn’t stop you much from doing your normal daily activities.
+            Your blood pressure and pulse are normal.
+            Your symptom score is 50.0, which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel worse compared to 3 months ago.
             """)
         }

@@ -298,10 +298,18 @@ enum KCCQ12Service {
         let socialLimitsScore = calculateSocialLimitsScore(response)
         
         var domainScores: [Double] = []
-        if let score = physicalLimitsScore { domainScores.append(score) }
-        if let score = symptomFrequencyScore { domainScores.append(score) }
-        if let score = qualityOfLifeScore { domainScores.append(score) }
-        if let score = socialLimitsScore { domainScores.append(score) }
+        if let score = physicalLimitsScore {
+            domainScores.append(score)
+        }
+        if let score = symptomFrequencyScore {
+            domainScores.append(score)
+        }
+        if let score = qualityOfLifeScore {
+            domainScores.append(score)
+        }
+        if let score = socialLimitsScore {
+            domainScores.append(score)
+        }
         
         return self.average(domainScores) ?? 0
     }

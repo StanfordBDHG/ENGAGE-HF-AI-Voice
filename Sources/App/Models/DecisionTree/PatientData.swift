@@ -43,7 +43,7 @@ struct PatientData {
         case severe
         case mild
         
-        static func categorize(score: Int) -> SymptomScoreCategory {
+        static func categorize(score: Double) -> SymptomScoreCategory {
             score <= 80 ? .severe : .mild
         }
     }
@@ -52,6 +52,21 @@ struct PatientData {
         case worse
         case same
         case better
+        
+        static func categorize(condition: Int) -> ConditionChange {
+            switch condition {
+            case 1:
+                return .worse
+            case 2:
+                return .worse
+            case 3:
+                return .same
+            case 4:
+                return .better
+            default:
+                return .better
+            }
+        }
     }
     
     struct Feedback {
@@ -62,7 +77,7 @@ struct PatientData {
     let systolicBP: Int
     let diastolicBP: Int
     let heartRate: Int
-    let symptomScore: Int
+    let symptomScore: Double
     let conditionChange: ConditionChange
     
     var bloodPressureCategory: BloodPressureCategory {
