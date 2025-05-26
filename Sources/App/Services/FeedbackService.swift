@@ -10,7 +10,6 @@ import ModelsR4
 import Vapor
 
 
-// swiftlint:disable type_body_length
 @MainActor
 enum FeedbackService {
     struct VitalSigns {
