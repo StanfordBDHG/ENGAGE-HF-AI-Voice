@@ -105,296 +105,132 @@ enum FeedbackService {
     
     // swiftlint:disable:next function_body_length
     private static func buildTree(data: PatientData) -> DecisionNode<String> {
-        let feedbackNode1111 = DecisionNode(
+        let feedbackNode111 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are lower than normal.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode1112 = DecisionNode(
-            leafValue: """
-            Your blood pressure and pulse are lower than normal.
-            """
-        )
-        let feedbackNode1121 = DecisionNode(
+        let feedbackNode112 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are lower than normal.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode1122 = DecisionNode(
-            leafValue: """
-            Your blood pressure and pulse are lower than normal.
-            """
-        )
-        let feedbackNode1211 = DecisionNode(
+        let feedbackNode121 = DecisionNode(
             leafValue: """
             Your blood pressure is low and your pulse is normal.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode1212 = DecisionNode(
-            leafValue: """
-            Your blood pressure is low and your pulse is normal.
-            """
-        )
-        let feedbackNode1221 = DecisionNode(
+        let feedbackNode122 = DecisionNode(
             leafValue: """
             Your blood pressure is low and your pulse is normal.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode1222 = DecisionNode(
-            leafValue: """
-            Your blood pressure is low and your pulse is normal.
-            """
-        )
-        let feedbackNode1311 = DecisionNode(
+        let feedbackNode131 = DecisionNode(
             leafValue: """
             Your pulse is higher than normal and your blood pressure is low.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode1312 = DecisionNode(
-            leafValue: """
-            Your pulse is higher than normal and your blood pressure is low.
-            """
-        )
-        let feedbackNode1321 = DecisionNode(
+        let feedbackNode132 = DecisionNode(
             leafValue: """
             Your pulse is higher than normal and your blood pressure is low.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode1322 = DecisionNode(
-            leafValue: """
-            Your pulse is higher than normal and your blood pressure is low.
-            """
-        )
-        let feedbackNode2111 = DecisionNode(
+        let feedbackNode211 = DecisionNode(
             leafValue: """
             Your blood pressure is normal and pulse is low.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode2112 = DecisionNode(
-            leafValue: """
-            Your blood pressure is normal and pulse is low.
-            """
-        )
-        let feedbackNode2121 = DecisionNode(
+        let feedbackNode212 = DecisionNode(
             leafValue: """
             Your blood pressure is normal and pulse is low.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode2122 = DecisionNode(
-            leafValue: """
-            Your blood pressure is normal and pulse is low.
-            """
-        )
-        let feedbackNode2211 = DecisionNode(
+        let feedbackNode221 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are normal.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode2212 = DecisionNode(
-            leafValue: """
-            Your blood pressure and pulse are normal.
-            """
-        )
-        let feedbackNode2221 = DecisionNode(
+        let feedbackNode222 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are normal.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode2222 = DecisionNode(
-            leafValue: """
-            Your blood pressure and pulse are normal.
-            """
-        )
-        let feedbackNode2311 = DecisionNode(
+        let feedbackNode231 = DecisionNode(
             leafValue: """
             Your blood pressure is normal and pulse is high.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode2312 = DecisionNode(
-            leafValue: """
-            Your blood pressure is normal and pulse is high.
-            """
-        )
-        let feedbackNode2321 = DecisionNode(
+        let feedbackNode232 = DecisionNode(
             leafValue: """
             Your blood pressure is normal and pulse is high.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode2322 = DecisionNode(
-            leafValue: """
-            Your blood pressure is normal and pulse is high.
-            """
-        )
-        let feedbackNode3111 = DecisionNode(
+        let feedbackNode311 = DecisionNode(
             leafValue: """
             Your blood pressure is high and pulse is low.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode3112 = DecisionNode(
-            leafValue: """
-            Your blood pressure is high and pulse is low.
-            """
-        )
-        let feedbackNode3121 = DecisionNode(
+        let feedbackNode312 = DecisionNode(
             leafValue: """
             Your blood pressure is high and pulse is low.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode3122 = DecisionNode(
-            leafValue: """
-            Your blood pressure is high and pulse is low.
-            """
-        )
-        let feedbackNode3211 = DecisionNode(
+        let feedbackNode321 = DecisionNode(
             leafValue: """
             Your blood pressure is high and pulse is normal.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode3212 = DecisionNode(
-            leafValue: """
-            Your blood pressure is high and pulse is normal.
-            """
-        )
-        let feedbackNode3221 = DecisionNode(
+        let feedbackNode322 = DecisionNode(
             leafValue: """
             Your blood pressure is high and pulse is normal.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode3222 = DecisionNode(
-            leafValue: """
-            Your blood pressure is high and pulse is normal.
-            """
-        )
-        let feedbackNode3311 = DecisionNode(
+        let feedbackNode331 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are high.
             Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode3312 = DecisionNode(
-            leafValue: """
-            Your blood pressure and pulse are high.
-            """
-        )
-        let feedbackNode3321 = DecisionNode(
+        let feedbackNode332 = DecisionNode(
             leafValue: """
             Your blood pressure and pulse are high.
             Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
             You feel \(data.conditionChange) compared to 3 months ago.
             """
         )
-        let feedbackNode3322 = DecisionNode(
-            leafValue: """
-            Your blood pressure and pulse are high.
-            """
-        )
-        
-        // Condition Change
-        let feedbackNode111 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode111.addBranch(value: "worse", node: feedbackNode1111)
-        feedbackNode111.addBranch(value: "same", node: feedbackNode1112)
-        feedbackNode111.addBranch(value: "better", node: feedbackNode1112)
-        let feedbackNode112 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode112.addBranch(value: "worse", node: feedbackNode1121)
-        feedbackNode112.addBranch(value: "same", node: feedbackNode1122)
-        feedbackNode112.addBranch(value: "better", node: feedbackNode1122)
-        let feedbackNode121 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode121.addBranch(value: "worse", node: feedbackNode1211)
-        feedbackNode121.addBranch(value: "same", node: feedbackNode1212)
-        feedbackNode121.addBranch(value: "better", node: feedbackNode1212)
-        let feedbackNode122 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode122.addBranch(value: "worse", node: feedbackNode1221)
-        feedbackNode122.addBranch(value: "same", node: feedbackNode1222)
-        feedbackNode122.addBranch(value: "better", node: feedbackNode1222)
-        let feedbackNode131 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode131.addBranch(value: "worse", node: feedbackNode1311)
-        feedbackNode131.addBranch(value: "same", node: feedbackNode1312)
-        feedbackNode131.addBranch(value: "better", node: feedbackNode1312)
-        let feedbackNode132 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode132.addBranch(value: "worse", node: feedbackNode1321)
-        feedbackNode132.addBranch(value: "same", node: feedbackNode1322)
-        feedbackNode132.addBranch(value: "better", node: feedbackNode1322)
-        let feedbackNode211 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode211.addBranch(value: "worse", node: feedbackNode2111)
-        feedbackNode211.addBranch(value: "same", node: feedbackNode2112)
-        feedbackNode211.addBranch(value: "better", node: feedbackNode2112)
-        let feedbackNode212 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode212.addBranch(value: "worse", node: feedbackNode2121)
-        feedbackNode212.addBranch(value: "same", node: feedbackNode2122)
-        feedbackNode212.addBranch(value: "better", node: feedbackNode2122)
-        let feedbackNode221 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode221.addBranch(value: "worse", node: feedbackNode2211)
-        feedbackNode221.addBranch(value: "same", node: feedbackNode2212)
-        feedbackNode221.addBranch(value: "better", node: feedbackNode2212)
-        let feedbackNode222 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode222.addBranch(value: "worse", node: feedbackNode2221)
-        feedbackNode222.addBranch(value: "same", node: feedbackNode2222)
-        feedbackNode222.addBranch(value: "better", node: feedbackNode2222)
-        let feedbackNode231 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode231.addBranch(value: "worse", node: feedbackNode2311)
-        feedbackNode231.addBranch(value: "same", node: feedbackNode2312)
-        feedbackNode231.addBranch(value: "better", node: feedbackNode2312)
-        let feedbackNode232 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode232.addBranch(value: "worse", node: feedbackNode2321)
-        feedbackNode232.addBranch(value: "same", node: feedbackNode2322)
-        feedbackNode232.addBranch(value: "better", node: feedbackNode2322)
-        let feedbackNode311 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode311.addBranch(value: "worse", node: feedbackNode3111)
-        feedbackNode311.addBranch(value: "same", node: feedbackNode3112)
-        feedbackNode311.addBranch(value: "better", node: feedbackNode3112)
-        let feedbackNode312 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode312.addBranch(value: "worse", node: feedbackNode3121)
-        feedbackNode312.addBranch(value: "same", node: feedbackNode3122)
-        feedbackNode312.addBranch(value: "better", node: feedbackNode3122)
-        let feedbackNode321 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode321.addBranch(value: "worse", node: feedbackNode3211)
-        feedbackNode321.addBranch(value: "same", node: feedbackNode3212)
-        feedbackNode321.addBranch(value: "better", node: feedbackNode3212)
-        let feedbackNode322 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode322.addBranch(value: "worse", node: feedbackNode3221)
-        feedbackNode322.addBranch(value: "same", node: feedbackNode3222)
-        feedbackNode322.addBranch(value: "better", node: feedbackNode3222)
-        let feedbackNode331 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode331.addBranch(value: "worse", node: feedbackNode3311)
-        feedbackNode331.addBranch(value: "same", node: feedbackNode3312)
-        feedbackNode331.addBranch(value: "better", node: feedbackNode3312)
-        let feedbackNode332 = DecisionNode<String>(attribute: "conditionChange")
-        feedbackNode332.addBranch(value: "worse", node: feedbackNode3321)
-        feedbackNode332.addBranch(value: "same", node: feedbackNode3322)
-        feedbackNode332.addBranch(value: "better", node: feedbackNode3322)
         
         // Symptom Score
         let feedbackNode11 = DecisionNode<String>(attribute: "symptomScore")
