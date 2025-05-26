@@ -39,7 +39,7 @@ enum Constants {
 
     static let vitalSignsInstructions = """
     Vital Signs Instuctions:
-    1. Tell the patient that this is the ENGAGE-HF phone service and inform the patient you need to ask some questions about their health and wellbeing.
+    1. Tell the patient that this is the ENGAGE-HF phone service and inform them that you need to ask some questions about their health condition.
     Before you start, use the count_answered_vitalSign_questions function to count the number of questions that have already been answered.
     If the number is not 0, inform the user about the progress and that you will continue with the remaining questions.
     If the number is 0, inform the user that you will start with the first question.
