@@ -10,6 +10,7 @@ import Foundation
 import Vapor
 
 
+/// Service for managing file paths
 enum FileService {
     private static let dataDirectory: String = {
 #if DEBUG

@@ -291,7 +291,6 @@ func routes(_ app: Application) throws {
         }
         
         // Vital Signs
-        
         @Sendable
         func getVitalSignQuestion(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             let question = await VitalSignsService.getNextQuestion(phoneNumber: phoneNumber, logger: req.logger)
@@ -408,9 +407,7 @@ func routes(_ app: Application) throws {
             await state.updateLastAssistantItem(nil)
         }
         
-        
         // KCCQ-12
-        
         @Sendable
         func getKCCQ12Question(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             let question = await KCCQ12Service.getNextQuestion(phoneNumber: phoneNumber, logger: req.logger)
@@ -528,7 +525,6 @@ func routes(_ app: Application) throws {
         }
         
         // Q17
-        
         @Sendable
         func getQ17Question(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             let question = await Q17Service.getNextQuestion(phoneNumber: phoneNumber, logger: req.logger)

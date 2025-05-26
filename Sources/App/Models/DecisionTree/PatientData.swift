@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
+/// Patient struct that holds the relevant data used by the decision tree
 struct PatientData {
     enum BloodPressureCategory: String {
         case low

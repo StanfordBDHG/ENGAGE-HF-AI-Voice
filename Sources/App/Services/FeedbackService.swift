@@ -10,6 +10,7 @@ import ModelsR4
 import Vapor
 
 
+/// Service for generating feedback based on the patient's data (vitals, symptom score, condition change)
 @MainActor
 enum FeedbackService {
     struct VitalSigns {

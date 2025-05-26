@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
-
+/// Decision node that can be used to build a decision tree
 class DecisionNode<T> {
     let attribute: String?
     private var branches: [String: DecisionNode<T>]
@@ -19,7 +19,6 @@ class DecisionNode<T> {
     }
     
     func decide(data: [String: String]) -> T? {
-        // If this is a leaf node, return the decision
         if let result = leafValue {
             return result
         }
@@ -28,13 +27,10 @@ class DecisionNode<T> {
             return nil
         }
         
-        // Get the value of the attribute for this data point
         guard let attributeValue = data[attribute] else {
-            // Try default branch if attribute is missing
             return branches["default"]?.decide(data: data)
         }
         
-        // Follow the appropriate branch
         if let nextNode = branches[attributeValue] {
             return nextNode.decide(data: data)
         } else if let defaultNode = branches["default"] {
@@ -45,7 +41,6 @@ class DecisionNode<T> {
         }
     }
     
-    // Add a branch to the node
     func addBranch(value: String, node: DecisionNode<T>) {
         branches[value] = node
     }
