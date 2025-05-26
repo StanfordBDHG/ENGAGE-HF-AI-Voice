@@ -10,7 +10,8 @@ import ModelsR4
 import Vapor
 
 
-// swiftlint:disable:next type_body_length
+// swiftlint:disable type_body_length
+@MainActor
 enum FeedbackService {
     struct VitalSigns {
         let systolicBP: Int
@@ -18,12 +19,12 @@ enum FeedbackService {
         let heartRate: Int
     }
     
-    static func feedback(phoneNumber: String, logger: Logger) async -> String {
+    static func feedback(phoneNumber: String, logger: Logger) async -> String? {
         let vitalSigns = await loadVitalSignsFromFile(phoneNumber: phoneNumber, logger: logger)
         let symptomScore = await loadSymptomScoreFromFile(phoneNumber: phoneNumber, logger: logger)
         let conditionChange = await loadConditionChangeFromFile(phoneNumber: phoneNumber, logger: logger)
-        guard let vitalSigns, let conditionChange else {
-            return "" // todo throw or smth
+        guard let vitalSigns, let symptomScore, let conditionChange else {
+            return nil
         }
         
         let patientData = PatientData(
@@ -43,67 +44,50 @@ enum FeedbackService {
         
         let tree = buildTree(data: patientData)
         
-        return tree.decide(data: patientDataMap) ?? ""
+        return tree.decide(data: patientDataMap)
     }
     
-    private static func getAnswerValueFromInt(_ item: QuestionnaireResponseItemAnswer) -> Int? {
-        guard let value = item.value,
-              case .integer(let integerValue) = value else {
+    private static func getAnswerValue(_ item: QuestionnaireResponseItemAnswer) -> Int? {
+        guard let value = item.value else {
             return nil
         }
-        return Int(integerValue.value?.integer ?? 0)
-    }
-    private static func getAnswerValueFromString(_ item: QuestionnaireResponseItemAnswer) -> Int? {
-        guard let value = item.value,
-              case .string(let stringValue) = value else {
+        
+        switch value {
+        case .integer(let integerValue):
+            return Int(integerValue.value?.integer ?? 0)
+        case .string(let stringValue):
+            return Int(stringValue.value?.string ?? "")
+        default:
             return nil
         }
-        return Int(stringValue.value?.string ?? "")
     }
     
-    // swiftlint:disable:next cyclomatic_complexity
     static func loadVitalSignsFromFile(phoneNumber: String, logger: Logger) async -> VitalSigns? {
         let questionnaireResponse = await VitalSignsService.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         
-        // Extract vital signs from questionnaire response
-        var systolicBP = 0
-        var diastolicBP = 0
-        var heartRate = 0
+        var vitalSigns: [String: Int] = [:]
         
         for item in questionnaireResponse.item ?? [] {
-            switch item.linkId.value?.string {
-            case "systolic":
-                if let answer = item.answer?.first {
-                    if let value = getAnswerValueFromInt(answer) {
-                        systolicBP = value
-                    }
-                }
-            case "diastolic":
-                if let answer = item.answer?.first {
-                    if let value = getAnswerValueFromInt(answer) {
-                        diastolicBP = value
-                    }
-                }
-            case "heart-rate":
-                if let answer = item.answer?.first {
-                    if let value = getAnswerValueFromInt(answer) {
-                        heartRate = value
-                    }
-                }
-            default:
+            guard let linkId = item.linkId.value?.string,
+                  let answer = item.answer?.first,
+                  let value = getAnswerValue(answer) else {
                 continue
             }
+            
+            vitalSigns[linkId] = value
         }
         
-        // Return nil if any vital sign is missing (still 0)
-        if systolicBP == 0 || diastolicBP == 0 || heartRate == 0 {
+        guard let systolicBP = vitalSigns["systolic"],
+              let diastolicBP = vitalSigns["diastolic"],
+              let heartRate = vitalSigns["heart-rate"],
+              systolicBP > 0, diastolicBP > 0, heartRate > 0 else {
             return nil
         }
         
         return VitalSigns(systolicBP: systolicBP, diastolicBP: diastolicBP, heartRate: heartRate)
     }
     
-    static func loadSymptomScoreFromFile(phoneNumber: String, logger: Logger) async -> Double {
+    static func loadSymptomScoreFromFile(phoneNumber: String, logger: Logger) async -> Double? {
         await KCCQ12Service.computeSymptomScore(phoneNumber: phoneNumber, logger: logger)
     }
     
@@ -111,7 +95,7 @@ enum FeedbackService {
         let questionnaireResponse = await Q17Service.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         let conditionChange = questionnaireResponse.item?.first?.answer?.first
         if let conditionChange = conditionChange {
-            if let value = getAnswerValueFromString(conditionChange) {
+            if let value = getAnswerValue(conditionChange) {
                 return PatientData.ConditionChange.categorize(condition: value)
             }
         }

@@ -26,9 +26,9 @@ func routes(_ app: Application) throws {
             let encodedCallerPhoneNumber = callerPhoneNumber.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
             
             // Create files for responses of caller
-            VitalSignsService.setupVitalSignsFile(phoneNumber: callerPhoneNumber, logger: req.logger)
-            KCCQ12Service.setupKCCQ12File(phoneNumber: callerPhoneNumber, logger: req.logger)
-            Q17Service.setupQ17File(phoneNumber: callerPhoneNumber, logger: req.logger)
+            await VitalSignsService.setupFile(phoneNumber: callerPhoneNumber, logger: req.logger)
+            await KCCQ12Service.setupFile(phoneNumber: callerPhoneNumber, logger: req.logger)
+            await Q17Service.setupFile(phoneNumber: callerPhoneNumber, logger: req.logger)
             
             let twimlResponse =
             """
@@ -460,7 +460,7 @@ func routes(_ app: Application) throws {
                     
                     let saveResult = await KCCQ12Service.saveQuestionnaireResponse(
                         linkId: parsedArgs.linkId,
-                        code: parsedArgs.code,
+                        answer: parsedArgs.code,
                         phoneNumber: phoneNumber,
                         logger: req.logger
                     )
@@ -578,7 +578,7 @@ func routes(_ app: Application) throws {
                     
                     let saveResult = await Q17Service.saveQuestionnaireResponse(
                         linkId: parsedArgs.linkId,
-                        code: parsedArgs.code,
+                        answer: parsedArgs.code,
                         phoneNumber: phoneNumber,
                         logger: req.logger
                     )
@@ -654,7 +654,7 @@ func routes(_ app: Application) throws {
                 "item": [
                     "type": "function_call_output",
                     "call_id": response.callId ?? "",
-                    "output": feedback
+                    "output": feedback ?? "No feedback available."
                 ]
             ]
             
