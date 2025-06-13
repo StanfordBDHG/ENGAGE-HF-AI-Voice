@@ -16,7 +16,7 @@ SPDX-License-Identifier: MIT
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FStanfordBDHG%2FSwiftPackageTemplate%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/StanfordBDHG/SwiftPackageTemplate)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FStanfordBDHG%2FSwiftPackageTemplate%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/StanfordBDHG/SwiftPackageTemplate)
 
-**Engage HF AI-Voice** is a [Vapor](https://vapor.codes/) server that integrates Twilio with OpenAI’s real-time API (ChatGPT-4o) to enable voice-based conversations for healthcare data collection.
+**Engage HF AI-Voice** is a [Vapor](https://vapor.codes/) server that integrates Twilio with OpenAI's real-time API (ChatGPT-4o) to enable voice-based conversations for healthcare data collection.
 
 ### Key Features
 
@@ -98,6 +98,61 @@ To run the server using Docker:
 5. In your Twilio Console, update the "A call comes in" webhook URL to match the forwarding address from ngrok, appending `/incoming-call`.
 Example: `https://your-ngrok-url.ngrok-free.app/incoming-call`
 6. Call your Twilio number and talk to the AI.
+
+### Deployment
+
+To deploy the service in a production environment, follow these steps:
+
+1. **Prepare the Deployment Directory**
+   - Create a new directory on your target machine (e.g., `engage-hf-ai-voice`)
+   - Copy the following files to this directory:
+     - `docker-compose.prod.yml`
+     - `nginx.conf`
+
+2. **Configure Environment Variables**
+   - Create a `.env` file in the deployment directory
+   - Add your OpenAI API key:
+     ```bash
+     OPENAI_API_KEY=<your-api-key>
+     ```
+
+3. **Set Up SSL Certificates**
+   - Create the required SSL certificate directories:
+     ```bash
+     sudo mkdir -p /etc/ssl/certs/voiceai-engagehf.stanford.edu/
+     sudo mkdir -p /etc/ssl/private/voiceai-engagehf.stanford.edu/
+     ```
+   - Add your SSL certificates:
+     - Place your certificate file (e.g., `certificate.cert`) in `/etc/ssl/certs/voiceai-engagehf.stanford.edu/`
+     - Place your private key file (e.g., `private.key`) in `/etc/ssl/private/voiceai-engagehf.stanford.edu/`
+
+   - Ensure proper permissions:
+     ```bash
+     sudo chmod 644 /etc/ssl/certs/voiceai-engagehf.stanford.edu/certificate.cert
+     sudo chmod 600 /etc/ssl/private/voiceai-engagehf.stanford.edu/private.key
+     ```
+
+3.1. **Update file names in `nginx.conf`**
+    - Depending on how your certificate and private key files are named, you need to adjust that in the `nginx.conf` file at:
+     ```bash
+     # SSL configuration with Stanford certificates
+     ssl_certificate /etc/ssl/certs/voiceai-engagehf.stanford.edu/<your certificate name>.cert;
+     ssl_certificate_key /etc/ssl/private/voiceai-engagehf.stanford.edu/<your private key name>.key;
+     ```
+
+4. **Start the Service**
+   - Navigate to your deployment directory
+   - Run the following command to start the service in detached mode:
+     ```bash
+     docker compose -f docker-compose.prod.yml up -d
+     ```
+
+The service should now be running and accessible via your configured domain.
+You can test the health check endpoint, e.g. via curl, like that:
+```bash
+curl -I https://voiceai-engagehf.stanford.edu/health
+```
+
 ---
 
 ## License
@@ -111,3 +166,4 @@ See [CONTRIBUTORS.md](https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/tree/ma
 
 ![Stanford Byers Center for Biodesign Logo](https://raw.githubusercontent.com/StanfordBDHG/.github/main/assets/biodesign-footer-light.png#gh-light-mode-only)
 ![Stanford Byers Center for Biodesign Logo](https://raw.githubusercontent.com/StanfordBDHG/.github/main/assets/biodesign-footer-dark.png#gh-dark-mode-only)
+
