@@ -105,16 +105,16 @@ To deploy the service in a production environment, follow these steps:
 
 0. **Prerequesites**
    Have Docker and Docker Compose installed.
-   
+
 1. **Prepare the Deployment Directory**
    - Create a new directory on your target machine (e.g., `engage-hf-ai-voice`)
-   - Copy the following files to this directory:
+   - Copy the following files to this directory (e.g. with `scp` or by creating a empty file and copy over the content):
      - `docker-compose.prod.yml`
      - `nginx.conf`
 
 2. **Configure Environment Variables**
    - Create a `.env` file in the deployment directory
-   - Add your OpenAI API key:
+   - Add your OpenAI API key like this:
      ```bash
      OPENAI_API_KEY=<your-api-key>
      ```
@@ -127,7 +127,15 @@ To deploy the service in a production environment, follow these steps:
      ```
    - Add your SSL certificates:
      - Place your certificate file (e.g., `certificate.cert`) in `/etc/ssl/certs/voiceai-engagehf.stanford.edu/`
+       E.g. with scp 
+       ```bash
+       scp /path/to/local/certificate.cert username@remote-machine-ip:/etc/ssl/certs/voiceai-engagehf.stanford.edu/
+       ```
      - Place your private key file (e.g., `private.key`) in `/etc/ssl/private/voiceai-engagehf.stanford.edu/`
+       E.g. with scp 
+       ```bash
+       scp /path/to/local/private.key username@remote-machine-ip:/etc/ssl/private/voiceai-engagehf.stanford.edu/
+       ```
 
    - Ensure proper permissions:
      ```bash
