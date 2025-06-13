@@ -103,6 +103,9 @@ Example: `https://your-ngrok-url.ngrok-free.app/incoming-call`
 
 To deploy the service in a production environment, follow these steps:
 
+0. **Prerequesites**
+   Have Docker and Docker Compose installed.
+   
 1. **Prepare the Deployment Directory**
    - Create a new directory on your target machine (e.g., `engage-hf-ai-voice`)
    - Copy the following files to this directory:
