@@ -14,8 +14,6 @@ services:
     image: ghcr.io/stanfordbdhg/engage-hf-ai-voice:main
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-    ports:
-      - "8080:8080"
     volumes:
       - app-data:/app/data
     networks:

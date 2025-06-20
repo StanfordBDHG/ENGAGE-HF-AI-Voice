@@ -122,33 +122,25 @@ To deploy the service in a production environment, follow these steps:
 3. **Set Up SSL Certificates**
    - Create the required SSL certificate directories:
      ```bash
-     sudo mkdir -p /etc/ssl/certs/voiceai-engagehf.stanford.edu/
-     sudo mkdir -p /etc/ssl/private/voiceai-engagehf.stanford.edu/
+     sudo mkdir -p ./certs
+     sudo mkdir -p ./private
      ```
    - Add your SSL certificates:
-     - Place your certificate file (e.g., `certificate.cert`) in `/etc/ssl/certs/voiceai-engagehf.stanford.edu/`
-       E.g. with scp 
-       ```bash
-       scp /path/to/local/certificate.cert username@remote-machine-ip:/etc/ssl/certs/voiceai-engagehf.stanford.edu/
-       ```
-     - Place your private key file (e.g., `private.key`) in `/etc/ssl/private/voiceai-engagehf.stanford.edu/`
-       E.g. with scp 
-       ```bash
-       scp /path/to/local/private.key username@remote-machine-ip:/etc/ssl/private/voiceai-engagehf.stanford.edu/
-       ```
+     - Place your certificate file which requies a full certificate chain (e.g., `certificate.pem`) in `./certs`
+     - Place your private key file (e.g., `certificate.key`) in `./private`
 
    - Ensure proper permissions:
      ```bash
-     sudo chmod 644 /etc/ssl/certs/voiceai-engagehf.stanford.edu/certificate.cert
-     sudo chmod 600 /etc/ssl/private/voiceai-engagehf.stanford.edu/private.key
+     sudo chmod 644 ./certs/certificate.pem
+     sudo chmod 600 ./private/private.key
      ```
 
 3.1. **Update file names in `nginx.conf`**
     - Depending on how your certificate and private key files are named, you need to adjust that in the `nginx.conf` file at:
      ```bash
      # SSL configuration with Stanford certificates
-     ssl_certificate /etc/ssl/certs/voiceai-engagehf.stanford.edu/<your certificate name>.cert;
-     ssl_certificate_key /etc/ssl/private/voiceai-engagehf.stanford.edu/<your private key name>.key;
+     ssl_certificate /etc/ssl/certs/voiceai-engagehf.stanford.edu/certificate.pem;
+     ssl_certificate_key /etc/ssl/private/voiceai-engagehf.stanford.edu/certificate.key;
      ```
 
 4. **Start the Service**
