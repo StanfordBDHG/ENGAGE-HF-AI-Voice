@@ -12,14 +12,15 @@ enum QuestionnaireResponseAnswer {
 }
 
 struct QuestionnaireResponseArgs: Codable {
-    let linkId: String
-    let answer: QuestionnaireResponseAnswer
-    
     enum CodingKeys: String, CodingKey {
         case linkId
         case answer
     }
-    
+
+    let linkId: String
+    let answer: QuestionnaireResponseAnswer
+
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         linkId = try container.decode(String.self, forKey: .linkId)
