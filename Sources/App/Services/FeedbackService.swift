@@ -63,7 +63,7 @@ enum FeedbackService {
     }
     
     static func loadVitalSignsFromFile(phoneNumber: String, logger: Logger) async -> VitalSigns? {
-        let questionnaireResponse = VitalSignsService.manager.getCurrentResponse()
+        let questionnaireResponse = VitalSignsService.storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         
         var vitalSigns: [String: Int] = [:]
         
@@ -92,7 +92,7 @@ enum FeedbackService {
     }
     
     static func loadConditionChangeFromFile(phoneNumber: String, logger: Logger) async -> PatientData.ConditionChange? {
-        let questionnaireResponse = Q17Service.manager.getCurrentResponse()
+        let questionnaireResponse = Q17Service.storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         let conditionChange = questionnaireResponse.item?.first?.answer?.first
         if let conditionChange = conditionChange {
             if let value = getAnswerValue(conditionChange) {
