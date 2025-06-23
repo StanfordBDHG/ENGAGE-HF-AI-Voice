@@ -11,40 +11,50 @@ import ModelsR4
 import Vapor
 
 
-/// Service for managing KCCQ12 data storage
+/// Service for managing KCCQ12 questionnaire
 enum KCCQ12Service: QuestionnaireService {
-    static let service = QuestionnaireStorageService(
+    static let storage = QuestionnaireStorageService(
         questionnaireName: "kccq12",
         filePath: FileService.kccq12FilePath,
         directoryPath: FileService.kccq12DirectoryPath
     )
+    static let manager = QuestionnaireManager(questionnaire: storage.loadQuestionnaire())
 
-    static func setQuestionnaireResponseLoader(_ loader: QuestionnaireResponseLoader) async {
-        await service.setQuestionnaireResponseLoader(loader)
+    
+    static func loadAnsweredQuestions(phoneNumber: String, logger: Logger) {
+        let currentResponse = storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+        manager.setCurrentResponse(currentResponse)
     }
     
     static func setupFile(phoneNumber: String, logger: Logger) {
-        service.setupFile(phoneNumber: phoneNumber, logger: logger)
+        storage.setupFile(phoneNumber: phoneNumber, logger: logger)
     }
     
-    static func initializeQuestions(phoneNumber: String, logger: Logger) async {
-        await service.initializeQuestions(phoneNumber: phoneNumber, logger: logger)
+    static func getNextQuestion(logger: Logger) async -> String? {
+        manager.getNextQuestionString()
     }
     
-    static func getNextQuestion(phoneNumber: String, logger: Logger) async -> String? {
-        await service.getNextQuestion(phoneNumber: phoneNumber, logger: logger)
+    static func saveQuestionnaireResponseToFile(phoneNumber: String, logger: Logger) async {
+        let response = manager.getCurrentResponse()
+        await storage.saveQuestionnaireResponse(phoneNumber: phoneNumber, response: response, logger: logger)
     }
     
-    static func loadQuestionnaireResponse(phoneNumber: String, logger: Logger) async -> QuestionnaireResponse {
-        await service.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+    static func saveQuestionnaireAnswer<T>(linkId: String, answer: T, logger: Logger) -> Bool {
+        do {
+            try manager.answerQuestion(linkId: linkId, answer: answer)
+            return true
+        } catch {
+            logger.error("Error saving Questionnaire Answer: \(error)")
+        }
+        return false
     }
     
-    static func saveQuestionnaireResponse<T>(linkId: String, answer: T, phoneNumber: String, logger: Logger) async -> Bool {
-        await service.saveQuestionnaireResponse(linkId: linkId, answer: answer, phoneNumber: phoneNumber, logger: logger)
+    static func countAnsweredQuestions() -> Int {
+        manager.countAnsweredQuestions()
     }
 
-    static func countAnsweredQuestions(phoneNumber: String, logger: Logger) async -> Int {
-        await service.countAnsweredQuestions(phoneNumber: phoneNumber, logger: logger)
+    static func unansweredQuestionsLeft() -> Bool {
+        !manager.isFinished
     }
 
     /// Compute the symptom score from the KCCQ12 questionnaire responses
@@ -53,7 +63,7 @@ enum KCCQ12Service: QuestionnaireService {
     ///   - logger: The logger to use for logging
     /// - Returns: The overall symptom score value
     static func computeSymptomScore(phoneNumber: String, logger: Logger) async -> Double? {
-        let response = await service.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+        let response = storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         
         guard let response = response.item else {
             return nil
@@ -156,7 +166,6 @@ enum KCCQ12Service: QuestionnaireService {
         return scores.count >= 2 ? self.average(scores) : nil
     }
 
-    // Helper function for calculating average
     private static func average(_ numbers: [Double]) -> Double? {
         guard !numbers.isEmpty else {
             return nil

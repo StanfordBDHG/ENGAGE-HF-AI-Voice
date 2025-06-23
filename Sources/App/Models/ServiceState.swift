@@ -36,7 +36,7 @@ actor ServiceState {
     
     func initializeCurrentService(phoneNumber: String, logger: Logger) async {
         for (index, serviceType) in services.enumerated() {
-            if await serviceType.unansweredQuestionsLeft(phoneNumber: phoneNumber, logger: logger) {
+            if await serviceType.unansweredQuestionsLeft() {
                 currentIndex = index
                 break
             }

@@ -11,27 +11,31 @@ import ModelsR4
 import Vapor
 
 
-/// Generic service for managing questionnaire data storage
+/// Service for managing questionnaire data storage on disk
 @MainActor
 class QuestionnaireStorageService {
     typealias FilePathClosure = @Sendable (String) -> String
     
-    private let questionManager: QuestionManager
     private let questionnaireName: String
     private let filePath: FilePathClosure
     private let directoryPath: String
     
+    
+    /// Initialize a new questionnaire storage service
+    /// - Parameters:
+    ///   - questionnaireName: The name of the questionnaire
+    ///   - filePath: The closure to get the file path for the questionnaire response
+    ///   - directoryPath: The path to the directory where the questionnaire response file is stored
     init(questionnaireName: String, filePath: @escaping FilePathClosure, directoryPath: String) {
         self.questionnaireName = questionnaireName
         self.filePath = filePath
         self.directoryPath = directoryPath
-        self.questionManager = QuestionManager(questionnaireResponseLoader: DefaultQuestionnaireResponseLoader(filePath: filePath))
     }
     
-    func setQuestionnaireResponseLoader(_ loader: QuestionnaireResponseLoader) async {
-        await questionManager.setQuestionnaireResponseLoader(loader)
-    }
-    
+    /// Creates the file to save the questionnaire's response
+    /// - Parameters:
+    ///   - phoneNumber: The caller's phone number used in the hash of the file name
+    ///   - logger: The logger to use for logging
     func setupFile(phoneNumber: String, logger: Logger) {
         logger.info("Attempting to create \(questionnaireName) file at: \(filePath(phoneNumber))")
         do {
@@ -50,7 +54,7 @@ class QuestionnaireStorageService {
             }
             
             // Create initial QuestionnaireResponse with phoneNumber in subject
-            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.inProgress))
             questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
             
             // Write to file
@@ -68,108 +72,62 @@ class QuestionnaireStorageService {
         }
     }
     
-    func initializeQuestions(phoneNumber: String, logger: Logger) async {
-        if let questionnaire = loadQuestionnaire(logger: logger) {
-            await questionManager.initializeQuestions(questionnaire.item ?? [], phoneNumber: phoneNumber, logger: logger)
-        } else {
-            logger.info("Questions could not be loaded and initialized")
-        }
-    }
-    
-    func getNextQuestion(phoneNumber: String, logger: Logger) async -> String? {
-        if await questionManager.isEmpty() {
-            await initializeQuestions(phoneNumber: phoneNumber, logger: logger)
-        }
-        do {
-            guard let questionJSON = try await questionManager.getNextQuestionAsJSON(logger: logger) else {
-                logger.error("No more questions available")
-                return nil
-            }
-            return questionJSON
-        } catch {
-            logger.error("Failed to process next question")
-            return nil
-        }
-    }
-    
-    private func loadQuestionnaire(logger: Logger) -> Questionnaire? {
+    /// Loads the questionnaire from the file
+    /// - Parameters:
+    ///   - logger: The logger to use for logging
+    /// - Returns: The questionnaire if it was loaded successfully, nil otherwise
+    func loadQuestionnaire() -> Questionnaire? {
         guard let path = Bundle.module.path(forResource: questionnaireName, ofType: "json"),
               let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
-            logger.info("Could not read data from \(questionnaireName) file")
             return nil
         }
-        
+       
+        let questionnaire = try? JSONDecoder().decode(Questionnaire.self, from: data)
+        return questionnaire
+    }
+    
+    /// Loads the questionnaire response from the file
+    /// - Parameters:
+    ///   - phoneNumber: The caller's phone number used in the hash of the file name
+    ///   - logger: The logger to use for logging
+    /// - Returns: The questionnaire response if it was loaded successfully, nil otherwise
+    func loadQuestionnaireResponse(phoneNumber: String, logger: Logger) -> QuestionnaireResponse {
+        let fileManager = FileManager.default
+
+        guard fileManager.fileExists(atPath: filePath(phoneNumber)) else {
+            logger.info("Could not read data from \(filePath(phoneNumber)) file")
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
+            return questionnaireResponse
+        }
+
         do {
-            let questionnaire = try JSONDecoder().decode(Questionnaire.self, from: data)
-            logger.info("Successfully decoded questionnaire")
-            return questionnaire
+            let data = try Data(contentsOf: URL(fileURLWithPath: filePath(phoneNumber)))
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(QuestionnaireResponse.self, from: data)
         } catch {
-            logger.error("Failed to decode questionnaire: \(error)")
-            if let dataString = String(data: data, encoding: .utf8) {
-                logger.debug("Raw JSON data: \(dataString)")
-            }
-            return nil
+            logger.error("Failed to load questionnaire response: \(error)")
+            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
+            return questionnaireResponse
         }
     }
     
-    func loadQuestionnaireResponse(phoneNumber: String, logger: Logger) async -> QuestionnaireResponse {
-        await questionManager.loadQuestionnaireResponse(phoneNumber, logger)
-    }
-    
-    func saveQuestionnaireResponse<T>(linkId: String, answer: T, phoneNumber: String, logger: Logger) async -> Bool {
+    /// Saves the questionnaire response to the file
+    /// - Parameters:
+    ///   - phoneNumber: The caller's phone number used in the hash of the file name
+    ///   - response: The questionnaire response to save
+    ///   - logger: The logger to use for logging
+    func saveQuestionnaireResponse(phoneNumber: String, response: QuestionnaireResponse, logger: Logger) async {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = .prettyPrinted
         do {
-            logger.info("Attempting to save questionnaire response for linkId: \(linkId) with answer: \(answer)")
-            
-            let response = await loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
-            
-            // Create or update the answer for the given linkId
-            let responseItem = QuestionnaireResponseItem(linkId: FHIRPrimitive(FHIRString(linkId)))
-            let answerItem = QuestionnaireResponseItemAnswer()
-            
-            // Set the value based on the generic type
-            switch answer {
-            case let stringAnswer as String:
-                answerItem.value = .string(FHIRPrimitive(FHIRString(stringAnswer)))
-            case let intAnswer as Int:
-                answerItem.value = .integer(FHIRPrimitive(FHIRInteger(FHIRInteger.IntegerLiteralType(intAnswer))))
-            default:
-                logger.error("Unsupported answer type: \(type(of: answer))")
-                return false
-            }
-            
-            responseItem.answer = [answerItem]
-            
-            if let index = response.item?.firstIndex(where: { $0.linkId.value?.string == linkId }) {
-                response.item?[index] = responseItem
-                logger.info("Updated existing response for linkId: \(linkId)")
-            } else {
-                if response.item != nil {
-                    response.item?.append(responseItem)
-                } else {
-                    response.item = [responseItem]
-                }
-                logger.info("Added new response for linkId: \(linkId)")
-            }
-            
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            encoder.outputFormatting = .prettyPrinted
-            
             let jsonData = try encoder.encode(response)
             try jsonData.write(to: URL(fileURLWithPath: filePath(phoneNumber)))
-            
-            await questionManager.removeRemainingQuestion(linkId: linkId)
-            
-            logger.info("Successfully saved questionnaire response to \(filePath(phoneNumber))")
-            return true
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")
-            return false
         }
-    }
-    
-    func countAnsweredQuestions(phoneNumber: String, logger: Logger) async -> Int {
-        let response = await questionManager.loadQuestionnaireResponse(phoneNumber, logger)
-        return response.item?.count ?? 0
     }
 }
