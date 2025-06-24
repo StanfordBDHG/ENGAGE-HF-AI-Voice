@@ -10,7 +10,7 @@ import Foundation
 
 /// Helper class for building the feedback decision tree
 @MainActor
-class FeedbackDecisionTreeBuilder {
+enum FeedbackDecisionTreeBuilder {
     // swiftlint:disable:next function_body_length
     static func buildTree(data: PatientData) -> DecisionNode<String> {
         let feedbackNode111 = DecisionNode(
