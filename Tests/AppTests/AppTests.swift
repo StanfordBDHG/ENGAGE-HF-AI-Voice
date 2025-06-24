@@ -56,7 +56,8 @@ struct AppTests {
     @Test("Test Symptom Score Calculation")
     func testSymptomScoreCalculation() async throws {
         try await withApp { app in
-            let score = await KCCQ12Service.computeSymptomScore(phoneNumber: "+16502341234", logger: app.logger)
+            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger)
+            let score = await kccq12Service.computeSymptomScore()
             
             #expect(score == 50.0, "Score should be 50.0 with mocked responses")
         }
@@ -65,7 +66,18 @@ struct AppTests {
     @Test("Test User Feedback Generation")
     func testUserFeedback() async throws {
         try await withApp { app in
-            let feedback = await FeedbackService.feedback(phoneNumber: "+16502341234", logger: app.logger)
+            let vitalSignsService = await VitalSignsService(phoneNumber: "+16502341234", logger: app.logger)
+            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger)
+            let q17Service = await Q17Service(phoneNumber: "+16502341234", logger: app.logger)
+            
+            let feedbackService = await FeedbackService(
+                phoneNumber: "+16502341234",
+                logger: app.logger,
+                vitalSignsService: vitalSignsService,
+                kccq12Service: kccq12Service,
+                q17Service: q17Service
+            )
+            let feedback = await feedbackService.feedback()
             
             #expect(feedback == """
             Your blood pressure and pulse are normal.

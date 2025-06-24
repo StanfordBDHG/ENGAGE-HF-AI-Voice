@@ -12,48 +12,15 @@ import Vapor
 
 
 /// Service for managing Q17 questionnaire
-enum Q17Service: QuestionnaireService {
-    static let storage = QuestionnaireStorageService(
-        questionnaireName: "q17",
-        filePath: FileService.q17FilePath,
-        directoryPath: FileService.q17DirectoryPath
-    )
-    static let manager = QuestionnaireManager(questionnaire: storage.loadQuestionnaire())
-    
-    
-    static func loadAnsweredQuestions(phoneNumber: String, logger: Logger) {
-        let currentResponse = storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
-        manager.setCurrentResponse(currentResponse)
-    }
-    
-    static func setupFile(phoneNumber: String, logger: Logging.Logger) {
-        storage.setupFile(phoneNumber: phoneNumber, logger: logger)
-    }
-    
-    static func getNextQuestion(logger: Logger) async -> String? {
-        manager.getNextQuestionString()
-    }
-    
-    static func saveQuestionnaireResponseToFile(phoneNumber: String, logger: Logger) async {
-        let response = manager.getCurrentResponse()
-        await storage.saveQuestionnaireResponse(phoneNumber: phoneNumber, response: response, logger: logger)
-    }
-    
-    static func saveQuestionnaireAnswer<T>(linkId: String, answer: T, logger: Logger) -> Bool {
-        do {
-            try manager.answerQuestion(linkId: linkId, answer: answer)
-            return true
-        } catch {
-            logger.error("Error saving Questionnaire Answer: \(error)")
-        }
-        return false
-    }
-    
-    static func countAnsweredQuestions() -> Int {
-        manager.countAnsweredQuestions()
-    }
-
-    static func unansweredQuestionsLeft() -> Bool {
-        !manager.isFinished
+@MainActor
+class Q17Service: BaseQuestionnaireService, Sendable {
+    init(phoneNumber: String, logger: Logger) {
+        super.init(
+            questionnaireName: "q17",
+            filePath: FileService.q17FilePath,
+            directoryPath: FileService.q17DirectoryPath,
+            phoneNumber: phoneNumber,
+            logger: logger
+        )
     }
 }

@@ -13,14 +13,14 @@ import Vapor
 
 /// Service for managing questionnaire data storage on disk
 @MainActor
-class QuestionnaireStorageService {
+class QuestionnaireStorageService: Sendable {
     typealias FilePathClosure = @Sendable (String) -> String
     
     private let questionnaireName: String
     private let filePath: FilePathClosure
     private let directoryPath: String
     
-    
+
     /// Initialize a new questionnaire storage service
     /// - Parameters:
     ///   - questionnaireName: The name of the questionnaire
@@ -30,46 +30,6 @@ class QuestionnaireStorageService {
         self.questionnaireName = questionnaireName
         self.filePath = filePath
         self.directoryPath = directoryPath
-    }
-    
-    /// Creates the file to save the questionnaire's response
-    /// - Parameters:
-    ///   - phoneNumber: The caller's phone number used in the hash of the file name
-    ///   - logger: The logger to use for logging
-    func setupFile(phoneNumber: String, logger: Logger) {
-        logger.info("Attempting to create \(questionnaireName) file at: \(filePath(phoneNumber))")
-        do {
-            // Create directory if it doesn't exist
-            try FileManager.default.createDirectory(
-                atPath: directoryPath,
-                withIntermediateDirectories: true
-            )
-            
-            let filePath = filePath(phoneNumber)
-            
-            // Check if file already exists
-            if FileManager.default.fileExists(atPath: filePath) {
-                logger.info("\(questionnaireName) file already exists for this participant")
-                return
-            }
-            
-            // Create initial QuestionnaireResponse with phoneNumber in subject
-            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.inProgress))
-            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
-            
-            // Write to file
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            encoder.outputFormatting = .prettyPrinted
-            let jsonData = try encoder.encode(questionnaireResponse)
-            try jsonData.write(to: URL(fileURLWithPath: filePath))
-            logger.info("Created new \(questionnaireName) file for this participant")
-            
-            return
-        } catch {
-            logger.error("Failed to setup \(questionnaireName) file: \(error)")
-            return
-        }
     }
     
     /// Loads the questionnaire from the file
@@ -120,6 +80,16 @@ class QuestionnaireStorageService {
     ///   - response: The questionnaire response to save
     ///   - logger: The logger to use for logging
     func saveQuestionnaireResponse(phoneNumber: String, response: QuestionnaireResponse, logger: Logger) async {
+        // Create directory if it doesn't exist
+        do {
+            try FileManager.default.createDirectory(
+                atPath: directoryPath,
+                withIntermediateDirectories: true
+            )
+        } catch {
+            logger.error("Failed to create directory: \(error)")
+        }
+
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = .prettyPrinted

@@ -99,13 +99,13 @@ enum Constants {
     After that, thank the patient for their time and tell them that they can now end the call.
     """
     
-    static func getSystemMessageForService(_ service: QuestionnaireService.Type, initialQuestion: String) -> String? {
+    static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String) -> String? {
         switch service {
-        case is VitalSignsService.Type:
+        case is VitalSignsService:
             return initialSystemMessage + vitalSignsInstructions + "Initial Question: \(initialQuestion)"
-        case is KCCQ12Service.Type:
+        case is KCCQ12Service:
             return initialSystemMessage + kccq12Instructions + "Initial Question: \(initialQuestion)"
-        case is Q17Service.Type:
+        case is Q17Service:
             return initialSystemMessage + q17Instructions + "Final Question: \(initialQuestion)"
         default:
             return nil

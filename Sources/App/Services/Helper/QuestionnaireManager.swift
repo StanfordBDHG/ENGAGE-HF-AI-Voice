@@ -19,7 +19,7 @@ enum QuestionnaireManagerError: Error {
 /// A generalized questionnaire manager that handles the state and progression of answering a questionnaire.
 /// It maintains an internal FHIR questionnaire response that is populated as answers are provided.
 @MainActor
-class QuestionnaireManager {
+class QuestionnaireManager: Sendable {
     /// The questionnaire being managed
     private let questionnaire: Questionnaire
     
@@ -46,13 +46,6 @@ class QuestionnaireManager {
         }
         
         updateFinishedState()
-    }
-    
-    /// Set the current questionnaire response
-    /// - Parameters:
-    ///   - currentResponse: The questionnaire response to set
-    func setCurrentResponse(_ currentResponse: QuestionnaireResponse) {
-        response = currentResponse
     }
     
     /// Get the next unanswered question
@@ -136,12 +129,6 @@ class QuestionnaireManager {
     /// - Returns: The number of answered questions
     func countAnsweredQuestions() -> Int {
         response.item?.count ?? 0
-    }
-    
-    /// Reset the questionnaire response to start over
-    func reset() {
-        response = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.inProgress))
-        isFinished = false
     }
     
     // MARK: - Private Helpers

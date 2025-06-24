@@ -10,10 +10,10 @@
 import Vapor
 
 actor ServiceState {
-    private var services: [QuestionnaireService.Type]
+    private var services: [QuestionnaireService]
     private var currentIndex: Int
     
-    var current: QuestionnaireService.Type {
+    var current: QuestionnaireService {
         services[currentIndex]
     }
     
@@ -22,12 +22,12 @@ actor ServiceState {
     }
     
     
-    init(services: [QuestionnaireService.Type]) {
+    init(services: [QuestionnaireService]) {
         self.services = services
         self.currentIndex = 0
     }
     
-    func next() -> QuestionnaireService.Type? {
+    func next() -> QuestionnaireService? {
         guard hasNext else {
             return nil
         }
@@ -40,9 +40,23 @@ actor ServiceState {
     }
     
     func initializeCurrentService() async {
-        for (index, serviceType) in services.enumerated() where await serviceType.unansweredQuestionsLeft() {
+        for (index, service) in services.enumerated() where await service.unansweredQuestionsLeft() {
             currentIndex = index
             break
         }
+    }
+    
+    // MARK: - Service Access Methods
+    
+    func getVitalSignsService() -> VitalSignsService? {
+        services.first { $0 is VitalSignsService } as? VitalSignsService
+    }
+    
+    func getKCCQ12Service() -> KCCQ12Service? {
+        services.first { $0 is KCCQ12Service } as? KCCQ12Service
+    }
+    
+    func getQ17Service() -> Q17Service? {
+        services.first { $0 is Q17Service } as? Q17Service
     }
 }

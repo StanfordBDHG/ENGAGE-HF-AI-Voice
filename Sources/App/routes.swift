@@ -23,11 +23,6 @@ func routes(_ app: Application) throws {
             // swiftlint:disable:next force_unwrapping
             let encodedCallerPhoneNumber = callerPhoneNumber.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
             
-            // Create files for responses of caller
-            await VitalSignsService.setupFile(phoneNumber: callerPhoneNumber, logger: req.logger)
-            await KCCQ12Service.setupFile(phoneNumber: callerPhoneNumber, logger: req.logger)
-            await Q17Service.setupFile(phoneNumber: callerPhoneNumber, logger: req.logger)
-            
             let twimlResponse =
             """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -56,15 +51,11 @@ func routes(_ app: Application) throws {
         }
         let connectionState = ConnectionState()
         
-        let serviceState = ServiceState(services: [
-            VitalSignsService.self,
-            KCCQ12Service.self,
-            Q17Service.self
+        let serviceState = await ServiceState(services: [
+            VitalSignsService(phoneNumber: callerPhoneNumber, logger: req.logger),
+            KCCQ12Service(phoneNumber: callerPhoneNumber, logger: req.logger),
+            Q17Service(phoneNumber: callerPhoneNumber, logger: req.logger)
         ])
-        
-        await VitalSignsService.loadAnsweredQuestions(phoneNumber: callerPhoneNumber, logger: req.logger)
-        await KCCQ12Service.loadAnsweredQuestions(phoneNumber: callerPhoneNumber, logger: req.logger)
-        await Q17Service.loadAnsweredQuestions(phoneNumber: callerPhoneNumber, logger: req.logger)
         
         // Handle incoming start messages from Twilio
         twilioWs.onText { _, text async in
@@ -116,11 +107,10 @@ func routes(_ app: Application) throws {
         @Sendable
         func initializeSession(webSocket: WebSocket) async {
             do {
-                await serviceState.initializeCurrentService(phoneNumber: callerPhoneNumber, logger: req.logger)
-                let currentService = await serviceState.current
-                let initialQuestion = await currentService.getNextQuestion(logger: req.logger)
-                let initialSystemMessage = Constants.getSystemMessageForService(
-                    currentService,
+                await serviceState.initializeCurrentService()
+                let initialQuestion = await serviceState.current.getNextQuestion()
+                let initialSystemMessage = await Constants.getSystemMessageForService(
+                    serviceState.current,
                     initialQuestion: initialQuestion ?? "No question found."
                 )
                 let sessionConfigJSONString = Constants.loadSessionConfig(systemMessage: initialSystemMessage ?? "")
@@ -292,7 +282,7 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func saveResponse(
-            service: QuestionnaireService.Type,
+            service: QuestionnaireService,
             response: OpenAIResponse,
             openAIWs: WebSocket,
             phoneNumber: String
@@ -323,7 +313,7 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func countAnsweredQuestions(
-            service: QuestionnaireService.Type,
+            service: QuestionnaireService,
             response: OpenAIResponse,
             openAIWs: WebSocket,
             phoneNumber: String
@@ -351,7 +341,22 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func getFeedback(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            let feedback = await FeedbackService.feedback(phoneNumber: phoneNumber, logger: req.logger)
+            // Get existing service instances to avoid creating duplicates
+            guard let vitalSignsService = await serviceState.getVitalSignsService(),
+                  let kccq12Service = await serviceState.getKCCQ12Service(),
+                  let q17Service = await serviceState.getQ17Service() else {
+                req.logger.error("Failed to get service instances for feedback")
+                throw Abort(.internalServerError, reason: "Service instances not available")
+            }
+            
+            let feedbackService = await FeedbackService(
+                phoneNumber: phoneNumber,
+                logger: req.logger,
+                vitalSignsService: vitalSignsService,
+                kccq12Service: kccq12Service,
+                q17Service: q17Service
+            )
+            let feedback = await feedbackService.feedback()
             
             let functionResponse: [String: Any] = [
                 "type": "conversation.item.create",
@@ -448,19 +453,17 @@ func routes(_ app: Application) throws {
         }
 
         @Sendable
-        func saveQuestionnaireAnswer(service: QuestionnaireService.Type, parsedArgs: QuestionnaireResponseArgs) async -> Bool {
+        func saveQuestionnaireAnswer(service: QuestionnaireService, parsedArgs: QuestionnaireResponseArgs) async -> Bool {
             switch parsedArgs.answer {
             case .number(let number):
                 return await service.saveQuestionnaireAnswer(
                     linkId: parsedArgs.linkId,
-                    answer: number,
-                    logger: req.logger
+                    answer: number
                 )
             case .text(let text):
                 return await service.saveQuestionnaireAnswer(
                     linkId: parsedArgs.linkId,
-                    answer: text,
-                    logger: req.logger
+                    answer: text
                 )
             }
         }
@@ -488,12 +491,12 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func handleSaveSuccess(
-            service: QuestionnaireService.Type,
+            service: QuestionnaireService,
             response: OpenAIResponse,
             openAIWs: WebSocket,
             phoneNumber: String
         ) async throws {
-            if let nextQuestion = await service.getNextQuestion(logger: req.logger) {
+            if let nextQuestion = await service.getNextQuestion() {
                 try await handleNextQuestionAvailable(nextQuestion: nextQuestion, response: response, openAIWs: openAIWs)
             } else {
                 try await handleQuestionnaireComplete(service: service, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
@@ -523,19 +526,15 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func handleQuestionnaireComplete(
-            service: QuestionnaireService.Type,
+            service: QuestionnaireService,
             response: OpenAIResponse,
             openAIWs: WebSocket,
             phoneNumber: String
         ) async throws {
-            await service.saveQuestionnaireResponseToFile(phoneNumber: phoneNumber, logger: req.logger)
-            
-            let responseRequest: [String: Any] = [
-                "type": "response.create"
-            ]
+            await service.saveQuestionnaireResponseToFile()
            
             if let nextService = await serviceState.next(),
-               let initialQuestion = await nextService.getNextQuestion(logger: req.logger),
+               let initialQuestion = await nextService.getNextQuestion(),
                let systemMessage = Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {
                 try await handleNextServiceAvailable(
                     nextService: nextService,
@@ -551,7 +550,7 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func handleNextServiceAvailable(
-            nextService: QuestionnaireService.Type,
+            nextService: QuestionnaireService,
             initialQuestion: String,
             systemMessage: String,
             response: OpenAIResponse,

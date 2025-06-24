@@ -12,49 +12,16 @@ import Vapor
 
 
 /// Service for managing KCCQ12 questionnaire
-enum KCCQ12Service: QuestionnaireService {
-    static let storage = QuestionnaireStorageService(
-        questionnaireName: "kccq12",
-        filePath: FileService.kccq12FilePath,
-        directoryPath: FileService.kccq12DirectoryPath
-    )
-    static let manager = QuestionnaireManager(questionnaire: storage.loadQuestionnaire())
-
-    
-    static func loadAnsweredQuestions(phoneNumber: String, logger: Logger) {
-        let currentResponse = storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
-        manager.setCurrentResponse(currentResponse)
-    }
-    
-    static func setupFile(phoneNumber: String, logger: Logger) {
-        storage.setupFile(phoneNumber: phoneNumber, logger: logger)
-    }
-    
-    static func getNextQuestion(logger: Logger) async -> String? {
-        manager.getNextQuestionString()
-    }
-    
-    static func saveQuestionnaireResponseToFile(phoneNumber: String, logger: Logger) async {
-        let response = manager.getCurrentResponse()
-        await storage.saveQuestionnaireResponse(phoneNumber: phoneNumber, response: response, logger: logger)
-    }
-    
-    static func saveQuestionnaireAnswer<T>(linkId: String, answer: T, logger: Logger) -> Bool {
-        do {
-            try manager.answerQuestion(linkId: linkId, answer: answer)
-            return true
-        } catch {
-            logger.error("Error saving Questionnaire Answer: \(error)")
-        }
-        return false
-    }
-    
-    static func countAnsweredQuestions() -> Int {
-        manager.countAnsweredQuestions()
-    }
-
-    static func unansweredQuestionsLeft() -> Bool {
-        !manager.isFinished
+@MainActor
+class KCCQ12Service: BaseQuestionnaireService, Sendable {
+    init(phoneNumber: String, logger: Logger) {
+        super.init(
+            questionnaireName: "kccq12",
+            filePath: FileService.kccq12FilePath,
+            directoryPath: FileService.kccq12DirectoryPath,
+            phoneNumber: phoneNumber,
+            logger: logger
+        )
     }
 
     /// Compute the symptom score from the KCCQ12 questionnaire responses
@@ -62,7 +29,7 @@ enum KCCQ12Service: QuestionnaireService {
     ///   - phoneNumber: The phone number of the caller
     ///   - logger: The logger to use for logging
     /// - Returns: The overall symptom score value
-    static func computeSymptomScore(phoneNumber: String, logger: Logger) async -> Double? {
+    func computeSymptomScore() async -> Double? {
         let response = storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         
         guard let response = response.item else {
@@ -91,7 +58,7 @@ enum KCCQ12Service: QuestionnaireService {
         return self.average(domainScores)
     }
     
-    private static func calculatePhysicalLimitsScore(_ response: [QuestionnaireResponseItem]) -> Double? {
+    private func calculatePhysicalLimitsScore(_ response: [QuestionnaireResponseItem]) -> Double? {
         let physicalLinkIds = [
             "a459b804-35bf-4792-f1eb-0b52c4e176e1",
             "cf9c5031-1ed5-438a-fc7d-dc69234015a0",
@@ -110,7 +77,7 @@ enum KCCQ12Service: QuestionnaireService {
         return physicalLimitsAnswers.count >= 2 ? self.average(physicalLimitsAnswers) : nil
     }
     
-    private static func calculateSymptomFrequencyScore(_ response: [QuestionnaireResponseItem]) -> Double? {
+    private func calculateSymptomFrequencyScore(_ response: [QuestionnaireResponseItem]) -> Double? {
         let linkIds = [
             "692bda7d-a616-43d1-8dc6-8291f6460ab2",
             "b1734b9e-1d16-4238-8556-5ae3fa0ba913",
@@ -133,7 +100,7 @@ enum KCCQ12Service: QuestionnaireService {
         return self.average(scores)
     }
     
-    private static func calculateQualityOfLifeScore(_ response: [QuestionnaireResponseItem]) -> Double? {
+    private func calculateQualityOfLifeScore(_ response: [QuestionnaireResponseItem]) -> Double? {
         let linkIds = [
             "75e3f62e-e37d-48a2-f4d9-af2db8922da0",
             "fce3a16e-c6d8-4bac-8ab5-8f4aee4adc08"
@@ -149,7 +116,7 @@ enum KCCQ12Service: QuestionnaireService {
         return self.average(scores)
     }
     
-    private static func calculateSocialLimitsScore(_ response: [QuestionnaireResponseItem]) -> Double? {
+    private func calculateSocialLimitsScore(_ response: [QuestionnaireResponseItem]) -> Double? {
         let linkIds = [
             "8649bc8c-f908-487d-87a4-a97106b1a4c3",
             "1eee7259-da1c-4cba-80a9-e67e684573a1",
@@ -166,7 +133,7 @@ enum KCCQ12Service: QuestionnaireService {
         return scores.count >= 2 ? self.average(scores) : nil
     }
 
-    private static func average(_ numbers: [Double]) -> Double? {
+    private func average(_ numbers: [Double]) -> Double? {
         guard !numbers.isEmpty else {
             return nil
         }
@@ -174,7 +141,7 @@ enum KCCQ12Service: QuestionnaireService {
         return sum / Double(numbers.count)
     }
     
-    private static nonisolated func getAnswerValue(_ item: QuestionnaireResponseItem) -> Int? {
+    private nonisolated func getAnswerValue(_ item: QuestionnaireResponseItem) -> Int? {
         guard let value = item.answer?.first?.value,
               case .string(let stringValue) = value,
               let intValue = Int(stringValue.value?.string ?? "") else {
