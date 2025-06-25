@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ENGAGE-HF-AI-Voice}",
+            "name": "Debug App",
+            "program": "${workspaceFolder:ENGAGE-HF-AI-Voice}/.build/debug/App",
+            "preLaunchTask": "swift: Build Debug App"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ENGAGE-HF-AI-Voice}",
+            "name": "Release App",
+            "program": "${workspaceFolder:ENGAGE-HF-AI-Voice}/.build/release/App",
+            "preLaunchTask": "swift: Build Release App"
+        }
+    ]
+}
