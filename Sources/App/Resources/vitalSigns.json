@@ -1,0 +1,78 @@
+{
+    "title": "Patient Vitals",
+    "resourceType": "Questionnaire",
+    "language": "en-US",
+    "status": "draft",
+    "publisher": "Stanford Biodesign Digital Health",
+    "meta": {
+        "profile": [
+            "http://spezi.health/fhir/StructureDefinition/sdf-Questionnaire"
+        ],
+        "tag": [
+            {
+                "system": "urn:ietf:bcp:47",
+                "code": "en-US",
+                "display": "English"
+            }
+        ]
+    },
+    "useContext": [
+        {
+            "code": {
+                "system": "http://hl7.org/fhir/ValueSet/usage-context-type",
+                "code": "focus",
+                "display": "Clinical Focus"
+            },
+            "valueCodeableConcept": {
+                "coding": [
+                    {
+                        "system": "http://snomed.info/sct",
+                        "code": "364075005",
+                        "display": "Heart rate, blood pressure, weight"
+                    }
+                ]
+            }
+        }
+    ],
+    "contact": [
+        {
+            "name": "http://spezi.health"
+        }
+    ],
+    "subjectType": ["Patient"],
+    "url": "http://spezi.health/fhir/questionnaire/vitals-simple",
+    "item": [
+        {
+            "linkId": "blood-pressure-group",
+            "type": "group",
+            "text": "Blood Pressure",
+            "required": true,
+            "item": [
+                {
+                    "linkId": "systolic",
+                    "type": "integer",
+                    "text": "Systolic Blood Pressure (mmHg)",
+                    "required": true
+                },
+                {
+                    "linkId": "diastolic",
+                    "type": "integer",
+                    "text": "Diastolic Blood Pressure (mmHg)",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "linkId": "heart-rate",
+            "type": "integer",
+            "text": "Heart Rate (beats per minute)",
+            "required": true
+        },
+        {
+            "linkId": "weight",
+            "type": "integer",
+            "text": "Weight (pounds)",
+            "required": true
+        }
+    ]
+}

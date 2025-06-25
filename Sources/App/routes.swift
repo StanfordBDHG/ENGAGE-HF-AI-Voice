@@ -10,8 +10,6 @@ import Foundation
 import Vapor
 
 // swiftlint:disable file_length
-
-
 // swiftlint:disable:next function_body_length
 func routes(_ app: Application) throws {
     app.get("health") { _ -> HTTPStatus in
@@ -24,10 +22,6 @@ func routes(_ app: Application) throws {
             let callerPhoneNumber = try req.content.get(String.self, at: "From")
             // swiftlint:disable:next force_unwrapping
             let encodedCallerPhoneNumber = callerPhoneNumber.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
-            
-            // Create files for responses of caller
-            VitalSignsService.setupVitalSignsFile(phoneNumber: callerPhoneNumber, logger: req.logger)
-            KCCQ12Service.setupKCCQ12File(phoneNumber: callerPhoneNumber, logger: req.logger)
             
             let twimlResponse =
             """
@@ -55,7 +49,13 @@ func routes(_ app: Application) throws {
             req.logger.info("Caller phone number not provided")
             return
         }
-        let state = ConnectionState()
+        let connectionState = ConnectionState()
+        
+        let serviceState = await ServiceState(services: [
+            VitalSignsService(phoneNumber: callerPhoneNumber, logger: req.logger),
+            KCCQ12Service(phoneNumber: callerPhoneNumber, logger: req.logger),
+            Q17Service(phoneNumber: callerPhoneNumber, logger: req.logger)
+        ])
         
         // Handle incoming start messages from Twilio
         twilioWs.onText { _, text async in
@@ -66,7 +66,7 @@ func routes(_ app: Application) throws {
             req.logger.info("OpenAI API key not found")
             return
         }
-        let openAIWsURL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
+        let openAIWsURL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-06-03"
         guard URL(string: openAIWsURL) != nil else {
             req.logger.info("Invalid OpenAI WebSocket URL")
             return
@@ -77,7 +77,7 @@ func routes(_ app: Application) throws {
         
         do {
             _ = try await WebSocket.connect(to: openAIWsURL, headers: headers, on: req.eventLoop) { openAIWs async in
-                initializeSession(webSocket: openAIWs)
+                await initializeSession(webSocket: openAIWs)
                 
                 // Handle incoming messages from Twilio
                 twilioWs.onText { _, text async in
@@ -105,20 +105,42 @@ func routes(_ app: Application) throws {
         
         
         @Sendable
-        func initializeSession(webSocket: WebSocket) {
+        func initializeSession(webSocket: WebSocket) async {
             do {
-                let sessionConfigJSONString = Constants.loadSessionConfig()
-                req.logger.info("\(sessionConfigJSONString)")
-                webSocket.send(sessionConfigJSONString)
+                let hasUnansweredQuestions = await serviceState.initializeCurrentService()
+                if !hasUnansweredQuestions {
+                    req.logger.info("No services have unanswered questions. Updating session with feedback.")
+                    let systemMessage = Constants.feedback
+                    await updateSession(webSocket: webSocket, systemMessage: systemMessage)
+                } else {
+                    let initialQuestion = await serviceState.current.getNextQuestion()
+                    let initialSystemMessage = await Constants.getSystemMessageForService(
+                        serviceState.current,
+                        initialQuestion: initialQuestion ?? "No question found."
+                    )
+                    await updateSession(webSocket: webSocket, systemMessage: initialSystemMessage ?? "")
+                }
                 let responseRequest: [String: Any] = [
                     "type": "response.create"
                 ]
                 let responseData = try JSONSerialization.data(withJSONObject: responseRequest)
                 if let jsonString = String(data: responseData, encoding: .utf8) {
-                    webSocket.send(jsonString)
+                    try await webSocket.send(jsonString)
                 }
             } catch {
                 req.logger.error("Failed to serialize session update: \(error)")
+            }
+        }
+        
+        @Sendable
+        func updateSession(webSocket: WebSocket, systemMessage: String) async {
+            let sessionConfigJSONString = Constants.loadSessionConfig(systemMessage: systemMessage)
+            do {
+                req.logger.info("Updating session with: \(sessionConfigJSONString)")
+                try await webSocket.send(sessionConfigJSONString)
+            } catch {
+                req.logger.error("Failed to update session: \(error). Closing web socket.")
+                try? await webSocket.close()
             }
         }
 
@@ -136,9 +158,9 @@ func routes(_ app: Application) throws {
                         req.logger.error("Start event missing start data")
                         return
                     }
-                    await state.updateStreamSid(start.streamSid)
-                    await state.updateResponseStartTimestampTwilio(nil)
-                    await state.updateTimestamp(0)
+                    await connectionState.updateStreamSid(start.streamSid)
+                    await connectionState.updateResponseStartTimestampTwilio(nil)
+                    await connectionState.updateTimestamp(0)
                 default:
                     req.logger.info("Received non-media event: \(twilioEvent.event)")
                 }
@@ -165,7 +187,7 @@ func routes(_ app: Application) throws {
                         req.logger.error("Failed to convert timestamp to Int")
                         return
                     }
-                    await state.updateTimestamp(timestampInt)
+                    await connectionState.updateTimestamp(timestampInt)
                     let audioAppend: [String: String] = [
                         "type": "input_audio_buffer.append",
                         "audio": media.payload
@@ -175,9 +197,9 @@ func routes(_ app: Application) throws {
                         try await openAIWs.send(jsonString)
                     }
                 case "mark":
-                    let markQueue = await state.markQueue
+                    let markQueue = await connectionState.markQueue
                     if !markQueue.isEmpty {
-                        await state.removeFirstFromMarkQueue()
+                        await connectionState.removeFirstFromMarkQueue()
                     }
                 default:
                     req.logger.info("Received non-media event: \(twilioEvent.event)")
@@ -196,7 +218,7 @@ func routes(_ app: Application) throws {
                 let response = try JSONDecoder().decode(OpenAIResponse.self, from: jsonData)
                 
                 if Constants.logEventTypes.contains(response.type) {
-                    print("Received event: \(response.type)", response)
+                    req.logger.info("Received event: \(response.type)")
                 }
                 
                 try await handleOpenAIFunctionCall(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
@@ -204,29 +226,29 @@ func routes(_ app: Application) throws {
                 
                 // Handling for Audio
                 if response.type == "response.audio.delta", let delta = response.delta {
-                    let streamSid = await state.streamSid
+                    let streamSid = await connectionState.streamSid
                     let audioDelta: [String: Any] = [
                         "event": "media",
                         "streamSid": streamSid ?? "",
                         "media": ["payload": delta]
                     ]
-                    let jsonData = try JSONSerialization.data(withJSONObject: audioDelta)
-                    if let jsonString = String(data: jsonData, encoding: .utf8) {
-                        try await twilioWs.send(jsonString)
+                    do {
+                        try await sendJSON(audioDelta, twilioWs)
+                    } catch {
+                        req.logger.error("Failed to send audio delta: \(error)")
                     }
                     
                     // First delta from a new response starts the elapsed time counter
-                    let responseStartTimestampTwilio = await state.responseStartTimestampTwilio
-                    if responseStartTimestampTwilio == nil {
-                        let latestMediaTimestamp = await state.latestMediaTimestamp
-                        await state.updateResponseStartTimestampTwilio(latestMediaTimestamp)
+                     if await connectionState.responseStartTimestampTwilio == nil {
+                        let latestMediaTimestamp = await connectionState.latestMediaTimestamp
+                        await connectionState.updateResponseStartTimestampTwilio(latestMediaTimestamp)
                         
-                        let responseStartTimestampTwilio = await state.responseStartTimestampTwilio
+                        let responseStartTimestampTwilio = await connectionState.responseStartTimestampTwilio
                         req.logger.info("Setting start timestamp for new response: \(responseStartTimestampTwilio ?? 0)ms")
                     }
                     
                     if let itemId = response.itemId {
-                        await state.updateLastAssistantItem(itemId)
+                        await connectionState.updateLastAssistantItem(itemId)
                     }
                     
                     try await sendMark(webSocket: twilioWs, streamSid: streamSid)
@@ -248,19 +270,14 @@ func routes(_ app: Application) throws {
         @Sendable
         func handleOpenAIFunctionCall(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
             if response.type == "response.function_call_arguments.done" {
+                let currentService = await serviceState.current
                 switch response.name {
-                case "save_blood_pressure":
-                    try await saveBloodPressure(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "save_heart_rate":
-                    try await saveHeartRate(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "save_weight":
-                    try await saveWeight(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "get_kccq12_question":
-                    try await getKCCQ12Question(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "save_kccq12_response":
-                    try await saveKCCQ12Response(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "count_answered_kccq12_questions":
-                    try await countAnsweredKCCQ12Questions(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+                case "save_response":
+                    try await saveResponse(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+                case "count_answered_questions":
+                    try await countAnsweredQuestions(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+                case "get_feedback":
+                    try await getFeedback(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 default:
                     req.logger.error("Unknown function call: \(String(describing: response.name))")
                 }
@@ -268,228 +285,45 @@ func routes(_ app: Application) throws {
         }
         
         @Sendable
-        func saveBloodPressure(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
+        func saveResponse(
+            service: QuestionnaireService,
+            response: OpenAIResponse,
+            openAIWs: WebSocket,
+            phoneNumber: String
+        ) async throws {
             do {
-                req.logger.info("Attempting to save blood pressure...")
-                let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
-                req.logger.info("\(argumentsData)")
-                if let parsedArgs = try? JSONDecoder().decode(BloodPressureArgs.self, from: argumentsData) {
-                    let saveResult = VitalSignsService.saveBloodPressure(
-                        bloodPressureSystolic: parsedArgs.systolicBloodPressure,
-                        bloodPressureDiastolic: parsedArgs.diastolicBloodPressure,
-                        phoneNumber: phoneNumber,
-                        logger: req.logger
-                    )
-                    
-                    let functionResponse: [String: Any] = [
-                        "type": "conversation.item.create",
-                        "item": [
-                            "type": "function_call_output",
-                            "call_id": response.callId ?? "",
-                            "output": saveResult ?
-                            "Blood pressure saved successfully." :
-                                "Failed to save blood pressure. Please try again."
-                        ]
-                    ]
-                    let responseRequest: [String: Any] = [
-                        "type": "response.create"
-                    ]
-                    
-                    try await sendJSON(functionResponse, openAIWs)
-                    try await sendJSON(responseRequest, openAIWs)
-                    
-                    await state.updateResponseStartTimestampTwilio(nil)
-                    await state.updateLastAssistantItem(nil)
-                }
-            } catch {
-                req.logger.error("Error processing blood pressure: \(error)")
-                // Send error response back to OpenAI
-                let errorResponse: [String: Any] = [
-                    "type": "function_response",
-                    "id": response.callId ?? "",
-                    "error": [
-                        "message": "Failed to process blood pressure"
-                    ]
-                ]
-                try await sendJSON(errorResponse, openAIWs)
-            }
-        }
-        
-        @Sendable
-        func saveHeartRate(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            do {
-                req.logger.info("Attempting to save heart rate...")
-                let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
-                if let parsedArgs = try? JSONDecoder().decode(HeartRateArgs.self, from: argumentsData) {
-                    let saveResult = VitalSignsService.saveHeartRate(parsedArgs.heartRate, phoneNumber: phoneNumber, logger: req.logger)
-                    
-                    let functionResponse: [String: Any] = [
-                        "type": "conversation.item.create",
-                        "item": [
-                            "type": "function_call_output",
-                            "call_id": response.callId ?? "",
-                            "output": saveResult ?
-                            "Heart rate saved successfully." :
-                                "Failed to save heart rate. Please try again."
-                        ]
-                    ]
-                    let responseRequest: [String: Any] = [
-                        "type": "response.create"
-                    ]
-                    
-                    try await sendJSON(functionResponse, openAIWs)
-                    try await sendJSON(responseRequest, openAIWs)
-                    
-                    await state.updateResponseStartTimestampTwilio(nil)
-                    await state.updateLastAssistantItem(nil)
-                }
-            } catch {
-                req.logger.error("Error processing heart rate: \(error)")
-                // Send error response back to OpenAI
-                let errorResponse: [String: Any] = [
-                    "type": "function_response",
-                    "id": response.callId ?? "",
-                    "error": [
-                        "message": "Failed to process heart rate"
-                    ]
-                ]
-                try await sendJSON(errorResponse, openAIWs)
-            }
-        }
-        
-        @Sendable
-        func saveWeight(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            do {
-                req.logger.info("Attempting to save weight...")
-                let argumentsData = response.arguments?.data(using: .utf8) ?? Data()
-                if let parsedArgs = try? JSONDecoder().decode(WeightArgs.self, from: argumentsData) {
-                    let saveResult = VitalSignsService.saveWeight(parsedArgs.weight, phoneNumber: phoneNumber, logger: req.logger)
-                    
-                    let functionResponse: [String: Any] = [
-                        "type": "conversation.item.create",
-                        "item": [
-                            "type": "function_call_output",
-                            "call_id": response.callId ?? "",
-                            "output": saveResult ?
-                            "Weight saved successfully." :
-                                "Failed to save weight. Please try again."
-                        ]
-                    ]
-                    let responseRequest: [String: Any] = [
-                        "type": "response.create"
-                    ]
-                    
-                    try await sendJSON(functionResponse, openAIWs)
-                    try await sendJSON(responseRequest, openAIWs)
-                    
-                    await state.updateResponseStartTimestampTwilio(nil)
-                    await state.updateLastAssistantItem(nil)
-                }
-            } catch {
-                req.logger.error("Error processing weight: \(error)")
-                // Send error response back to OpenAI
-                let errorResponse: [String: Any] = [
-                    "type": "function_response",
-                    "id": response.callId ?? "",
-                    "error": [
-                        "message": "Failed to process weight"
-                    ]
-                ]
-                try await sendJSON(errorResponse, openAIWs)
-            }
-        }
-        
-        @Sendable
-        func getKCCQ12Question(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            let question = await KCCQ12Service.getNextQuestion(phoneNumber: phoneNumber, logger: req.logger)
-            
-            let functionResponse: [String: Any] = [
-                "type": "conversation.item.create",
-                "item": [
-                    "type": "function_call_output",
-                    "call_id": response.callId ?? "",
-                    "output": question ?? "No more questions available."
-                ]
-            ]
-            
-            req.logger.info("KCCQ-12 question functionResponse: \(functionResponse)")
-            
-            let responseRequest: [String: Any] = [
-                "type": "response.create"
-            ]
-            
-            try await sendJSON(functionResponse, openAIWs)
-            try await sendJSON(responseRequest, openAIWs)
-            
-            await state.updateResponseStartTimestampTwilio(nil)
-            await state.updateLastAssistantItem(nil)
-            
-            // Log the connection state after function response
-            req.logger.info("Function response sent, connection state: \(openAIWs.isClosed ? "closed" : "open")")
-        }
-        
-        @Sendable
-        func saveKCCQ12Response(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            do {
-                req.logger.info("Attempting to save KCCQ12 Response...")
+                req.logger.info("Attempting to save response...")
                 guard let arguments = response.arguments else {
                     throw Abort(.badRequest, reason: "No arguments provided")
                 }
                 let argumentsData = arguments.data(using: .utf8) ?? Data()
                 
-                if let parsedArgs = try? JSONDecoder().decode(KCCQ12ResponseArgs.self, from: argumentsData) {
+                if let parsedArgs = try? JSONDecoder().decode(QuestionnaireResponseArgs.self, from: argumentsData) {
                     req.logger.info("Parsed arguments: \(parsedArgs)")
+                    let saveResult = await saveQuestionnaireAnswer(service: service, parsedArgs: parsedArgs)
                     
-                    let saveResult = await KCCQ12Service.saveQuestionnaireResponse(
-                        linkId: parsedArgs.linkId,
-                        code: parsedArgs.code,
-                        phoneNumber: phoneNumber,
-                        logger: req.logger
-                    )
-                    
-                    let functionResponse: [String: Any] = [
-                        "type": "conversation.item.create",
-                        "item": [
-                            "type": "function_call_output",
-                            "call_id": response.callId ?? "",
-                            "output": saveResult ?
-                            "KCCQ-12 survey response saved successfully." :
-                                "Failed to save KCCQ-12 survey response. Please try again."
-                        ]
-                    ]
-                    let responseRequest: [String: Any] = [
-                        "type": "response.create"
-                    ]
-                    
-                    try await sendJSON(functionResponse, openAIWs)
-                    try await sendJSON(responseRequest, openAIWs)
-                    
-                    await state.updateResponseStartTimestampTwilio(nil)
-                    await state.updateLastAssistantItem(nil)
-                } else {
-                    do {
-                        _ = try JSONDecoder().decode(KCCQ12ResponseArgs.self, from: argumentsData)
-                    } catch let decodingError as DecodingError {
-                        req.logger.error("Decoding error details: \(decodingError)")
+                    if !saveResult {
+                        try await handleSaveFailure(response: response, openAIWs: openAIWs)
+                    } else {
+                        try await handleSaveSuccess(service: service, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                     }
+                } else {
+                    handleParsingError(argumentsData: argumentsData)
                 }
             } catch {
-                req.logger.error("Error processing KCCQ-12 survey: \(error)")
-                let errorResponse: [String: Any] = [
-                    "type": "function_response",
-                    "id": response.callId ?? "",
-                    "error": [
-                        "message": "Failed to process KCCQ-12 survey"
-                    ]
-                ]
-                try await sendJSON(errorResponse, openAIWs)
+                try await handleProcessingError(error: error, response: response, openAIWs: openAIWs)
             }
         }
-
+        
         @Sendable
-        func countAnsweredKCCQ12Questions(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            let count = KCCQ12Service.countAnsweredQuestions(phoneNumber: phoneNumber, logger: req.logger)
-            req.logger.info("Count of answered KCCQ-12 questions: \(count)")
+        func countAnsweredQuestions(
+            service: QuestionnaireService,
+            response: OpenAIResponse,
+            openAIWs: WebSocket,
+            phoneNumber: String
+        ) async throws {
+            let count = await service.countAnsweredQuestions()
+            req.logger.info("Count of answered questions of current service: \(count)")
             let functionResponse: [String: Any] = [
                 "type": "conversation.item.create",
                 "item": [
@@ -505,16 +339,60 @@ func routes(_ app: Application) throws {
             try await sendJSON(functionResponse, openAIWs)
             try await sendJSON(responseRequest, openAIWs)
 
-            await state.updateResponseStartTimestampTwilio(nil)
-            await state.updateLastAssistantItem(nil)
+            await connectionState.updateResponseStartTimestampTwilio(nil)
+            await connectionState.updateLastAssistantItem(nil)
+        }
+        
+        @Sendable
+        func getFeedback(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
+            // Get existing service instances to avoid creating duplicates
+            guard let vitalSignsService = await serviceState.getVitalSignsService(),
+                  let kccq12Service = await serviceState.getKCCQ12Service(),
+                  let q17Service = await serviceState.getQ17Service() else {
+                req.logger.error("Failed to get service instances for feedback")
+                throw Abort(.internalServerError, reason: "Service instances not available")
+            }
+            
+            let feedbackService = await FeedbackService(
+                phoneNumber: phoneNumber,
+                logger: req.logger,
+                vitalSignsService: vitalSignsService,
+                kccq12Service: kccq12Service,
+                q17Service: q17Service
+            )
+            let feedback = await feedbackService.feedback()
+            
+            let functionResponse: [String: Any] = [
+                "type": "conversation.item.create",
+                "item": [
+                    "type": "function_call_output",
+                    "call_id": response.callId ?? "",
+                    "output": feedback ?? "No feedback available."
+                ]
+            ]
+            
+            req.logger.info("Feedback functionResponse: \(functionResponse)")
+            
+            let responseRequest: [String: Any] = [
+                "type": "response.create"
+            ]
+            
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
+            
+            await connectionState.updateResponseStartTimestampTwilio(nil)
+            await connectionState.updateLastAssistantItem(nil)
+            
+            // Log the connection state after function response
+            req.logger.info("Function response sent, connection state: \(openAIWs.isClosed ? "closed" : "open")")
         }
         
         @Sendable
         func handleSpeechStartedEvent(webSocket: WebSocket) async throws {
-            let markQueue = await state.markQueue
-            let responseStart = await state.responseStartTimestampTwilio
-            let lastItem = await state.lastAssistantItem
-            let streamSid = await state.streamSid
+            let markQueue = await connectionState.markQueue
+            let responseStart = await connectionState.responseStartTimestampTwilio
+            let lastItem = await connectionState.lastAssistantItem
+            let streamSid = await connectionState.streamSid
             
             guard !markQueue.isEmpty,
                   let responseStart = responseStart,
@@ -524,7 +402,7 @@ func routes(_ app: Application) throws {
                 return
             }
             
-            let latestMediaTimestamp = await state.latestMediaTimestamp ?? 0
+            let latestMediaTimestamp = await connectionState.latestMediaTimestamp ?? 0
             let elapsedTime = latestMediaTimestamp - responseStart
             req.logger.info("Calculating elapsed time for truncation: \(latestMediaTimestamp) - \(responseStart) = \(elapsedTime)ms")
             
@@ -545,9 +423,9 @@ func routes(_ app: Application) throws {
                 ]
                 try await sendJSON(clearEvent, twilioWs)
                 
-                await state.removeAllFromMarkQueue()
-                await state.updateLastAssistantItem(nil)
-                await state.updateResponseStartTimestampTwilio(nil)
+                await connectionState.removeAllFromMarkQueue()
+                await connectionState.updateLastAssistantItem(nil)
+                await connectionState.updateResponseStartTimestampTwilio(nil)
             } catch {
                 req.logger.error("Failed to handle speech started event: \(error)")
             }
@@ -575,7 +453,163 @@ func routes(_ app: Application) throws {
             ]
             
             try await sendJSON(markEvent, webSocket)
-            await state.appendToMarkQueue("responsePart")
+            await connectionState.appendToMarkQueue("responsePart")
+        }
+
+        @Sendable
+        func saveQuestionnaireAnswer(service: QuestionnaireService, parsedArgs: QuestionnaireResponseArgs) async -> Bool {
+            switch parsedArgs.answer {
+            case .number(let number):
+                return await service.saveQuestionnaireAnswer(
+                    linkId: parsedArgs.linkId,
+                    answer: number
+                )
+            case .text(let text):
+                return await service.saveQuestionnaireAnswer(
+                    linkId: parsedArgs.linkId,
+                    answer: text
+                )
+            }
+        }
+        
+        @Sendable
+        func handleSaveFailure(response: OpenAIResponse, openAIWs: WebSocket) async throws {
+            let functionResponse: [String: Any] = [
+                "type": "conversation.item.create",
+                "item": [
+                    "type": "function_call_output",
+                    "call_id": response.callId ?? "",
+                    "output": "The response could not be saved. Try again."
+                ]
+            ]
+            let responseRequest: [String: Any] = [
+                "type": "response.create"
+            ]
+            
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
+            
+            await connectionState.updateResponseStartTimestampTwilio(nil)
+            await connectionState.updateLastAssistantItem(nil)
+        }
+        
+        @Sendable
+        func handleSaveSuccess(
+            service: QuestionnaireService,
+            response: OpenAIResponse,
+            openAIWs: WebSocket,
+            phoneNumber: String
+        ) async throws {
+            if let nextQuestion = await service.getNextQuestion() {
+                try await handleNextQuestionAvailable(nextQuestion: nextQuestion, response: response, openAIWs: openAIWs)
+            } else {
+                try await handleQuestionnaireComplete(service: service, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+            }
+        }
+        
+        @Sendable
+        func handleNextQuestionAvailable(nextQuestion: String, response: OpenAIResponse, openAIWs: WebSocket) async throws {
+            let functionResponse: [String: Any] = [
+                "type": "conversation.item.create",
+                "item": [
+                    "type": "function_call_output",
+                    "call_id": response.callId ?? "",
+                    "output": nextQuestion
+                ]
+            ]
+            let responseRequest: [String: Any] = [
+                "type": "response.create"
+            ]
+            
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
+            
+            await connectionState.updateResponseStartTimestampTwilio(nil)
+            await connectionState.updateLastAssistantItem(nil)
+        }
+        
+        @Sendable
+        func handleQuestionnaireComplete(
+            service: QuestionnaireService,
+            response: OpenAIResponse,
+            openAIWs: WebSocket,
+            phoneNumber: String
+        ) async throws {
+            await service.saveQuestionnaireResponseToFile()
+           
+            if let nextService = await serviceState.next(),
+               let initialQuestion = await nextService.getNextQuestion(),
+               let systemMessage = Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {
+                try await handleNextServiceAvailable(
+                    nextService: nextService,
+                    initialQuestion: initialQuestion,
+                    systemMessage: systemMessage,
+                    response: response,
+                    openAIWs: openAIWs
+                )
+            } else {
+                try await handleNoNextService(response: response, openAIWs: openAIWs)
+            }
+        }
+        
+        @Sendable
+        func handleNextServiceAvailable(
+            nextService: QuestionnaireService,
+            initialQuestion: String,
+            systemMessage: String,
+            response: OpenAIResponse,
+            openAIWs: WebSocket
+        ) async throws {
+            await updateSession(webSocket: openAIWs, systemMessage: systemMessage)
+            let functionResponse: [String: Any] = [
+                "type": "conversation.item.create",
+                "item": [
+                    "type": "function_call_output",
+                    "call_id": response.callId ?? "",
+                    "output": initialQuestion
+                ]
+            ]
+            let responseRequest: [String: Any] = [
+                "type": "response.create"
+            ]
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
+        }
+        
+        @Sendable
+        func handleNoNextService(response: OpenAIResponse, openAIWs: WebSocket) async throws {
+            let systemMessage = Constants.feedback
+            await updateSession(webSocket: openAIWs, systemMessage: systemMessage)
+            
+            let responseRequest: [String: Any] = [
+                "type": "response.create"
+            ]
+            try await sendJSON(responseRequest, openAIWs)
+            
+            await connectionState.updateResponseStartTimestampTwilio(nil)
+            await connectionState.updateLastAssistantItem(nil)
+        }
+        
+        @Sendable
+        func handleParsingError(argumentsData: Data) {
+            do {
+                _ = try JSONDecoder().decode(QuestionnaireResponseArgs.self, from: argumentsData)
+            } catch {
+                req.logger.error("Decoding error details: \(error)")
+            }
+        }
+        
+        @Sendable
+        func handleProcessingError(error: Error, response: OpenAIResponse, openAIWs: WebSocket) async throws {
+            req.logger.error("Error processing questionnaire: \(error)")
+            let errorResponse: [String: Any] = [
+                "type": "function_response",
+                "id": response.callId ?? "",
+                "error": [
+                    "message": "Failed to process questionnaire"
+                ]
+            ]
+            try await sendJSON(errorResponse, openAIWs)
         }
     }
 }

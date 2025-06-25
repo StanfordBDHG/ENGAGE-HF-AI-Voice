@@ -11,13 +11,13 @@ import ModelsR4
 import Vapor
 
 
-/// Service for managing vital signs questionnaire
+/// Service for managing Q17 questionnaire
 @MainActor
-class VitalSignsService: BaseQuestionnaireService, Sendable {
+class Q17Service: BaseQuestionnaireService, Sendable {
     init(phoneNumber: String, logger: Logger) {
         super.init(
-            questionnaireName: "vitalSigns",
-            directoryPath: Constants.vitalSignsDirectoryPath,
+            questionnaireName: "q17",
+            directoryPath: Constants.q17DirectoryPath,
             phoneNumber: phoneNumber,
             logger: logger
         )

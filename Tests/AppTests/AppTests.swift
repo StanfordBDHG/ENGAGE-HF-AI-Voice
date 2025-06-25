@@ -7,6 +7,7 @@
 //
 
 @testable import App
+import ModelsR4
 import Testing
 import VaporTesting
 
@@ -24,7 +25,7 @@ struct AppTests {
         }
         try await app.asyncShutdown()
     }
-
+    
     @Test("Test Health Route")
     func health() async throws {
         try await withApp { app in
@@ -41,7 +42,7 @@ struct AppTests {
                 .POST,
                 "incoming-call",
                 beforeRequest: { req in
-                    try req.content.encode(["From": "+15551234567"])
+                    try req.content.encode(["From": "+16502341234"])
                     app.logger.info("Request prepared with phone number")
                 },
                 afterResponse: { res async in
@@ -49,6 +50,40 @@ struct AppTests {
                     #expect(res.status == .ok)
                 }
             )
+        }
+    }
+    
+    @Test("Test Symptom Score Calculation")
+    func testSymptomScoreCalculation() async throws {
+        try await withApp { app in
+            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger)
+            let score = await kccq12Service.computeSymptomScore()
+            
+            #expect(score == 50.0, "Score should be 50.0 with mocked responses")
+        }
+    }
+    
+    @Test("Test User Feedback Generation")
+    func testUserFeedback() async throws {
+        try await withApp { app in
+            let vitalSignsService = await VitalSignsService(phoneNumber: "+16502341234", logger: app.logger)
+            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger)
+            let q17Service = await Q17Service(phoneNumber: "+16502341234", logger: app.logger)
+            
+            let feedbackService = await FeedbackService(
+                phoneNumber: "+16502341234",
+                logger: app.logger,
+                vitalSignsService: vitalSignsService,
+                kccq12Service: kccq12Service,
+                q17Service: q17Service
+            )
+            let feedback = await feedbackService.feedback()
+            
+            #expect(feedback == """
+            Your blood pressure and pulse are normal.
+            Your symptom score is 50.0, which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel worse compared to 3 months ago.
+            """)
         }
     }
 }
