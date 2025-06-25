@@ -25,5 +25,6 @@ jobs:
     secrets: inherit
   deployment:
     name: Deployment
+    needs: buildandtest
     uses: ./.github/workflows/deployment.yml
     secrets: inherit

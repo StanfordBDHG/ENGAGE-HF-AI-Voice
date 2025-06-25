@@ -18,6 +18,7 @@ coverage.lcov
 
 # IDE related folders
 .idea
+.vscode
 
 # Xcode User settings
 xcuserdata/
