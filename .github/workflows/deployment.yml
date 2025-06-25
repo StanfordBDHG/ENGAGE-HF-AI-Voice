@@ -10,12 +10,14 @@ name: Deployment
 
 on:
   workflow_call:
+  release:
+    types: [published]
 
 jobs:
   buildandpush:
     name: Build and Push to Container Registry
-
     uses: StanfordBDHG/.github/.github/workflows/docker-build-and-push.yml@v2
     secrets: inherit
     with:
       imageName: ghcr.io/stanfordbdhg/engage-hf-ai-voice
+      version: ${{ github.event.release.tag_name || '' }}
