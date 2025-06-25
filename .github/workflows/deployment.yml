@@ -24,4 +24,3 @@ jobs:
     secrets: inherit
     with:
       imageName: ghcr.io/stanfordbdhg/engage-hf-ai-voice
-      version: ${{ github.event.release.tag_name || '' }}
