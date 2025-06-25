@@ -66,7 +66,7 @@ func routes(_ app: Application) throws {
             req.logger.info("OpenAI API key not found")
             return
         }
-        let openAIWsURL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
+        let openAIWsURL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-06-03"
         guard URL(string: openAIWsURL) != nil else {
             req.logger.info("Invalid OpenAI WebSocket URL")
             return
@@ -107,15 +107,19 @@ func routes(_ app: Application) throws {
         @Sendable
         func initializeSession(webSocket: WebSocket) async {
             do {
-                await serviceState.initializeCurrentService()
-                let initialQuestion = await serviceState.current.getNextQuestion()
-                let initialSystemMessage = await Constants.getSystemMessageForService(
-                    serviceState.current,
-                    initialQuestion: initialQuestion ?? "No question found."
-                )
-                let sessionConfigJSONString = Constants.loadSessionConfig(systemMessage: initialSystemMessage ?? "")
-                req.logger.info("\(sessionConfigJSONString)")
-                try await webSocket.send(sessionConfigJSONString)
+                let hasUnansweredQuestions = await serviceState.initializeCurrentService()
+                if !hasUnansweredQuestions {
+                    req.logger.info("No services have unanswered questions. Updating session with feedback.")
+                    let systemMessage = Constants.initialSystemMessage + Constants.feedback
+                    await updateSession(webSocket: webSocket, systemMessage: systemMessage)
+                } else {
+                    let initialQuestion = await serviceState.current.getNextQuestion()
+                    let initialSystemMessage = await Constants.getSystemMessageForService(
+                        serviceState.current,
+                        initialQuestion: initialQuestion ?? "No question found."
+                    )
+                    await updateSession(webSocket: webSocket, systemMessage: initialSystemMessage ?? "")
+                }
                 let responseRequest: [String: Any] = [
                     "type": "response.create"
                 ]
@@ -132,11 +136,11 @@ func routes(_ app: Application) throws {
         func updateSession(webSocket: WebSocket, systemMessage: String) async {
             let sessionConfigJSONString = Constants.loadSessionConfig(systemMessage: systemMessage)
             do {
-                print("Updading session with:")
-                print(sessionConfigJSONString)
+                req.logger.info("Updating session with: \(sessionConfigJSONString)")
                 try await webSocket.send(sessionConfigJSONString)
             } catch {
-                print("Failed to serialize update request: \(error)")
+                req.logger.error("Failed to update session: \(error). Closing web socket.")
+                try? await webSocket.close()
             }
         }
 
@@ -214,7 +218,7 @@ func routes(_ app: Application) throws {
                 let response = try JSONDecoder().decode(OpenAIResponse.self, from: jsonData)
                 
                 if Constants.logEventTypes.contains(response.type) {
-                    print("Received event: \(response.type)", response)
+                    req.logger.info("Received event: \(response.type)")
                 }
                 
                 try await handleOpenAIFunctionCall(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
@@ -228,14 +232,14 @@ func routes(_ app: Application) throws {
                         "streamSid": streamSid ?? "",
                         "media": ["payload": delta]
                     ]
-                    let jsonData = try JSONSerialization.data(withJSONObject: audioDelta)
-                    if let jsonString = String(data: jsonData, encoding: .utf8) {
-                        try await twilioWs.send(jsonString)
+                    do {
+                        try await sendJSON(audioDelta, twilioWs)
+                    } catch {
+                        req.logger.error("Failed to send audio delta: \(error)")
                     }
                     
                     // First delta from a new response starts the elapsed time counter
-                    let responseStartTimestampTwilio = await connectionState.responseStartTimestampTwilio
-                    if responseStartTimestampTwilio == nil {
+                     if await connectionState.responseStartTimestampTwilio == nil {
                         let latestMediaTimestamp = await connectionState.latestMediaTimestamp
                         await connectionState.updateResponseStartTimestampTwilio(latestMediaTimestamp)
                         
@@ -265,8 +269,8 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func handleOpenAIFunctionCall(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            let currentService = await serviceState.current
             if response.type == "response.function_call_arguments.done" {
+                let currentService = await serviceState.current
                 switch response.name {
                 case "save_response":
                     try await saveResponse(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)

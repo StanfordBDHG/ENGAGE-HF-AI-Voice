@@ -17,8 +17,7 @@ class VitalSignsService: BaseQuestionnaireService, Sendable {
     init(phoneNumber: String, logger: Logger) {
         super.init(
             questionnaireName: "vitalSigns",
-            filePath: FileService.vitalSignsFilePath,
-            directoryPath: FileService.vitalSignsDirectoryPath,
+            directoryPath: Constants.vitalSignsDirectoryPath,
             phoneNumber: phoneNumber,
             logger: logger
         )

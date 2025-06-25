@@ -25,7 +25,6 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
     ///   - logger: The logger to use for logging
     init(
         questionnaireName: String,
-        filePath: @Sendable @escaping (String) -> String,
         directoryPath: String,
         phoneNumber: String,
         logger: Logger
@@ -34,7 +33,6 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         self.logger = logger
         self.storage = QuestionnaireStorageService(
             questionnaireName: questionnaireName,
-            filePath: filePath,
             directoryPath: directoryPath
         )
         self.manager = QuestionnaireManager(

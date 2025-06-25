@@ -17,8 +17,7 @@ class KCCQ12Service: BaseQuestionnaireService, Sendable {
     init(phoneNumber: String, logger: Logger) {
         super.init(
             questionnaireName: "kccq12",
-            filePath: FileService.kccq12FilePath,
-            directoryPath: FileService.kccq12DirectoryPath,
+            directoryPath: Constants.kccq12DirectoryPath,
             phoneNumber: phoneNumber,
             logger: logger
         )

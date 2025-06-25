@@ -36,7 +36,6 @@ class DecisionNode<T> {
         } else if let defaultNode = branches["default"] {
             return defaultNode.decide(data: data)
         } else {
-            print("No branch for value \(attributeValue) of attribute \(attribute)")
             return nil
         }
     }

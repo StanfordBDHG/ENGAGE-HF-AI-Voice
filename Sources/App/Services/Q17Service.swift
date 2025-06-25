@@ -17,8 +17,7 @@ class Q17Service: BaseQuestionnaireService, Sendable {
     init(phoneNumber: String, logger: Logger) {
         super.init(
             questionnaireName: "q17",
-            filePath: FileService.q17FilePath,
-            directoryPath: FileService.q17DirectoryPath,
+            directoryPath: Constants.q17DirectoryPath,
             phoneNumber: phoneNumber,
             logger: logger
         )

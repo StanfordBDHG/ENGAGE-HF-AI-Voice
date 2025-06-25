@@ -14,21 +14,16 @@ import Vapor
 /// Service for managing questionnaire data storage on disk
 @MainActor
 class QuestionnaireStorageService: Sendable {
-    typealias FilePathClosure = @Sendable (String) -> String
-    
     private let questionnaireName: String
-    private let filePath: FilePathClosure
     private let directoryPath: String
     
 
     /// Initialize a new questionnaire storage service
     /// - Parameters:
     ///   - questionnaireName: The name of the questionnaire
-    ///   - filePath: The closure to get the file path for the questionnaire response
     ///   - directoryPath: The path to the directory where the questionnaire response file is stored
-    init(questionnaireName: String, filePath: @escaping FilePathClosure, directoryPath: String) {
+    init(questionnaireName: String, directoryPath: String) {
         self.questionnaireName = questionnaireName
-        self.filePath = filePath
         self.directoryPath = directoryPath
     }
     
@@ -99,5 +94,27 @@ class QuestionnaireStorageService: Sendable {
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")
         }
+    }
+    
+    /// Get the file path for the questionnaire response based on the phone number (and current date)
+    private func filePath(_ phoneNumber: String) -> String {
+        "\(directoryPath)\(self.hashPhoneNumber(phoneNumber)).json"
+    }
+
+    /// Hash the phone number for file naming (includes date for daily rotation)
+    private func hashPhoneNumber(_ phoneNumber: String) -> String {
+#if !DEBUG
+        return "1"
+#else
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = formatter.string(from: Date())
+        let combinedString = phoneNumber + today
+        
+        // swiftlint:disable:next force_unwrapping
+        let data = combinedString.data(using: .utf8)!
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
+#endif
     }
 }

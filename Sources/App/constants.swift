@@ -15,18 +15,6 @@ enum Constants {
     You are a professional assistant who is trained to help heart failure patients record their daily health measurements over the phone.
     
     """
-    
-    /// The event types to log
-    static let logEventTypes = [
-        "error",
-        "response.content.done",
-        "rate_limits.updated",
-        "response.done",
-        "input_audio_buffer.committed",
-        "input_audio_buffer.speech_stopped",
-        "input_audio_buffer.speech_started",
-        "session.created"
-    ]
 
     static let vitalSignsInstructions = """
     Tell the patient that this is the ENGAGE-HF phone service consisting of three sections of questions.
@@ -98,7 +86,36 @@ enum Constants {
     Read the feedback to the patient.
     After that, thank the patient for their time and tell them that they can now end the call.
     """
+
+    /// Directory paths for different questionnaire types
+    static let vitalSignsDirectoryPath = "\(dataDirectory)/vital_signs/"
+    static let kccq12DirectoryPath = "\(dataDirectory)/kccq12_questionnairs/"
+    static let q17DirectoryPath = "\(dataDirectory)/q17/"
+
+    /// Base data directory for storing questionnaire responses
+    static let dataDirectory: String = {
+#if !DEBUG
+        return Bundle.module.bundlePath + "/Contents/Resources/MockData"
+#else
+        let fileManager = FileManager.default
+        let currentDirectoryPath = fileManager.currentDirectoryPath
+        return "\(currentDirectoryPath)/Data"
+#endif
+    }()
     
+    /// The event types to log
+    static let logEventTypes = [
+        "error",
+        "response.content.done",
+        "rate_limits.updated",
+        "response.done",
+        "input_audio_buffer.committed",
+        "input_audio_buffer.speech_stopped",
+        "input_audio_buffer.speech_started",
+        "session.created"
+    ]
+    
+    /// Get the system message for the service including the initial question
     static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String) -> String? {
         switch service {
         case is VitalSignsService:

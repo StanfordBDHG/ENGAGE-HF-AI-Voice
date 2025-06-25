@@ -39,11 +39,14 @@ actor ServiceState {
         currentIndex = 0
     }
     
-    func initializeCurrentService() async {
+    func initializeCurrentService() async -> Bool {
         for (index, service) in services.enumerated() where await service.unansweredQuestionsLeft() {
             currentIndex = index
-            break
+            return true  // Found a service with unanswered questions
         }
+        
+        // No service has unanswered questions (i.e. all services have all questions answered already)
+        return false
     }
     
     // MARK: - Service Access Methods
