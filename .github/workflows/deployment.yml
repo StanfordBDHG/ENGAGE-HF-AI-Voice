@@ -15,7 +15,7 @@ on:
       - '*'
 
 concurrency:
-  group: ${{ github.workflow }}
+  group: deployment
   cancel-in-progress: false
 
 jobs:
