@@ -10,8 +10,9 @@ name: Deployment
 
 on:
   workflow_call:
-  release:
-    types: [published]
+  push:
+    tags:
+      - '*'
 
 concurrency:
   group: ${{ github.workflow }}
