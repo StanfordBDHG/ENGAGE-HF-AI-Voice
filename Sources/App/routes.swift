@@ -110,7 +110,7 @@ func routes(_ app: Application) throws {
                 let hasUnansweredQuestions = await serviceState.initializeCurrentService()
                 if !hasUnansweredQuestions {
                     req.logger.info("No services have unanswered questions. Updating session with feedback.")
-                    let systemMessage = Constants.initialSystemMessage + Constants.feedback
+                    let systemMessage = Constants.feedback
                     await updateSession(webSocket: webSocket, systemMessage: systemMessage)
                 } else {
                     let initialQuestion = await serviceState.current.getNextQuestion()

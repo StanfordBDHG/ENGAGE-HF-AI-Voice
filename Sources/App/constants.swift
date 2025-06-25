@@ -81,9 +81,9 @@ enum Constants {
     """
     
     static let feedback = """
-    Final Instruction:
-    Use the get_feedback function to get the final patient feedback.
-    Read the feedback to the patient.
+    Tell the patient that all questions have been answered for this day.
+    Use the get_feedback function to get the final patient feedback. Then, read the feedback precisely to the patient.
+    
     After that, thank the patient for their time and tell them that they can now end the call.
     """
 
