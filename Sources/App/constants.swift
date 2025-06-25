@@ -94,7 +94,7 @@ enum Constants {
 
     /// Base data directory for storing questionnaire responses
     static let dataDirectory: String = {
-#if !DEBUG
+#if DEBUG
         return Bundle.module.bundlePath + "/Contents/Resources/MockData"
 #else
         let fileManager = FileManager.default

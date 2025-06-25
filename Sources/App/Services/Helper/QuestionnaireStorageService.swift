@@ -103,7 +103,7 @@ class QuestionnaireStorageService: Sendable {
 
     /// Hash the phone number for file naming (includes date for daily rotation)
     private func hashPhoneNumber(_ phoneNumber: String) -> String {
-#if !DEBUG
+#if DEBUG
         return "1"
 #else
         let formatter = DateFormatter()
