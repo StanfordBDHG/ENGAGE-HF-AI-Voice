@@ -8,18 +8,6 @@
 
 import Vapor
 
-
-
-// Storage key for OpenAI API key
-struct OpenAIKeyStorageKey: StorageKey {
-    typealias Value = String
-}
-
-// Storage key for encryption key
-struct EncryptionKeyStorageKey: StorageKey {
-    typealias Value = String
-}
-
 /// Configure the application
 public func configure(_ app: Application) async throws {
     // Environment variables
