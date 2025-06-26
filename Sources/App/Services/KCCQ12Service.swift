@@ -14,12 +14,13 @@ import Vapor
 /// Service for managing KCCQ12 questionnaire
 @MainActor
 class KCCQ12Service: BaseQuestionnaireService, Sendable {
-    init(phoneNumber: String, logger: Logger, encryptionKey: String? = nil) {
+    init(phoneNumber: String, logger: Logger, featureFlags: FeatureFlags, encryptionKey: String? = nil) {
         super.init(
-            questionnaireName: "kccq12",
+            questionnaireName: featureFlags.internalTestingMode ? "kccq12Short" : "kccq12",
             directoryPath: Constants.kccq12DirectoryPath,
             phoneNumber: phoneNumber,
             logger: logger,
+            featureFlags: featureFlags,
             encryptionKey: encryptionKey
         )
     }

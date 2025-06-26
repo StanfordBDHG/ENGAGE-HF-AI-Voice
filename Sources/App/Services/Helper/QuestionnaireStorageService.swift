@@ -17,6 +17,8 @@ class QuestionnaireStorageService: Sendable {
     private let questionnaireName: String
     private let directoryPath: String
     private let encryptionService: EncryptionService?
+    private let featureFlags: FeatureFlags
+    private let dateTimeCreated: Date
     
 
     /// Initialize a new questionnaire storage service
@@ -24,7 +26,7 @@ class QuestionnaireStorageService: Sendable {
     ///   - questionnaireName: The name of the questionnaire
     ///   - directoryPath: The path to the directory where the questionnaire response file is stored
     ///   - encryptionKey: Optional base64-encoded master encryption key. If provided, responses will be encrypted.
-    init(questionnaireName: String, directoryPath: String, encryptionKey: String? = nil) {
+    init(questionnaireName: String, directoryPath: String, featureFlags: FeatureFlags, encryptionKey: String? = nil) {
         self.questionnaireName = questionnaireName
         self.directoryPath = directoryPath
         
@@ -34,6 +36,11 @@ class QuestionnaireStorageService: Sendable {
         } else {
             self.encryptionService = nil
         }
+        
+        self.featureFlags = featureFlags
+        
+        // save the timestamp when the storage service has been created to load the correct questionnaire response files during a internal testing session
+        self.dateTimeCreated = Date()
     }
     
     /// Loads the questionnaire from the file
@@ -139,8 +146,13 @@ class QuestionnaireStorageService: Sendable {
         return "1"
 #else
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let today = formatter.string(from: Date())
+        if featureFlags.internalTestingMode {
+            // For internal testing, allow for multiple responses per day by including timestamp
+            formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
+        } else {
+            formatter.dateFormat = "yyyy-MM-dd"
+        }
+        let today = formatter.string(from: dateTimeCreated)
         let combinedString = phoneNumber + today
         
         // swiftlint:disable:next force_unwrapping

@@ -165,6 +165,8 @@ To run the server using Docker:
    cp .env.example .env
    ```
 2. Open the **.env** file and insert your OpenAI API Key and optionally a encryption key if you wish to encrypt the response files (you can generate one using ``openssl rand -base64 32``).
+
+   **Optional**: For internal testing, you can also set `INTERNAL_TESTING_MODE=true` which allows to do the survey multiple times per day and serves a reduced KCCQ12 section with only three questions to allow faster testing.
 3. Build and start the server:
    ```bash
    docker compose build

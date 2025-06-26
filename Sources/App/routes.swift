@@ -55,9 +55,9 @@ func routes(_ app: Application) throws {
         let encryptionKey = app.storage[EncryptionKeyStorageKey.self]
         
         let serviceState = await ServiceState(services: [
-            VitalSignsService(phoneNumber: callerPhoneNumber, logger: req.logger, encryptionKey: encryptionKey),
-            KCCQ12Service(phoneNumber: callerPhoneNumber, logger: req.logger, encryptionKey: encryptionKey),
-            Q17Service(phoneNumber: callerPhoneNumber, logger: req.logger, encryptionKey: encryptionKey)
+            VitalSignsService(phoneNumber: callerPhoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
+            KCCQ12Service(phoneNumber: callerPhoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
+            Q17Service(phoneNumber: callerPhoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey)
         ])
         
         // Handle incoming start messages from Twilio

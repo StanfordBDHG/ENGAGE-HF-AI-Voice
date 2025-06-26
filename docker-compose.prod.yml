@@ -15,6 +15,7 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - INTERNAL_TESTING_MODE=${INTERNAL_TESTING_MODE}
     volumes:
       - app-data:/app/data
     networks:

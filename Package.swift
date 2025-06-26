@@ -34,6 +34,7 @@ let package = Package(
             resources: [
                 .process("Resources/vitalSigns.json"),
                 .process("Resources/kccq12.json"),
+                .process("Resources/kccq12Short.json"),
                 .process("Resources/q17.json"),
                 .process("Resources/sessionConfig.json"),
                 .copy("Resources/MockData")

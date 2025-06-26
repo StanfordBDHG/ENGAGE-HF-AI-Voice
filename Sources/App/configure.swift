@@ -10,6 +10,10 @@ import Vapor
 
 /// Configure the application
 public func configure(_ app: Application) async throws {
+    // Initialize feature flags
+    let featureFlags = FeatureFlags()
+    app.featureFlags = featureFlags
+    
     // Environment variables
     let openAIKey: String
     if app.environment == .testing {
