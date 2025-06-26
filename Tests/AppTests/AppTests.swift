@@ -56,7 +56,7 @@ struct AppTests {
     @Test("Test Symptom Score Calculation")
     func testSymptomScoreCalculation() async throws {
         try await withApp { app in
-            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger)
+            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
             let score = await kccq12Service.computeSymptomScore()
             
             #expect(score == 50.0, "Score should be 50.0 with mocked responses")
