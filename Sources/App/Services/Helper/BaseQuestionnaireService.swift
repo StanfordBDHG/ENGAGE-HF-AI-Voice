@@ -16,6 +16,7 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
     let phoneNumber: String
     let logger: Logger
     
+    
     /// Initialize a new questionnaire service
     /// - Parameters:
     ///   - questionnaireName: The name of the questionnaire
@@ -27,13 +28,15 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         questionnaireName: String,
         directoryPath: String,
         phoneNumber: String,
-        logger: Logger
+        logger: Logger,
+        encryptionKey: String? = nil
     ) {
         self.phoneNumber = phoneNumber
         self.logger = logger
         self.storage = QuestionnaireStorageService(
             questionnaireName: questionnaireName,
-            directoryPath: directoryPath
+            directoryPath: directoryPath,
+            encryptionKey: encryptionKey
         )
         self.manager = QuestionnaireManager(
             questionnaire: storage.loadQuestionnaire(),

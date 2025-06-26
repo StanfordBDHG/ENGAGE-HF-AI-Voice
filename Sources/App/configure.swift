@@ -8,6 +8,18 @@
 
 import Vapor
 
+
+
+// Storage key for OpenAI API key
+struct OpenAIKeyStorageKey: StorageKey {
+    typealias Value = String
+}
+
+// Storage key for encryption key
+struct EncryptionKeyStorageKey: StorageKey {
+    typealias Value = String
+}
+
 /// Configure the application
 public func configure(_ app: Application) async throws {
     // Environment variables
@@ -22,17 +34,24 @@ public func configure(_ app: Application) async throws {
         openAIKey = key
     }
     
-    // Store API key in application storage for access in routes
+    // Encryption key (optional for development)
+    let encryptionKey: String?
+    if app.environment == .testing {
+        encryptionKey = nil // No encryption in testing
+    } else {
+        encryptionKey = Environment.get("ENCRYPTION_KEY")
+        if encryptionKey == nil {
+            app.logger.warning("No encryption key provided. Questionnaire responses will be stored unencrypted.")
+        }
+    }
+    
+    // Store keys in application storage for access in routes
     app.storage[OpenAIKeyStorageKey.self] = openAIKey
+    app.storage[EncryptionKeyStorageKey.self] = encryptionKey
     
     // Configure server
     app.http.server.configuration.port = Environment.get("PORT").flatMap(Int.init) ?? 5000
     
     // Register routes
     try routes(app)
-}
-
-// Storage key for OpenAI API key
-struct OpenAIKeyStorageKey: StorageKey {
-    typealias Value = String
 }

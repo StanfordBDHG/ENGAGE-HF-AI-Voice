@@ -14,12 +14,13 @@ import Vapor
 /// Service for managing vital signs questionnaire
 @MainActor
 class VitalSignsService: BaseQuestionnaireService, Sendable {
-    init(phoneNumber: String, logger: Logger) {
+    init(phoneNumber: String, logger: Logger, encryptionKey: String? = nil) {
         super.init(
             questionnaireName: "vitalSigns",
             directoryPath: Constants.vitalSignsDirectoryPath,
             phoneNumber: phoneNumber,
-            logger: logger
+            logger: logger,
+            encryptionKey: encryptionKey
         )
     }
 }

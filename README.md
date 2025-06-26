@@ -107,10 +107,9 @@ To customize the conversation flow and questions, you can replace or modify thes
 6. **Inject your service** into the `ServiceState` in `Sources/App/routes.swift`:
    ```swift
    let serviceState = await ServiceState(services: [
-       VitalSignsService(phoneNumber: callerPhoneNumber, logger: req.logger),
-       KCCQ12Service(phoneNumber: callerPhoneNumber, logger: req.logger),
-       Q17Service(phoneNumber: callerPhoneNumber, logger: req.logger),
+       /// ... other services ...
        YourCustomService(phoneNumber: callerPhoneNumber, logger: req.logger)  // Add your service
+       /// ... other services ...
    ])
    ```
 
@@ -165,7 +164,7 @@ To run the server using Docker:
    ```bash
    cp .env.example .env
    ```
-2. Open the **.env** file and insert your OpenAI API Key.
+2. Open the **.env** file and insert your OpenAI API Key and optionally a encryption key if you wish to encrypt the response files (you can generate one using ``openssl rand -base64 32``).
 3. Build and start the server:
    ```bash
    docker compose build
@@ -235,6 +234,23 @@ You can test the health check endpoint, e.g. via curl, like that:
 ```bash
 curl -I https://voiceai-engagehf.stanford.edu/health
 ```
+
+### Decrypting Stored Files
+
+To decrypt questionnaire response files for analysis:
+
+1. **Install Python cryptography library**:
+   ```bash
+   pip3 install cryptography
+   ```
+
+2. **Run the decryption script** (make sure you're in the directory containing the `/vital_signs`, `/kccq12_questionnairs`, and `/q17` folders):
+   ```bash
+   chmod +x decrypt_files.sh # make it executable
+   ./decrypt_files.sh <your-base64-encryption-key>
+   ```
+
+The script will decrypt all files from `./vital_signs/`, `./kccq12_questionnairs/`, and `./q17/` directories and save them to `./decrypted/`.
 
 ---
 

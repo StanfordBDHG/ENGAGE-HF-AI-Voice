@@ -14,12 +14,13 @@ import Vapor
 /// Service for managing Q17 questionnaire
 @MainActor
 class Q17Service: BaseQuestionnaireService, Sendable {
-    init(phoneNumber: String, logger: Logger) {
+    init(phoneNumber: String, logger: Logger, encryptionKey: String? = nil) {
         super.init(
             questionnaireName: "q17",
             directoryPath: Constants.q17DirectoryPath,
             phoneNumber: phoneNumber,
-            logger: logger
+            logger: logger,
+            encryptionKey: encryptionKey
         )
     }
 }

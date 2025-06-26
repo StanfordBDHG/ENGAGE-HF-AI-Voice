@@ -26,6 +26,7 @@
 x-shared_environment: &shared_environment
   LOG_LEVEL: ${LOG_LEVEL:-debug}
   OPENAI_API_KEY: ${OPENAI_API_KEY}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY}
   
 services:
   app:
