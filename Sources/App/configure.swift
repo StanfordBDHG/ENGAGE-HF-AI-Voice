@@ -39,7 +39,10 @@ public func configure(_ app: Application) async throws {
             guard let keyData = Data(base64Encoded: encryptionKey!),
                   keyData.count == 32 else {
                 app.logger.warning(
-                    "Invalid encryption key provided. Key must be base64-encoded and exactly 32 bytes when decoded. Questionnaire responses will be stored unencrypted."
+                    """
+                    Invalid encryption key provided (must be base64-encoded and 32 bytes when decoded).
+                    Questionnaire responses will be stored unencrypted.
+                    """
                 )
                 encryptionKey = nil
                 return
