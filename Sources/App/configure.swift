@@ -27,13 +27,23 @@ public func configure(_ app: Application) async throws {
     }
     
     // Encryption key (optional for development)
-    let encryptionKey: String?
+    var encryptionKey: String?
     if app.environment == .testing {
         encryptionKey = nil // No encryption in testing
     } else {
         encryptionKey = Environment.get("ENCRYPTION_KEY")
         if encryptionKey == nil {
             app.logger.warning("No encryption key provided. Questionnaire responses will be stored unencrypted.")
+        } else {
+            // swiftlint:disable:next force_unwrapping
+            guard let keyData = Data(base64Encoded: encryptionKey!),
+                  keyData.count == 32 else {
+                app.logger.warning(
+                    "Invalid encryption key provided. Key must be base64-encoded and exactly 32 bytes when decoded. Questionnaire responses will be stored unencrypted."
+                )
+                encryptionKey = nil
+                return
+            }
         }
     }
     
