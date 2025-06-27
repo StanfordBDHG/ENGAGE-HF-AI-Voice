@@ -24,29 +24,108 @@ SPDX-License-Identifier: MIT
   Receives and streams audio to and from Twilio, relaying it in real-time to OpenAI's API.
 
 - **Conversational AI on FHIR Questionnaires**  
-  Configures ChatGPT-4o to conduct voice conversations based on a FHIR Questionnaire (e.g., `kccq12.json`) and records user responses in FHIR format on disk.
+  Configures ChatGPT-4o to conduct voice conversations based on FHIR Questionnaires and records user responses in FHIR format on disk (encrypted on rest).
 
-- **Customizable AI Behavior**  
-  Includes function calling and system prompts to tailor the conversation flow and data handling.
+- **Customizable Conversation Flow**  
+  Configure the voice assistant with multiple questionnaires, custom system prompts, and flexible session settings to tailor the conversation flow and data handling.
 
 ---
 
 ## Configuration
 
-You can customize the server in several ways:
+The ENGAGE-HF-AI-Voice assistant is configured by default with **3 questionnaires** that are processed sequentially:
 
-- **Custom FHIR Questionnaire**  
-  Replace the default FHIR R4 questionnaire (`Sources/App/Resources/kccq12.json`) with your own to change the conversation content.
+1. **Vital Signs** - Collects blood pressure, heart rate, and weight (4 questions)
+2. **KCCQ12** - Kansas City Cardiomyopathy Questionnaire (12 questions)
+3. **Q17** - A final question on how the patient feels compared to three months ago (1 question)
+
+### Customizing the Conversation Flow
+
+To customize the conversation flow and questions, you can replace or modify these services:
+
+#### **Adding a New Questionnaire Service**
+
+1. **Create a new service class** that conforms to `BaseQuestionnaireService` and `Sendable`:
+   ```swift
+   @MainActor
+   class YourCustomService: BaseQuestionnaireService, Sendable {
+       init(phoneNumber: String, logger: Logger) {
+           super.init(
+               questionnaireName: "yourQuestionnaire",
+               directoryPath: Constants.yourQuestionnaireDirectoryPath,
+               phoneNumber: phoneNumber,
+               logger: logger
+           )
+       }
+   }
+   ```
+
+2. **Add your FHIR R4 questionnaire JSON file** to `Sources/App/Resources/` (e.g., `yourQuestionnaire.json`)
+
+3. **Add the directory path** to `Sources/App/constants.swift`:
+   ```swift
+   static let yourQuestionnaireDirectoryPath = "\(dataDirectory)/yourQuestionnaire/"
+   ```
+
+4. **Add questionnaire instructions** to `Sources/App/constants.swift`
+   Here is an example of what it could look like:
+   ```swift
+   static let yourQuestionnaireInstructions = """
+   Your Questionnaire Instructions:
+   1. Inform the patient about this section of questions.
+   Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
+   If the number is not 0, inform the user about the progress and that you will continue with the remaining questions.
+   If the number is 0, inform the user that you will start with the first/initial question.
+
+   2. For each question:
+   - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
+   - Listen to the patient's response
+   - Confirm their answer
+   - After the answer is confirmed, save the question's linkId and answer using the save_response function
+   - Move to the next question
+
+   IMPORTANT:
+   - Call save_response after each response is confirmed
+   - Don't let the user end the call before ALL answers are collected
+   - The function will show you progress (e.g., "Question 1 of 3") to help track completion
+   """
+   ```
+
+5. **Update the `getSystemMessageForService` function** in `Sources/App/constants.swift` to include your service:
+   ```swift
+   static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String) -> String? {
+       switch service {
+       // ... other cases ...
+       case is YourCustomService: // add a case for your service
+           return initialSystemMessage + yourQuestionnaireInstructions + "Initial Question: \(initialQuestion)"
+       default:
+           return nil
+       }
+   }
+   ```
+
+6. **Inject your service** into the `ServiceState` in `Sources/App/routes.swift`:
+   ```swift
+   let serviceState = await ServiceState(services: [
+       /// ... other services ...
+       YourCustomService(phoneNumber: callerPhoneNumber, logger: req.logger)  // Add your service
+       /// ... other services ...
+   ])
+   ```
+
+#### **Modifying Existing Services**
+
+- **Replace a service**: Simply replace the service in the array with your custom implementation
+- **Reorder services**: Change the order in the array to change the conversation flow
+- **Remove services**: Remove services from the array to skip them
+
+### Other Configuration Options
 
 - **System Message (AI Behavior)**  
-  Edit the `systemMessage` constant in  
-  `Sources/App/constants.swift`  
-  This message sets the behavior of the AI and is passed to OpenAI during session initialization.
+  Edit the `systemMessage` oder `instruction` constants in `Sources/App/constants.swift` to customize AI behavior for each questionnaire.
 
 - **Session Configuration (Voice, Functions, etc.)**  
-  Modify `sessionConfig.json` in  
-  `Sources/App/Resources/`  
-  This file controls OpenAI-specific parameters such as:
+  Modify `sessionConfig.json` in `Sources/App/Resources/` to control OpenAI-specific parameters such as:
   - Which voice model to use
   - The available function calls (e.g., saving responses)
   - Other ChatGPT session settings
@@ -85,7 +164,9 @@ To run the server using Docker:
    ```bash
    cp .env.example .env
    ```
-2. Open the **.env** file and insert your OpenAI API Key.
+2. Open the **.env** file and insert your OpenAI API Key and optionally a encryption key if you wish to encrypt the response files (you can generate one using ``openssl rand -base64 32``).
+
+   **Optional**: For internal testing, you can also set `INTERNAL_TESTING_MODE=true` which allows to do the survey multiple times per day and serves a reduced KCCQ12 section with only three questions to allow faster testing.
 3. Build and start the server:
    ```bash
    docker compose build
@@ -155,6 +236,23 @@ You can test the health check endpoint, e.g. via curl, like that:
 ```bash
 curl -I https://voiceai-engagehf.stanford.edu/health
 ```
+
+### Decrypting Stored Files
+
+To decrypt questionnaire response files for analysis:
+
+1. **Install Python cryptography library**:
+   ```bash
+   pip3 install cryptography
+   ```
+
+2. **Run the decryption script** (make sure you're in the directory containing the `/vital_signs`, `/kccq12_questionnairs`, and `/q17` folders):
+   ```bash
+   chmod +x decrypt_files.sh # make it executable
+   ./decrypt_files.sh <your-base64-encryption-key>
+   ```
+
+The script will decrypt all files from `./vital_signs/`, `./kccq12_questionnairs/`, and `./q17/` directories and save them to `./decrypted/`.
 
 ---
 

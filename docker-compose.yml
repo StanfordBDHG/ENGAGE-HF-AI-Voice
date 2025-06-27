@@ -26,7 +26,9 @@
 x-shared_environment: &shared_environment
   LOG_LEVEL: ${LOG_LEVEL:-debug}
   OPENAI_API_KEY: ${OPENAI_API_KEY}
-  
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+  INTERNAL_TESTING_MODE: ${INTERNAL_TESTING_MODE}
+
 services:
   app:
     image: engage-hf-ai-voice:latest

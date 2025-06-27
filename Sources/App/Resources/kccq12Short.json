@@ -1,0 +1,284 @@
+{
+    "title": "KCCQ-12",
+    "resourceType": "Questionnaire",
+    "language": "en-US",
+    "status": "draft",
+    "publisher": "Stanford Biodesign Digital Health",
+    "meta": {
+        "profile": [
+            "http://spezi.health/fhir/StructureDefinition/sdf-Questionnaire"
+        ],
+        "tag": [
+            {
+                "system": "urn:ietf:bcp:47",
+                "code": "en-US",
+                "display": "English"
+            }
+        ]
+    },
+    "useContext": [
+        {
+            "code": {
+                "system": "http://hl7.org/fhir/ValueSet/usage-context-type",
+                "code": "focus",
+                "display": "Clinical Focus"
+            },
+            "valueCodeableConcept": {
+                "coding": [
+                    {
+                        "system": "urn:oid:2.16.578.1.12.4.1.1.8655",
+                        "display": "KCCQ-12"
+                    }
+                ]
+            }
+        }
+    ],
+    "contact": [
+        {
+            "name": "http://spezi.health"
+        }
+    ],
+    "subjectType": ["Patient"],
+    "url": "http://spezi.health/fhir/questionnaire/9528ccc2-d1be-4c4c-9c3c-19f78e51ec19",
+    "item": [
+        {
+            "linkId": "73490535-203f-44b2-d1b7-7c0a786c16f9",
+            "type": "display",
+            "text": "The following questions refer to your heart failure and how it may affect your life. Please read and complete the following questions. There are no right or wrong answers. Please mark the answer that best applies to you.\n\nThese results will be send to your care team.",
+            "required": false
+        },
+        {
+            "linkId": "c0b3bef6-1e2d-4621-d82e-b73069574dc4",
+            "type": "group",
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                    "valueCodeableConcept": {
+                        "coding": [
+                            {
+                                "system": "http://hl7.org/fhir/questionnaire-item-control",
+                                "code": "page",
+                                "display": "Page"
+                            }
+                        ],
+                        "text": "Page"
+                    }
+                }
+            ],
+            "item": [
+                {
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                            "valueCodeableConcept": {
+                                "coding": [
+                                    {
+                                        "system": "http://hl7.org/fhir/questionnaire-item-control",
+                                        "code": "radio-button",
+                                        "display": "Radio Button"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "linkId": "a459b804-35bf-4792-f1eb-0b52c4e176e1",
+                    "type": "choice",
+                    "text": "Showering/bathing",
+                    "required": true,
+                    "answerOption": [
+                        {
+                            "valueCoding": {
+                                "id": "c973b297-4561-4b8c-c8c6-fb559ca15169",
+                                "code": "1",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Extremely Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "1a8c0f4f-12a7-458d-8881-0a0750117ff0",
+                                "code": "2",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Quite a bit Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "1e372729-1834-41c4-8cda-9a8196a77971",
+                                "code": "3",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Moderately Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "cb3c686a-42a0-4c68-8b8d-f2621129adef",
+                                "code": "4",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Slightly Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "4c04162f-e529-406b-a0fa-d636ad1bf6d7",
+                                "code": "5",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Not at all Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "c4f351f5-33d6-477a-f9ba-f68a1ae0df6d",
+                                "code": "6",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Limited for other reasons or did not do the activity"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                            "valueCodeableConcept": {
+                                "coding": [
+                                    {
+                                        "system": "http://hl7.org/fhir/questionnaire-item-control",
+                                        "code": "radio-button",
+                                        "display": "Radio Button"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "linkId": "cf9c5031-1ed5-438a-fc7d-dc69234015a0",
+                    "type": "choice",
+                    "text": "Walking 1 block on level ground",
+                    "required": true,
+                    "answerOption": [
+                        {
+                            "valueCoding": {
+                                "id": "c973b297-4561-4b8c-c8c6-fb559ca15169",
+                                "code": "1",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Extremely Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "1a8c0f4f-12a7-458d-8881-0a0750117ff0",
+                                "code": "2",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Quite a bit Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "1e372729-1834-41c4-8cda-9a8196a77971",
+                                "code": "3",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Moderately Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "cb3c686a-42a0-4c68-8b8d-f2621129adef",
+                                "code": "4",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Slightly Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "4c04162f-e529-406b-a0fa-d636ad1bf6d7",
+                                "code": "5",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Not at all Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "c4f351f5-33d6-477a-f9ba-f68a1ae0df6d",
+                                "code": "6",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Limited for other reasons or did not do the activity"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                            "valueCodeableConcept": {
+                                "coding": [
+                                    {
+                                        "system": "http://hl7.org/fhir/questionnaire-item-control",
+                                        "code": "radio-button",
+                                        "display": "Radio Button"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "linkId": "1fad0f81-b2a9-4c8f-9a78-4b2a5d7aef07",
+                    "type": "choice",
+                    "text": "Hurrying or jogging (as if to catch a bus)",
+                    "required": true,
+                    "answerOption": [
+                        {
+                            "valueCoding": {
+                                "id": "c973b297-4561-4b8c-c8c6-fb559ca15169",
+                                "code": "1",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Extremely Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "1a8c0f4f-12a7-458d-8881-0a0750117ff0",
+                                "code": "2",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Quite a bit Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "1e372729-1834-41c4-8cda-9a8196a77971",
+                                "code": "3",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Moderately Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "cb3c686a-42a0-4c68-8b8d-f2621129adef",
+                                "code": "4",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Slightly Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "4c04162f-e529-406b-a0fa-d636ad1bf6d7",
+                                "code": "5",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Not at all Limited"
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "id": "c4f351f5-33d6-477a-f9ba-f68a1ae0df6d",
+                                "code": "6",
+                                "system": "urn:uuid:8290e1d8-8141-4982-deb9-57f9d2e13a14",
+                                "display": "Limited for other reasons or did not do the activity"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "required": false,
+            "text": "Heart failure affects different people in different ways. Some feel shortness of breath while others feel fatigue. Please indicate how much you are limited by heart failure (shortness of breath or fatigue) in your ability to do the following activities over the past 2 weeks."
+        }
+    ]
+}

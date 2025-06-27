@@ -27,13 +27,17 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         questionnaireName: String,
         directoryPath: String,
         phoneNumber: String,
-        logger: Logger
+        logger: Logger,
+        featureFlags: FeatureFlags,
+        encryptionKey: String? = nil
     ) {
         self.phoneNumber = phoneNumber
         self.logger = logger
         self.storage = QuestionnaireStorageService(
             questionnaireName: questionnaireName,
-            directoryPath: directoryPath
+            directoryPath: directoryPath,
+            featureFlags: featureFlags,
+            encryptionKey: encryptionKey
         )
         self.manager = QuestionnaireManager(
             questionnaire: storage.loadQuestionnaire(),
