@@ -111,6 +111,7 @@ class QuestionnaireStorageService: Sendable {
         } catch {
             logger.error("Failed to create directory: \(error)")
         }
+        response.authored = try? FHIRPrimitive(DateTime(date: dateTimeCreated))
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

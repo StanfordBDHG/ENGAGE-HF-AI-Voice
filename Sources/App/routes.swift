@@ -224,8 +224,9 @@ func routes(_ app: Application) throws {
                     req.logger.info("Received event: \(response.type)")
                 }
                 
-                try await handleOpenAIFunctionCall(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                
+                if response.type == "response.function_call_arguments.done" {
+                    try await handleOpenAIFunctionCall(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+                }
                 
                 // Handling for Audio
                 if response.type == "response.audio.delta", let delta = response.delta {
@@ -272,18 +273,16 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func handleOpenAIFunctionCall(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            if response.type == "response.function_call_arguments.done" {
-                let currentService = await serviceState.current
-                switch response.name {
-                case "save_response":
-                    try await saveResponse(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "count_answered_questions":
-                    try await countAnsweredQuestions(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "get_feedback":
-                    try await getFeedback(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                default:
-                    req.logger.error("Unknown function call: \(String(describing: response.name))")
-                }
+            let currentService = await serviceState.current
+            switch response.name {
+            case "save_response":
+                try await saveResponse(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+            case "count_answered_questions":
+                try await countAnsweredQuestions(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+            case "get_feedback":
+                try await getFeedback(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+            default:
+                req.logger.error("Unknown function call: \(String(describing: response.name))")
             }
         }
         
@@ -418,6 +417,10 @@ func routes(_ app: Application) throws {
             ]
             
             do {
+                await connectionState.removeAllFromMarkQueue()
+                await connectionState.updateLastAssistantItem(nil)
+                await connectionState.updateResponseStartTimestampTwilio(nil)
+
                 try await sendJSON(truncateEvent, webSocket)
                 
                 let clearEvent: [String: Any] = [
@@ -425,10 +428,6 @@ func routes(_ app: Application) throws {
                     "streamSid": streamSid
                 ]
                 try await sendJSON(clearEvent, twilioWs)
-                
-                await connectionState.removeAllFromMarkQueue()
-                await connectionState.updateLastAssistantItem(nil)
-                await connectionState.updateResponseStartTimestampTwilio(nil)
             } catch {
                 req.logger.error("Failed to handle speech started event: \(error)")
             }
@@ -524,11 +523,12 @@ func routes(_ app: Application) throws {
                 "type": "response.create"
             ]
             
-            try await sendJSON(functionResponse, openAIWs)
-            try await sendJSON(responseRequest, openAIWs)
-            
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
+            await connectionState.removeAllFromMarkQueue()
+
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
         }
         
         @Sendable
@@ -575,6 +575,10 @@ func routes(_ app: Application) throws {
             let responseRequest: [String: Any] = [
                 "type": "response.create"
             ]
+            await connectionState.updateResponseStartTimestampTwilio(nil)
+            await connectionState.updateLastAssistantItem(nil)
+            await connectionState.removeAllFromMarkQueue()
+
             try await sendJSON(functionResponse, openAIWs)
             try await sendJSON(responseRequest, openAIWs)
         }
@@ -587,10 +591,11 @@ func routes(_ app: Application) throws {
             let responseRequest: [String: Any] = [
                 "type": "response.create"
             ]
-            try await sendJSON(responseRequest, openAIWs)
-            
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
+            await connectionState.removeAllFromMarkQueue()
+
+            try await sendJSON(responseRequest, openAIWs)
         }
         
         @Sendable
