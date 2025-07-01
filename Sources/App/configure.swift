@@ -10,6 +10,10 @@ import Vapor
 
 /// Configure the application
 public func configure(_ app: Application) async throws {
+    // Initialize feature flags
+    let featureFlags = FeatureFlags()
+    app.featureFlags = featureFlags
+    
     // Environment variables
     let openAIKey: String
     if app.environment == .testing {
@@ -22,17 +26,37 @@ public func configure(_ app: Application) async throws {
         openAIKey = key
     }
     
-    // Store API key in application storage for access in routes
+    // Encryption key (optional for development)
+    var encryptionKey: String?
+    if app.environment == .testing {
+        encryptionKey = nil // No encryption in testing
+    } else {
+        encryptionKey = Environment.get("ENCRYPTION_KEY")
+        if encryptionKey == nil {
+            app.logger.warning("No encryption key provided. Questionnaire responses will be stored unencrypted.")
+        } else {
+            // swiftlint:disable:next force_unwrapping
+            guard let keyData = Data(base64Encoded: encryptionKey!),
+                  keyData.count == 32 else {
+                app.logger.warning(
+                    """
+                    Invalid encryption key provided (must be base64-encoded and 32 bytes when decoded).
+                    Questionnaire responses will be stored unencrypted.
+                    """
+                )
+                encryptionKey = nil
+                return
+            }
+        }
+    }
+    
+    // Store keys in application storage for access in routes
     app.storage[OpenAIKeyStorageKey.self] = openAIKey
+    app.storage[EncryptionKeyStorageKey.self] = encryptionKey
     
     // Configure server
     app.http.server.configuration.port = Environment.get("PORT").flatMap(Int.init) ?? 5000
     
     // Register routes
     try routes(app)
-}
-
-// Storage key for OpenAI API key
-struct OpenAIKeyStorageKey: StorageKey {
-    typealias Value = String
 }

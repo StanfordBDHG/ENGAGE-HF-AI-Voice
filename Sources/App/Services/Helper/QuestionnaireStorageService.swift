@@ -16,15 +16,31 @@ import Vapor
 class QuestionnaireStorageService: Sendable {
     private let questionnaireName: String
     private let directoryPath: String
+    private let encryptionService: EncryptionService?
+    private let featureFlags: FeatureFlags
+    private let dateTimeCreated: Date
     
 
     /// Initialize a new questionnaire storage service
     /// - Parameters:
     ///   - questionnaireName: The name of the questionnaire
     ///   - directoryPath: The path to the directory where the questionnaire response file is stored
-    init(questionnaireName: String, directoryPath: String) {
+    ///   - encryptionKey: Optional base64-encoded master encryption key. If provided, responses will be encrypted.
+    init(questionnaireName: String, directoryPath: String, featureFlags: FeatureFlags, encryptionKey: String? = nil) {
         self.questionnaireName = questionnaireName
         self.directoryPath = directoryPath
+        
+        // Initialize encryption service if key is provided
+        if let encryptionKey = encryptionKey {
+            self.encryptionService = try? EncryptionService(encryptionKeyBase64: encryptionKey)
+        } else {
+            self.encryptionService = nil
+        }
+        
+        self.featureFlags = featureFlags
+        
+        // save the timestamp when the storage service has been created to load the correct questionnaire response files during a internal testing session
+        self.dateTimeCreated = Date()
     }
     
     /// Loads the questionnaire from the file
@@ -57,10 +73,21 @@ class QuestionnaireStorageService: Sendable {
         }
 
         do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: filePath(phoneNumber)))
+            let encryptedData = try Data(contentsOf: URL(fileURLWithPath: filePath(phoneNumber)))
+            
+            // Decrypt the data if encryption service is available
+            let jsonData: Data
+            if let encryptionService = encryptionService {
+                jsonData = try encryptionService.decrypt(encryptedData)
+                logger.info("Decrypted questionnaire response using encryption key")
+            } else {
+                jsonData = encryptedData
+                logger.info("Loading questionnaire response without decryption")
+            }
+            
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(QuestionnaireResponse.self, from: data)
+            return try decoder.decode(QuestionnaireResponse.self, from: jsonData)
         } catch {
             logger.error("Failed to load questionnaire response: \(error)")
             let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
@@ -84,13 +111,26 @@ class QuestionnaireStorageService: Sendable {
         } catch {
             logger.error("Failed to create directory: \(error)")
         }
+        response.authored = try? FHIRPrimitive(DateTime(date: dateTimeCreated))
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = .prettyPrinted
+        
         do {
             let jsonData = try encoder.encode(response)
-            try jsonData.write(to: URL(fileURLWithPath: filePath(phoneNumber)))
+            
+            // Encrypt the data if encryption service is available
+            let dataToWrite: Data
+            if let encryptionService = encryptionService {
+                dataToWrite = try encryptionService.encrypt(jsonData)
+                logger.info("Encrypted questionnaire response using encryption key")
+            } else {
+                dataToWrite = jsonData
+                logger.info("Saving questionnaire response without encryption")
+            }
+            
+            try dataToWrite.write(to: URL(fileURLWithPath: filePath(phoneNumber)))
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")
         }
@@ -107,8 +147,13 @@ class QuestionnaireStorageService: Sendable {
         return "1"
 #else
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let today = formatter.string(from: Date())
+        if featureFlags.internalTestingMode {
+            // For internal testing, allow for multiple responses per day by including timestamp
+            formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
+        } else {
+            formatter.dateFormat = "yyyy-MM-dd"
+        }
+        let today = formatter.string(from: dateTimeCreated)
         let combinedString = phoneNumber + today
         
         // swiftlint:disable:next force_unwrapping

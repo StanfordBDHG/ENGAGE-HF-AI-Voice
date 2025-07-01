@@ -63,13 +63,13 @@ class QuestionnaireManager: Sendable {
         return nil
     }
     
-    private func getNextQuestion() -> QuestionnaireItem? {
+    private func getNextQuestion() -> QuestionWithProgress? {
         let questions = getAllQuestions(from: questionnaire.item ?? [])
         
         let answeredLinkIds = Set(response.item?.compactMap { $0.linkId.value?.string } ?? [])
         
         // Find first required question that hasn't been answered
-        return questions.first { question in
+        let nextQuestion = questions.first { question in
             guard let linkId = question.linkId.value?.string else {
                 return false
             }
@@ -81,6 +81,17 @@ class QuestionnaireManager: Sendable {
             }
             return !answeredLinkIds.contains(linkId)
         }
+        
+        guard let nextQuestion = nextQuestion else {
+            return nil
+        }
+        
+        // Calculate progress
+        let totalQuestions = questions.count
+        let answeredCount = answeredLinkIds.count
+        let progress = "\(answeredCount + 1) of \(totalQuestions)"
+        
+        return QuestionWithProgress(question: nextQuestion, progress: progress)
     }
     
     /// Answer a question in the questionnaire

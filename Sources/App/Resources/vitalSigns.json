@@ -52,13 +52,33 @@
                     "linkId": "systolic",
                     "type": "integer",
                     "text": "Systolic Blood Pressure (mmHg)",
-                    "required": true
+                    "required": true,
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+                            "valueInteger": 70
+                        },
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+                            "valueInteger": 250
+                        }
+                    ]
                 },
                 {
                     "linkId": "diastolic",
                     "type": "integer",
                     "text": "Diastolic Blood Pressure (mmHg)",
-                    "required": true
+                    "required": true,
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+                            "valueInteger": 40
+                        },
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+                            "valueInteger": 150
+                        }
+                    ]
                 }
             ]
         },
@@ -66,13 +86,33 @@
             "linkId": "heart-rate",
             "type": "integer",
             "text": "Heart Rate (beats per minute)",
-            "required": true
+            "required": true,
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+                    "valueInteger": 30
+                },
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+                    "valueInteger": 200
+                }
+            ]
         },
         {
             "linkId": "weight",
             "type": "integer",
             "text": "Weight (pounds)",
-            "required": true
+            "required": true,
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+                    "valueInteger": 50
+                },
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+                    "valueInteger": 500
+                }
+            ]
         }
     ]
 }

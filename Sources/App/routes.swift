@@ -51,10 +51,13 @@ func routes(_ app: Application) throws {
         }
         let connectionState = ConnectionState()
         
+        // Get encryption key from app storage
+        let encryptionKey = app.storage[EncryptionKeyStorageKey.self]
+        
         let serviceState = await ServiceState(services: [
-            VitalSignsService(phoneNumber: callerPhoneNumber, logger: req.logger),
-            KCCQ12Service(phoneNumber: callerPhoneNumber, logger: req.logger),
-            Q17Service(phoneNumber: callerPhoneNumber, logger: req.logger)
+            VitalSignsService(phoneNumber: callerPhoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
+            KCCQ12Service(phoneNumber: callerPhoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
+            Q17Service(phoneNumber: callerPhoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey)
         ])
         
         // Handle incoming start messages from Twilio
@@ -89,11 +92,22 @@ func routes(_ app: Application) throws {
                     await handleOpenAIMessage(twilioWs: twilioWs, openAIWs: openAIWs, text: text, phoneNumber: callerPhoneNumber)
                 }
                 
-                openAIWs.onClose.whenComplete { _ in
-                    req.logger.info("Disconnected from the OpenAI Realtime API")
+                openAIWs.onClose.whenComplete { result in
+                    switch result {
+                    case .success(let closeCode):
+                        req.logger.info("OpenAI WebSocket closed successfully with code: \(closeCode)")
+                    case .failure(let error):
+                        req.logger.error("OpenAI WebSocket closed with error: \(error)")
+                    }
                 }
                 
-                twilioWs.onClose.whenComplete { _ in
+                twilioWs.onClose.whenComplete { result in
+                    switch result {
+                    case .success(let closeCode):
+                        req.logger.info("Twilio WebSocket closed successfully with code: \(closeCode)")
+                    case .failure(let error):
+                        req.logger.error("Twilio WebSocket closed with error: \(error)")
+                    }
                     openAIWs.close().whenComplete { _ in
                         req.logger.info("Clients (OpenAI and Twilio) have both disconnected")
                     }
@@ -123,10 +137,7 @@ func routes(_ app: Application) throws {
                 let responseRequest: [String: Any] = [
                     "type": "response.create"
                 ]
-                let responseData = try JSONSerialization.data(withJSONObject: responseRequest)
-                if let jsonString = String(data: responseData, encoding: .utf8) {
-                    try await webSocket.send(jsonString)
-                }
+                try await sendJSON(responseRequest, webSocket)
             } catch {
                 req.logger.error("Failed to serialize session update: \(error)")
             }
@@ -221,8 +232,9 @@ func routes(_ app: Application) throws {
                     req.logger.info("Received event: \(response.type)")
                 }
                 
-                try await handleOpenAIFunctionCall(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                
+                if response.type == "response.function_call_arguments.done" {
+                    try await handleOpenAIFunctionCall(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+                }
                 
                 // Handling for Audio
                 if response.type == "response.audio.delta", let delta = response.delta {
@@ -239,7 +251,8 @@ func routes(_ app: Application) throws {
                     }
                     
                     // First delta from a new response starts the elapsed time counter
-                     if await connectionState.responseStartTimestampTwilio == nil {
+                    let currentTimestamp = await connectionState.responseStartTimestampTwilio
+                    if currentTimestamp == nil {
                         let latestMediaTimestamp = await connectionState.latestMediaTimestamp
                         await connectionState.updateResponseStartTimestampTwilio(latestMediaTimestamp)
                         
@@ -269,18 +282,16 @@ func routes(_ app: Application) throws {
         
         @Sendable
         func handleOpenAIFunctionCall(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
-            if response.type == "response.function_call_arguments.done" {
-                let currentService = await serviceState.current
-                switch response.name {
-                case "save_response":
-                    try await saveResponse(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "count_answered_questions":
-                    try await countAnsweredQuestions(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                case "get_feedback":
-                    try await getFeedback(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
-                default:
-                    req.logger.error("Unknown function call: \(String(describing: response.name))")
-                }
+            let currentService = await serviceState.current
+            switch response.name {
+            case "save_response":
+                try await saveResponse(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+            case "count_answered_questions":
+                try await countAnsweredQuestions(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+            case "get_feedback":
+                try await getFeedback(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+            default:
+                req.logger.error("Unknown function call: \(String(describing: response.name))")
             }
         }
         
@@ -336,11 +347,12 @@ func routes(_ app: Application) throws {
                 "type": "response.create"
             ]
 
-            try await sendJSON(functionResponse, openAIWs)
-            try await sendJSON(responseRequest, openAIWs)
-
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
+            await connectionState.removeAllFromMarkQueue()
+
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
         }
         
         @Sendable
@@ -415,6 +427,10 @@ func routes(_ app: Application) throws {
             ]
             
             do {
+                await connectionState.removeAllFromMarkQueue()
+                await connectionState.updateLastAssistantItem(nil)
+                await connectionState.updateResponseStartTimestampTwilio(nil)
+
                 try await sendJSON(truncateEvent, webSocket)
                 
                 let clearEvent: [String: Any] = [
@@ -422,10 +438,6 @@ func routes(_ app: Application) throws {
                     "streamSid": streamSid
                 ]
                 try await sendJSON(clearEvent, twilioWs)
-                
-                await connectionState.removeAllFromMarkQueue()
-                await connectionState.updateLastAssistantItem(nil)
-                await connectionState.updateResponseStartTimestampTwilio(nil)
             } catch {
                 req.logger.error("Failed to handle speech started event: \(error)")
             }
@@ -521,11 +533,12 @@ func routes(_ app: Application) throws {
                 "type": "response.create"
             ]
             
-            try await sendJSON(functionResponse, openAIWs)
-            try await sendJSON(responseRequest, openAIWs)
-            
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
+            await connectionState.removeAllFromMarkQueue()
+
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
         }
         
         @Sendable
@@ -572,6 +585,10 @@ func routes(_ app: Application) throws {
             let responseRequest: [String: Any] = [
                 "type": "response.create"
             ]
+            await connectionState.updateResponseStartTimestampTwilio(nil)
+            await connectionState.updateLastAssistantItem(nil)
+            await connectionState.removeAllFromMarkQueue()
+
             try await sendJSON(functionResponse, openAIWs)
             try await sendJSON(responseRequest, openAIWs)
         }
@@ -584,10 +601,11 @@ func routes(_ app: Application) throws {
             let responseRequest: [String: Any] = [
                 "type": "response.create"
             ]
-            try await sendJSON(responseRequest, openAIWs)
-            
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
+            await connectionState.removeAllFromMarkQueue()
+
+            try await sendJSON(responseRequest, openAIWs)
         }
         
         @Sendable
