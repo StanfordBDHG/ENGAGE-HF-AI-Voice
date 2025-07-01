@@ -92,11 +92,22 @@ func routes(_ app: Application) throws {
                     await handleOpenAIMessage(twilioWs: twilioWs, openAIWs: openAIWs, text: text, phoneNumber: callerPhoneNumber)
                 }
                 
-                openAIWs.onClose.whenComplete { _ in
-                    req.logger.info("Disconnected from the OpenAI Realtime API")
+                openAIWs.onClose.whenComplete { result in
+                    switch result {
+                    case .success(let closeCode):
+                        req.logger.info("OpenAI WebSocket closed successfully with code: \(closeCode)")
+                    case .failure(let error):
+                        req.logger.error("OpenAI WebSocket closed with error: \(error)")
+                    }
                 }
                 
-                twilioWs.onClose.whenComplete { _ in
+                twilioWs.onClose.whenComplete { result in
+                    switch result {
+                    case .success(let closeCode):
+                        req.logger.info("Twilio WebSocket closed successfully with code: \(closeCode)")
+                    case .failure(let error):
+                        req.logger.error("Twilio WebSocket closed with error: \(error)")
+                    }
                     openAIWs.close().whenComplete { _ in
                         req.logger.info("Clients (OpenAI and Twilio) have both disconnected")
                     }
@@ -126,10 +137,7 @@ func routes(_ app: Application) throws {
                 let responseRequest: [String: Any] = [
                     "type": "response.create"
                 ]
-                let responseData = try JSONSerialization.data(withJSONObject: responseRequest)
-                if let jsonString = String(data: responseData, encoding: .utf8) {
-                    try await webSocket.send(jsonString)
-                }
+                try await sendJSON(responseRequest, webSocket)
             } catch {
                 req.logger.error("Failed to serialize session update: \(error)")
             }
@@ -243,7 +251,8 @@ func routes(_ app: Application) throws {
                     }
                     
                     // First delta from a new response starts the elapsed time counter
-                     if await connectionState.responseStartTimestampTwilio == nil {
+                    let currentTimestamp = await connectionState.responseStartTimestampTwilio
+                    if currentTimestamp == nil {
                         let latestMediaTimestamp = await connectionState.latestMediaTimestamp
                         await connectionState.updateResponseStartTimestampTwilio(latestMediaTimestamp)
                         
@@ -338,11 +347,12 @@ func routes(_ app: Application) throws {
                 "type": "response.create"
             ]
 
-            try await sendJSON(functionResponse, openAIWs)
-            try await sendJSON(responseRequest, openAIWs)
-
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
+            await connectionState.removeAllFromMarkQueue()
+
+            try await sendJSON(functionResponse, openAIWs)
+            try await sendJSON(responseRequest, openAIWs)
         }
         
         @Sendable

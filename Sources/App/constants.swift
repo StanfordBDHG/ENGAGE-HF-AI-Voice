@@ -27,14 +27,14 @@ enum Constants {
     2. For each question:
     - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
     - Listen to the patient's response
-    - Confirm their answer
-    - After the answer is confirmed, save the question's linkId and answer using the save_response function
+    - Confirm their answer by asking the patient to confirm the answer
+    - After the answer is confirmed by the patient, save the question's linkId and answer using the save_response function
     - Move to the next question
 
     IMPORTANT:
-    - Call save_response after each response in confirmed
+    - Call save_response after each response in confirmed, but only if the response is in the expected range
     - Don't let the user end the call before ALL answers are collected
-    - The function will show you progress (e.g., "Question 1 of 3") to help track completion
+    - The function will show you progress (e.g., "Question 1 of 3") to help track completion of the current section
     
     """
     
@@ -48,15 +48,15 @@ enum Constants {
     2. For each question:
     - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
     - Listen to the patient's response
-    - Confirm their answer
-    - After the answer is confirmed, save the question's linkId and answer using the save_response function
+    - Confirm their answer by asking the patient to confirm the answer
+    - After the answer is confirmed by the patient, save the question's linkId and answer using the save_response function
     - Move to the next question
 
 
     IMPORTANT:
     - Call save_response after each response in confirmed
     - Don't let the user end the call before ALL answers are collected
-    - The function will show you progress (e.g., "Question 1 of 3") to help track completion
+    - The function will show you progress (e.g., "Question 1 of 3") to help track completion of the current section
     
     """
     
@@ -67,8 +67,8 @@ enum Constants {
     2. For each question:
     - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
     - Listen to the patient's response
-    - Confirm their answer
-    - After the answer is confirmed, save the question's linkId and answer using the save_response function
+    - Confirm their answer by asking the patient to confirm the answer
+    - After the answer is confirmed by the patient, save the question's linkId and answer using the save_response function
     
     3. After this last section is complete (no next question is found):
     - Let the patient know they completed all the questions.
@@ -76,13 +76,14 @@ enum Constants {
     IMPORTANT:
     - Call save_response after each response in confirmed
     - Don't let the user end the call before ALL answers are collected
-    - The function will show you progress (e.g., "Question 1 of 1") to help track completion
+    - The function will show you progress (e.g., "Question 1 of 1") to help track completion of the current section
     
     """
     
     static let feedback = """
     Tell the patient that all questions have been answered for this day.
     Use the get_feedback function to get the final patient feedback. Then, read the feedback precisely to the patient.
+    Also make sure to tell them their symptom score value.
     
     After that, thank the patient for their time and tell them that they can now end the call.
     """
