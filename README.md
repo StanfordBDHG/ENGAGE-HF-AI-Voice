@@ -184,17 +184,17 @@ Example: `https://your-ngrok-url.ngrok-free.app/incoming-call`
 
 To deploy the service in a production environment, follow these steps:
 
-0. **Prerequesites**
-   Have Docker and Docker Compose installed.
+0. **Prerequisites**
+   - Install Docker and Docker Compose.
 
 1. **Prepare the Deployment Directory**
-   - Create a new directory on your target machine (e.g., `engage-hf-ai-voice`)
-   - Copy the following files to this directory (e.g. with `scp` or by creating a empty file and copy over the content):
+   - Create a new directory on your target machine (e.g., `engage-hf-ai-voice`).
+   - Copy the following files into this directory (e.g., via `scp` or by creating the files locally and pasting the content):
      - `docker-compose.prod.yml`
      - `nginx.conf`
 
 2. **Configure Environment Variables**
-   - Create a `.env` file in the deployment directory
+   - Create a `.env` file in the deployment directory.
    - Add your OpenAI API key like this:
      ```bash
      OPENAI_API_KEY=<your-api-key>
@@ -207,35 +207,37 @@ To deploy the service in a production environment, follow these steps:
      sudo mkdir -p ./private
      ```
    - Add your SSL certificates:
-     - Place your certificate file which requies a full certificate chain (e.g., `certificate.pem`) in `./certs`
-     - Place your private key file (e.g., `certificate.key`) in `./private`
-
+     - Place your certificate file which requires a full certificate chain (e.g., `certificate.pem`) in `./certs`.
+     - Place your private key file (e.g., `private.key`) in `./private`.
    - Ensure proper permissions:
      ```bash
      sudo chmod 644 ./certs/certificate.pem
      sudo chmod 600 ./private/private.key
      ```
 
-3.1. **Update file names in `nginx.conf`**
-    - Depending on how your certificate and private key files are named, you need to adjust that in the `nginx.conf` file at:
-     ```bash
-     # SSL configuration with Stanford certificates
-     ssl_certificate /etc/ssl/certs/voiceai-engagehf.stanford.edu/certificate.pem;
-     ssl_certificate_key /etc/ssl/private/voiceai-engagehf.stanford.edu/certificate.key;
-     ```
+3.1. **Update the Docker Compose file**
+   - If needed, adjust the `secrets` block at the bottom of the file and reference.
+   ```yaml
+   secrets:
+     cert_chain:
+       file: ./certs/certificate.pem
+     priv_key:
+       file: ./private/private.key
+   ```
 
 4. **Start the Service**
-   - Navigate to your deployment directory
+   - Navigate to your deployment directory.
    - Run the following command to start the service in detached mode:
      ```bash
      docker compose -f docker-compose.prod.yml up -d
      ```
 
-The service should now be running and accessible via your configured domain.
-You can test the health check endpoint, e.g. via curl, like that:
-```bash
-curl -I https://voiceai-engagehf.stanford.edu/health
-```
+5. **Verify the Deployment**
+   - The service should now be running and accessible via your configured domain.
+   - Test the health check endpoint:
+     ```bash
+     curl -I https://voiceai-engagehf.stanford.edu/health
+     ```
 
 ### Decrypting Stored Files
 
