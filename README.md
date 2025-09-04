@@ -212,7 +212,7 @@ To deploy the service in a production environment, follow these steps:
    - Ensure proper permissions:
      ```bash
      sudo chmod 644 ./certs/certificate.pem
-     sudo chmod 600 ./private/private.key
+     sudo chmod 640 ./private/private.key
      ```
 
 3.1. **Update the Docker Compose file**
@@ -225,14 +225,28 @@ To deploy the service in a production environment, follow these steps:
        file: ./private/private.key
    ```
 
-4. **Start the Service**
+4. **Adjust the App Data Volume**
+By default the app uses a named volume `app-data`; data stays inside Docker.  
+If you want data on the host, mount a host directory instead.
+
+- Define the absolute path to the folder you would like to mount for the application data in the `docker-compose.prod.yml` file:
+  ```yaml
+  services:
+    app:
+      volumes:
+        - "/Users/exampleuser/yourfolder:/app/data"
+  ```
+
+  Then you can delete named volume at the bottom section of the docker compose file.
+
+5. **Start the Service**
    - Navigate to your deployment directory.
    - Run the following command to start the service in detached mode:
      ```bash
      docker compose -f docker-compose.prod.yml up -d
      ```
 
-5. **Verify the Deployment**
+6. **Verify the Deployment**
    - The service should now be running and accessible via your configured domain.
    - Test the health check endpoint:
      ```bash
