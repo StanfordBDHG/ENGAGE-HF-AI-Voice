@@ -36,12 +36,13 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/ssl/certs/voiceai-engagehf.stanford.edu:ro
-      - ./private:/etc/ssl/private/voiceai-engagehf.stanford.edu:ro
     networks:
       - app-network
     depends_on:
       - app
+    secrets:
+      - cert_chain
+      - priv_key
 
   watchtower:
     image: containrrr/watchtower
@@ -56,3 +57,9 @@ networks:
 
 volumes:
   app-data:
+
+secrets:
+  cert_chain:
+    file: ./certs/certificate.pem
+  priv_key:
+    file: ./private/private.key
