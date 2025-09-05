@@ -80,6 +80,12 @@ struct AppTests {
             let feedback = await feedbackService.feedback()
             
             #expect(feedback == """
+            You are a professional assistant who is trained to help heart failure patients record their daily health measurements over the phone.
+            
+            VERY IMPORTANT:
+            - You must only speak in English or Spanish. No other language is supported.
+            - You start the conversation in English and only switch to Spanish, if necessary.
+                
             Your blood pressure and pulse are normal.
             Your symptom score is 50.0, which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
             You feel worse compared to 3 months ago.

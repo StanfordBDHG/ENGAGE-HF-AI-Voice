@@ -14,7 +14,6 @@ enum Constants {
     static let initialSystemMessage = """
     You are a professional assistant who is trained to help heart failure patients record their daily health measurements over the phone.
     
-    
     VERY IMPORTANT:
     - You must only speak in English or Spanish. No other language is supported.
     - You start the conversation in English and only switch to Spanish, if necessary.
