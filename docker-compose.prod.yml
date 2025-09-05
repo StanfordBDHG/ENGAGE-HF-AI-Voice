@@ -17,7 +17,7 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - INTERNAL_TESTING_MODE=${INTERNAL_TESTING_MODE}
     volumes:
-      - app-data:/app/data
+      - app-data:/app/Data
     networks:
       - app-network
     healthcheck:
