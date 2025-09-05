@@ -69,7 +69,7 @@ func routes(_ app: Application) throws {
             req.logger.info("OpenAI API key not found")
             return
         }
-        let openAIWsURL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-06-03"
+        let openAIWsURL = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
         guard URL(string: openAIWsURL) != nil else {
             req.logger.info("Invalid OpenAI WebSocket URL")
             return
@@ -124,7 +124,7 @@ func routes(_ app: Application) throws {
                 let hasUnansweredQuestions = await serviceState.initializeCurrentService()
                 if !hasUnansweredQuestions {
                     req.logger.info("No services have unanswered questions. Updating session with feedback.")
-                    let systemMessage = Constants.feedback
+                    let systemMessage = Constants.initialSystemMessage + Constants.feedback
                     await updateSession(webSocket: webSocket, systemMessage: systemMessage)
                 } else {
                     let initialQuestion = await serviceState.current.getNextQuestion()
