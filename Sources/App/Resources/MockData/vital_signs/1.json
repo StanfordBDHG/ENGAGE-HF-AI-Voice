@@ -5,22 +5,6 @@
     },
     "item" : [
         {
-            "linkId" : "systolic",
-            "answer" : [
-                {
-                    "valueInteger" : 120
-                }
-            ]
-        },
-        {
-            "linkId" : "diastolic",
-            "answer" : [
-                {
-                    "valueInteger" : 80
-                }
-            ]
-        },
-        {
             "linkId" : "heart-rate",
             "answer" : [
                 {
