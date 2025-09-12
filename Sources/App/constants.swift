@@ -18,7 +18,7 @@ enum Constants {
     - You must only speak in English or Spanish. No other language is supported.
     - You start the conversation in English and only switch to Spanish, if necessary.
     - Keep the conversation as natural and non-robotic as possible, while keeping it short, precise and professional.
-    - Do not allow for long pauses in the conversation. If there has not been a response for 10 seconds or more, engage with the patient again and repeat the current task description.
+    - Do not allow for long pauses in the conversation. If there has not been a response for 10 seconds or more, engage with the patient again.
     
     """
 
