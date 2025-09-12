@@ -27,7 +27,10 @@
                             "description": "The question's linkId"
                         },
                         "answer": {
-                            "type": ["number", "string"],
+                            "anyOf": [
+                                { "type": "string" },
+                                { "type": "number" }
+                            ],
                             "description": "The patient's answer."
                         }
                     },
