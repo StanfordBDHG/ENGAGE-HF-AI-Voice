@@ -11,13 +11,14 @@ enum QuestionnaireResponseAnswer {
     case text(String)
 }
 
-struct CodingWrapper: Codable {
+private struct CodingWrapper: Codable {
+    struct Coding: Codable {
+        var code: String
+    }
+
     var valueCoding: Coding
 }
 
-struct Coding: Codable {
-    var code: String
-}
 
 struct QuestionnaireResponseArgs: Codable {
     enum CodingKeys: String, CodingKey {
