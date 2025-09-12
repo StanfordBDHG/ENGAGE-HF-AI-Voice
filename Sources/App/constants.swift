@@ -55,7 +55,7 @@ enum Constants {
     2. For each question:
     - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
     - Listen to the patient's response
-    - Confirm their answer by asking the patient to confirm the answer with a quick question similar to "Moderately limited - can you confirm?"
+    - Repeat the patient's response and wait for confirmation by the patient
     - After the answer is confirmed by the patient, save the question's linkId and answer using the save_response function
     - Move to the next question
 
@@ -74,7 +74,7 @@ enum Constants {
     2. For each question:
     - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
     - Listen to the patient's response
-    - Confirm their answer by asking the patient to confirm the answer
+    - Repeat the patient's response and wait for confirmation by the patient
     - After the answer is confirmed by the patient, save the question's linkId and answer using the save_response function
     
     3. After this last section is complete (no next question is found):
