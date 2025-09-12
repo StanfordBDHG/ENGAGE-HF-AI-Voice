@@ -13,7 +13,7 @@ import Vapor
 // swiftlint:disable:next function_body_length
 func routes(_ app: Application) throws {
     app.get("health") { _ -> HTTPStatus in
-        .ok
+            .ok
     }
     
     app.post("incoming-call") { req async -> Response in
@@ -154,7 +154,7 @@ func routes(_ app: Application) throws {
                 try? await webSocket.close()
             }
         }
-
+        
         @Sendable
         func handleTwilioStartMessage(text: String) async {
             do {
@@ -179,7 +179,7 @@ func routes(_ app: Application) throws {
                 req.logger.info("Error processing message: \(error)")
             }
         }
-
+        
         @Sendable
         func handleTwilioMessage(openAIWs: WebSocket, text: String) async {
             do {
@@ -309,17 +309,27 @@ func routes(_ app: Application) throws {
                 }
                 let argumentsData = arguments.data(using: .utf8) ?? Data()
                 
-                if let parsedArgs = try? JSONDecoder().decode(QuestionnaireResponseArgs.self, from: argumentsData) {
+                req.logger.debug("Received arguments: \(arguments)")
+                
+                do {
+                    let parsedArgs = try JSONDecoder().decode(QuestionnaireResponseArgs.self, from: argumentsData)
                     req.logger.info("Parsed arguments: \(parsedArgs)")
                     let saveResult = await saveQuestionnaireAnswer(service: service, parsedArgs: parsedArgs)
-                    
                     if !saveResult {
                         try await handleSaveFailure(response: response, openAIWs: openAIWs)
                     } else {
                         try await handleSaveSuccess(service: service, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                     }
-                } else {
-                    handleParsingError(argumentsData: argumentsData)
+                } catch {
+                    req.logger.error("Decoding error details: \(error)")
+                    let errorResponse: [String: Any] = [
+                        "type": "function_response",
+                        "id": response.callId ?? "",
+                        "error": [
+                            "message": "Failed to decode parameters; please adhere to the JSON schema definitions."
+                        ]
+                    ]
+                    try await sendJSON(errorResponse, openAIWs)
                 }
             } catch {
                 try await handleProcessingError(error: error, response: response, openAIWs: openAIWs)
@@ -346,11 +356,11 @@ func routes(_ app: Application) throws {
             let responseRequest: [String: Any] = [
                 "type": "response.create"
             ]
-
+            
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
             await connectionState.removeAllFromMarkQueue()
-
+            
             try await sendJSON(functionResponse, openAIWs)
             try await sendJSON(responseRequest, openAIWs)
         }
@@ -430,7 +440,7 @@ func routes(_ app: Application) throws {
                 await connectionState.removeAllFromMarkQueue()
                 await connectionState.updateLastAssistantItem(nil)
                 await connectionState.updateResponseStartTimestampTwilio(nil)
-
+                
                 try await sendJSON(truncateEvent, webSocket)
                 
                 let clearEvent: [String: Any] = [
@@ -467,7 +477,7 @@ func routes(_ app: Application) throws {
             try await sendJSON(markEvent, webSocket)
             await connectionState.appendToMarkQueue("responsePart")
         }
-
+        
         @Sendable
         func saveQuestionnaireAnswer(service: QuestionnaireService, parsedArgs: QuestionnaireResponseArgs) async -> Bool {
             switch parsedArgs.answer {
@@ -536,7 +546,7 @@ func routes(_ app: Application) throws {
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
             await connectionState.removeAllFromMarkQueue()
-
+            
             try await sendJSON(functionResponse, openAIWs)
             try await sendJSON(responseRequest, openAIWs)
         }
@@ -549,7 +559,7 @@ func routes(_ app: Application) throws {
             phoneNumber: String
         ) async throws {
             await service.saveQuestionnaireResponseToFile()
-           
+            
             if let nextService = await serviceState.next(),
                let initialQuestion = await nextService.getNextQuestion(),
                let systemMessage = Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {
@@ -588,7 +598,7 @@ func routes(_ app: Application) throws {
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
             await connectionState.removeAllFromMarkQueue()
-
+            
             try await sendJSON(functionResponse, openAIWs)
             try await sendJSON(responseRequest, openAIWs)
         }
@@ -604,17 +614,8 @@ func routes(_ app: Application) throws {
             await connectionState.updateResponseStartTimestampTwilio(nil)
             await connectionState.updateLastAssistantItem(nil)
             await connectionState.removeAllFromMarkQueue()
-
+            
             try await sendJSON(responseRequest, openAIWs)
-        }
-        
-        @Sendable
-        func handleParsingError(argumentsData: Data) {
-            do {
-                _ = try JSONDecoder().decode(QuestionnaireResponseArgs.self, from: argumentsData)
-            } catch {
-                req.logger.error("Decoding error details: \(error)")
-            }
         }
         
         @Sendable

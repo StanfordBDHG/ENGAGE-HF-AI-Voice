@@ -11,6 +11,15 @@ enum QuestionnaireResponseAnswer {
     case text(String)
 }
 
+private struct CodingWrapper: Codable {
+    struct Coding: Codable {
+        var code: String
+    }
+
+    var valueCoding: Coding
+}
+
+
 struct QuestionnaireResponseArgs: Codable {
     enum CodingKeys: String, CodingKey {
         case linkId
@@ -27,9 +36,15 @@ struct QuestionnaireResponseArgs: Codable {
         
         if let number = try? container.decode(Int.self, forKey: .answer) {
             answer = .number(number)
-        } else {
-            let text = try container.decode(String.self, forKey: .answer)
+        } else if let text = try? container.decode(String.self, forKey: .answer) {
             answer = .text(text)
+        } else if let codingWrapper = try? container.decode(CodingWrapper.self, forKey: .answer) {
+            answer = .text(codingWrapper.valueCoding.code)
+        } else {
+            throw DecodingError.typeMismatch(
+                QuestionnaireResponseArgs.self,
+                .init(codingPath: decoder.codingPath + [CodingKeys.answer], debugDescription: "Unknown type")
+            )
         }
     }
     
