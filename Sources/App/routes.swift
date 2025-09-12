@@ -320,7 +320,6 @@ func routes(_ app: Application) throws {
                     } else {
                         try await handleSaveSuccess(service: service, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                     }
-                    
                 } catch {
                     req.logger.error("Decoding error details: \(error)")
                     let errorResponse: [String: Any] = [
