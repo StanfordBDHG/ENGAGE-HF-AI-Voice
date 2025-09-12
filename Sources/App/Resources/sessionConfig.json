@@ -12,13 +12,13 @@
         "input_audio_format": "g711_ulaw",
         "turn_detection": {
             "type": "semantic_vad",
-            "eagerness": "low"
+            "eagerness": "auto"
         },
         "tools": [
             {
                 "type": "function",
                 "name": "save_response",
-                "description": "Saves a patient response and returns the next question. This function should be called after a response is recorded to save it.",
+                "description": "Saves a patient response and returns the next question. This function should be called after a response is recorded to save it. Calling this function multiple times for the same linkId will override the answer value.",
                 "parameters": {
                     "type": "object",
                     "properties": {

@@ -17,6 +17,8 @@ enum Constants {
     VERY IMPORTANT:
     - You must only speak in English or Spanish. No other language is supported.
     - You start the conversation in English and only switch to Spanish, if necessary.
+    - Keep the conversation as natural and non-robotic as possible, while keeping it short, precise and professional.
+    - Do not allow for long pauses in the conversation. If there has not been a response for 10 seconds or more, engage with the patient again and repeat the current task description.
     
     """
 
@@ -27,11 +29,12 @@ enum Constants {
     1. Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
     If the number is not 0, inform the user about the progress and that you will continue with the remaining questions.
     If the number is 0, inform the user that you will start with the first/initial question.
+    Always pronounce units in its long form, e.g. use "Millimeters of Mercury" for "mmHg".
 
     2. For each question:
     - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
     - Listen to the patient's response
-    - Confirm their answer by asking the patient to confirm the answer
+    - Repeat the patient's response and wait for confirmation by the patient
     - After the answer is confirmed by the patient, save the question's linkId and answer using the save_response function
     - Move to the next question
 
@@ -52,7 +55,7 @@ enum Constants {
     2. For each question:
     - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
     - Listen to the patient's response
-    - Confirm their answer by asking the patient to confirm the answer
+    - Confirm their answer by asking the patient to confirm the answer with a quick question similar to "Moderately limited - can you confirm?"
     - After the answer is confirmed by the patient, save the question's linkId and answer using the save_response function
     - Move to the next question
 

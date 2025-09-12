@@ -309,6 +309,7 @@ func routes(_ app: Application) throws {
                 }
                 let argumentsData = arguments.data(using: .utf8) ?? Data()
                 
+                req.logger.debug("Received arguments: \(arguments)")
                 if let parsedArgs = try? JSONDecoder().decode(QuestionnaireResponseArgs.self, from: argumentsData) {
                     req.logger.info("Parsed arguments: \(parsedArgs)")
                     let saveResult = await saveQuestionnaireAnswer(service: service, parsedArgs: parsedArgs)
