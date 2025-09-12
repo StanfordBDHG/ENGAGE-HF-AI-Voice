@@ -327,7 +327,7 @@ func routes(_ app: Application) throws {
                         "type": "function_response",
                         "id": response.callId ?? "",
                         "error": [
-                            "message": "Failed to decode response."
+                            "message": "Failed to decode parameters; please adhere to the JSON schema definitions."
                         ]
                     ]
                     try await sendJSON(errorResponse, openAIWs)
