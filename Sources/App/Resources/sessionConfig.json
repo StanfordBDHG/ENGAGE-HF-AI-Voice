@@ -12,7 +12,7 @@
         "input_audio_format": "g711_ulaw",
         "turn_detection": {
             "type": "semantic_vad",
-            "eagerness": "auto"
+            "eagerness": "high"
         },
         "tools": [
             {
