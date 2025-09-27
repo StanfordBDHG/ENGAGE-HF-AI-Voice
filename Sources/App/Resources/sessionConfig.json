@@ -29,7 +29,8 @@
                         "answer": {
                             "anyOf": [
                                 { "type": "string" },
-                                { "type": "number" }
+                                { "type": "number" },
+                                { "type": "null" }
                             ],
                             "description": "The patient's answer."
                         }

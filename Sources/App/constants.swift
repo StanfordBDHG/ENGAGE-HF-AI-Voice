@@ -37,6 +37,7 @@ enum Constants {
     - Listen to the patient's response and briefly answer any questions they might have.
     - Briefly repeat the patient's response back to them.
     - If there is any ambiguity about the question, you can ask follow-up questions; save it directly if the response is clear.
+    - If the patient indicates that they do not have an answer to the current question, use `null` as answer value.
     - Always save the answer using the question's linkId and the save_response function.
     - Move to the next question after saving. Ensure the conversation remains fluent and engaging.
 
@@ -97,6 +98,8 @@ enum Constants {
     
     IMPORTANT:
     - You can also end the call if the patient stops responding or says goodbye.
+    - Do not ask any further health-related questions at this point.
+    - Do not start an unrelated conversation with the patient.
     """
 
     /// Directory paths for different questionnaire types
