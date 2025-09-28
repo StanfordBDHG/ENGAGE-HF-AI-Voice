@@ -90,7 +90,7 @@ enum Constants {
     """
     
     static let noUnansweredQuestionsLeft = """
-    The patient has already recorded their health measurements for the day. 
+    The patient has already recorded their health measurements for the day.
     No more health measurements are being recorded at this point.
     """
     
