@@ -40,7 +40,7 @@ struct QuestionnaireResponseArgs: Codable {
             answer = .text(text)
         } else if let codingWrapper = try? container.decode(CodingWrapper.self, forKey: .answer) {
             answer = .text(codingWrapper.valueCoding.code)
-        } else if let null = try? container.decodeNil(forKey: .answer) {
+        } else if try container.decodeNil(forKey: .answer) {
             answer = .text("null")
         } else {
             throw DecodingError.typeMismatch(

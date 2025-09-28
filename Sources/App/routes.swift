@@ -80,7 +80,7 @@ func routes(_ app: Application) throws {
         
         do {
             _ = try await WebSocket.connect(to: openAIWsURL, headers: headers, on: req.eventLoop) { openAIWs async in
-                await initializeSession(webSocket: openAIWs)
+                await initializeSession(openAIWs: openAIWs)
                 
                 // Handle incoming messages from Twilio
                 twilioWs.onText { _, text async in
@@ -119,39 +119,42 @@ func routes(_ app: Application) throws {
         
         
         @Sendable
-        func initializeSession(webSocket: WebSocket) async {
+        func initializeSession(openAIWs: WebSocket) async {
             do {
                 let hasUnansweredQuestions = await serviceState.initializeCurrentService()
+                let fallbackSystemMessage = Constants.initialSystemMessage + Constants.feedback
                 if !hasUnansweredQuestions {
                     req.logger.info("No services have unanswered questions. Updating session with feedback.")
-                    let systemMessage = Constants.initialSystemMessage + Constants.feedback
-                    await updateSession(webSocket: webSocket, systemMessage: systemMessage)
+                    await updateSession(openAIWs: openAIWs, systemMessage: fallbackSystemMessage)
                 } else {
                     let initialQuestion = await serviceState.current.getNextQuestion()
                     let initialSystemMessage = await Constants.getSystemMessageForService(
                         serviceState.current,
-                        initialQuestion: initialQuestion ?? "No question found."
+                        initialQuestion: initialQuestion
                     )
-                    await updateSession(webSocket: webSocket, systemMessage: initialSystemMessage ?? "")
+                    await updateSession(
+                        openAIWs: openAIWs,
+                        systemMessage: initialSystemMessage ?? fallbackSystemMessage
+                    )
                 }
                 let responseRequest: [String: Any] = [
                     "type": "response.create"
                 ]
-                try await sendJSON(responseRequest, webSocket)
+                try await sendJSON(responseRequest, openAIWs)
             } catch {
                 req.logger.error("Failed to serialize session update: \(error)")
             }
         }
         
         @Sendable
-        func updateSession(webSocket: WebSocket, systemMessage: String) async {
+        func updateSession(openAIWs: WebSocket, systemMessage: String) async {
             let sessionConfigJSONString = Constants.loadSessionConfig(systemMessage: systemMessage)
             do {
                 req.logger.info("Updating session with: \(sessionConfigJSONString)")
-                try await webSocket.send(sessionConfigJSONString)
+                try await openAIWs.send(sessionConfigJSONString)
             } catch {
                 req.logger.error("Failed to update session: \(error). Closing web socket.")
-                try? await webSocket.close()
+                try? await openAIWs.close()
             }
         }
         
@@ -290,6 +293,9 @@ func routes(_ app: Application) throws {
                 try await countAnsweredQuestions(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
             case "get_feedback":
                 try await getFeedback(response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
+            case "end_call":
+                req.logger.info("Call will be ended due to end_call being called.")
+                try await twilioWs.close()
             default:
                 req.logger.error("Unknown function call: \(String(describing: response.name))")
             }
@@ -583,7 +589,7 @@ func routes(_ app: Application) throws {
             response: OpenAIResponse,
             openAIWs: WebSocket
         ) async throws {
-            await updateSession(webSocket: openAIWs, systemMessage: systemMessage)
+            await updateSession(openAIWs: openAIWs, systemMessage: systemMessage)
             let functionResponse: [String: Any] = [
                 "type": "conversation.item.create",
                 "item": [
@@ -606,7 +612,7 @@ func routes(_ app: Application) throws {
         @Sendable
         func handleNoNextService(response: OpenAIResponse, openAIWs: WebSocket) async throws {
             let systemMessage = Constants.feedback
-            await updateSession(webSocket: openAIWs, systemMessage: systemMessage)
+            await updateSession(openAIWs: openAIWs, systemMessage: systemMessage)
             
             let responseRequest: [String: Any] = [
                 "type": "response.create"

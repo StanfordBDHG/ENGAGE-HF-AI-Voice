@@ -90,6 +90,8 @@ enum Constants {
     """
     
     static let feedback = """
+    You are at the end of the conversation. No more health measurements are being recorded at this point.
+    
     Tell the patient that all questions have been answered for this day.
     Use the get_feedback function to obtain the final patient feedback, then read it precisely to the patient.
     Also make sure to tell them their symptom score value.
@@ -97,7 +99,7 @@ enum Constants {
     After that, thank the patient for their time and let them know they can now end the call.
     
     IMPORTANT:
-    - You can also end the call if the patient stops responding or says goodbye.
+    - You can also end the call by calling the end_call function, if the patient stops responding or says goodbye.
     - Do not ask any further health-related questions at this point.
     - Do not start an unrelated conversation with the patient.
     """
@@ -131,14 +133,14 @@ enum Constants {
     ]
     
     /// Get the system message for the service including the initial question
-    static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String) -> String? {
+    static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String?) -> String? {
         switch service {
         case is VitalSignsService:
-            return initialSystemMessage + vitalSignsInstructions + "Initial Question: \(initialQuestion)"
+            return initialSystemMessage + vitalSignsInstructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is KCCQ12Service:
-            return initialSystemMessage + kccq12Instructions + "Initial Question: \(initialQuestion)"
+            return initialSystemMessage + kccq12Instructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is Q17Service:
-            return initialSystemMessage + q17Instructions + "Final Question: \(initialQuestion)"
+            return initialSystemMessage + q17Instructions + (initialQuestion.map { "Final Question: \($0)" } ?? "")
         default:
             return nil
         }

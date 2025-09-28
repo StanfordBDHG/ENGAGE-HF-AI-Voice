@@ -50,6 +50,15 @@
                     "type": "object",
                     "properties": {}
                 }
+            },
+            {
+                "type": "function",
+                "name": "end_call",
+                "description": "End the conversation with the patient by effectively hanging up the phone.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
             }
         ],
         "tool_choice": "auto"
