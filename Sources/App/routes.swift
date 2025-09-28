@@ -499,6 +499,11 @@ func routes(_ app: Application) throws {
                     linkId: parsedArgs.linkId,
                     answer: text
                 )
+            case .none:
+                return await service.saveQuestionnaireAnswer(
+                    linkId: parsedArgs.linkId,
+                    answer: NSNull()
+                )
             }
         }
         

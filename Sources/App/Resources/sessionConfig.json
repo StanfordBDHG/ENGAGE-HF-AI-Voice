@@ -32,7 +32,7 @@
                                 { "type": "number" },
                                 { "type": "null" }
                             ],
-                            "description": "The patient's answer."
+                            "description": "The patient's answer. If the patient is allowed to skip the question, a `null` answer can be used to indicate a skipped question."
                         }
                     },
                     "required": [
