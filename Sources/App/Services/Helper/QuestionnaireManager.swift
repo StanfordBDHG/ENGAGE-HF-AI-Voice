@@ -110,7 +110,7 @@ class QuestionnaireManager: Sendable {
             answerItem.value = .string(FHIRPrimitive(FHIRString(stringAnswer)))
         case let intAnswer as Int:
             answerItem.value = .integer(FHIRPrimitive(FHIRInteger(FHIRInteger.IntegerLiteralType(intAnswer))))
-        case  _ as NSNull:
+        case _ as NSNull:
             answerItem.value = .none
         default:
             throw QuestionnaireManagerError.unsupportedAnswerType
