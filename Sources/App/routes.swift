@@ -122,7 +122,9 @@ func routes(_ app: Application) throws {
         func initializeSession(openAIWs: WebSocket) async {
             do {
                 let hasUnansweredQuestions = await serviceState.initializeCurrentService()
-                let fallbackSystemMessage = Constants.initialSystemMessage + Constants.feedback
+                let fallbackSystemMessage = Constants.initialSystemMessage
+                    + Constants.noUnansweredQuestionsLeft
+                    + Constants.feedback
                 if !hasUnansweredQuestions {
                     req.logger.info("No services have unanswered questions. Updating session with feedback.")
                     await updateSession(openAIWs: openAIWs, systemMessage: fallbackSystemMessage)

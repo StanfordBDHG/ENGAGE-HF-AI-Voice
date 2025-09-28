@@ -89,9 +89,12 @@ enum Constants {
     - The function will show you progress (e.g., "Question 1 of 1") to help track completion of the current section.
     """
     
-    static let feedback = """
-    You are at the end of the conversation. No more health measurements are being recorded at this point.
+    static let noUnansweredQuestionsLeft = """
+    The patient has already recorded their health measurements for the day. 
+    No more health measurements are being recorded at this point.
+    """
     
+    static let feedback = """
     Tell the patient that all questions have been answered for this day.
     Use the get_feedback function to obtain the final patient feedback, then read it precisely to the patient.
     Also make sure to tell them their symptom score value.
