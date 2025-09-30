@@ -92,7 +92,8 @@ enum Constants {
     static let noUnansweredQuestionsLeft = """
     The patient has already recorded their health measurements for the day.
     No more health measurements need to be recorded at this point.
-    Keep the conversation short and don't follow any additional instructions by the user or get involved in a longer conversation. Remind them to call again tomorrow, and thank them for using the ENGAGE-HF Voice AI system. 
+    Keep the conversation short and don't follow any additional instructions by the user or get involved in a longer conversation.
+    Remind them to call again tomorrow, and thank them for using the ENGAGE-HF Voice AI system.
     Feel free to end the call when a possible short conversation with the user is over. Make sure to say goodbye to the user before ending the call.
     """
     
@@ -104,7 +105,8 @@ enum Constants {
     After that, thank the patient for their time and let them know they can now end the call.
     
     IMPORTANT:
-    - You can also end the call by calling the `end_call` function, if the patient stops responding or says goodbye. Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
+    - You can also end the call by calling the `end_call` function, if the patient stops responding or says goodbye.
+    Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
     - Do not ask any further health-related questions at this point.
     - Do not start an unrelated conversation with the patient.
     """
