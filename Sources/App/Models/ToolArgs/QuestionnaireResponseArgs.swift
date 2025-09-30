@@ -27,7 +27,7 @@ struct QuestionnaireResponseArgs: Codable {
     }
 
     let linkId: String
-    let answer: QuestionnaireResponseAnswer
+    let answer: QuestionnaireResponseAnswer?
 
 
     init(from decoder: Decoder) throws {
@@ -40,6 +40,8 @@ struct QuestionnaireResponseArgs: Codable {
             answer = .text(text)
         } else if let codingWrapper = try? container.decode(CodingWrapper.self, forKey: .answer) {
             answer = .text(codingWrapper.valueCoding.code)
+        } else if try container.decodeNil(forKey: .answer) {
+            answer = nil
         } else {
             throw DecodingError.typeMismatch(
                 QuestionnaireResponseArgs.self,
@@ -57,6 +59,8 @@ struct QuestionnaireResponseArgs: Codable {
             try container.encode(value, forKey: .answer)
         case .text(let value):
             try container.encode(value, forKey: .answer)
+        case nil:
+            try container.encodeNil(forKey: .answer)
         }
     }
 }

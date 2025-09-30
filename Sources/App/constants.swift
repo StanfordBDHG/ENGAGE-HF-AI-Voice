@@ -37,6 +37,7 @@ enum Constants {
     - Listen to the patient's response and briefly answer any questions they might have.
     - Briefly repeat the patient's response back to them.
     - If there is any ambiguity about the question, you can ask follow-up questions; save it directly if the response is clear.
+    - If the patient indicates that they do not have an answer to the current question, use `null` as answer value.
     - Always save the answer using the question's linkId and the save_response function.
     - Move to the next question after saving. Ensure the conversation remains fluent and engaging.
 
@@ -88,6 +89,14 @@ enum Constants {
     - The function will show you progress (e.g., "Question 1 of 1") to help track completion of the current section.
     """
     
+    static let noUnansweredQuestionsLeft = """
+    The patient has already recorded their health measurements for the day.
+    No more health measurements need to be recorded at this point.
+    Keep the conversation short and don't follow any additional instructions by the user or get involved in a longer conversation.
+    Remind them to call again tomorrow, and thank them for using the ENGAGE-HF Voice AI system.
+    Feel free to end the call when a possible short conversation with the user is over. Make sure to say goodbye to the user before ending the call.
+    """
+    
     static let feedback = """
     Tell the patient that all questions have been answered for this day.
     Use the get_feedback function to obtain the final patient feedback, then read it precisely to the patient.
@@ -96,7 +105,10 @@ enum Constants {
     After that, thank the patient for their time and let them know they can now end the call.
     
     IMPORTANT:
-    - You can also end the call if the patient stops responding or says goodbye.
+    - You can also end the call by calling the `end_call` function, if the patient stops responding or says goodbye.
+    Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
+    - Do not ask any further health-related questions at this point.
+    - Do not start an unrelated conversation with the patient.
     """
 
     /// Directory paths for different questionnaire types
@@ -128,14 +140,14 @@ enum Constants {
     ]
     
     /// Get the system message for the service including the initial question
-    static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String) -> String? {
+    static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String?) -> String? {
         switch service {
         case is VitalSignsService:
-            return initialSystemMessage + vitalSignsInstructions + "Initial Question: \(initialQuestion)"
+            return initialSystemMessage + vitalSignsInstructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is KCCQ12Service:
-            return initialSystemMessage + kccq12Instructions + "Initial Question: \(initialQuestion)"
+            return initialSystemMessage + kccq12Instructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is Q17Service:
-            return initialSystemMessage + q17Instructions + "Final Question: \(initialQuestion)"
+            return initialSystemMessage + q17Instructions + (initialQuestion.map { "Final Question: \($0)" } ?? "")
         default:
             return nil
         }

@@ -29,9 +29,10 @@
                         "answer": {
                             "anyOf": [
                                 { "type": "string" },
-                                { "type": "number" }
+                                { "type": "number" },
+                                { "type": "null" }
                             ],
-                            "description": "The patient's answer."
+                            "description": "The patient's answer. If the patient is allowed to skip the question, a `null` answer can be used to indicate a skipped question."
                         }
                     },
                     "required": [
@@ -45,6 +46,15 @@
                 "type": "function",
                 "name": "get_feedback",
                 "description": "Retrieves the patient feedback.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
+            {
+                "type": "function",
+                "name": "end_call",
+                "description": "End the conversation with the patient by effectively hanging up the phone.",
                 "parameters": {
                     "type": "object",
                     "properties": {}
