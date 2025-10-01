@@ -25,22 +25,17 @@ struct OpenAICAllIncomingEvent: Decodable {
         let value: String
     }
     
-    enum CodingKeys: String, CodingKey {
-        case id = "id"
-        case data = "data"
-    }
-    
     let id: String
     let data: ContainedData
 }
 
-// swiftlint:disable file_length
-// swiftlint:disable:next function_body_length
+// swiftlint:disable:next function_body_length cyclomatic_complexity
 func routes(_ app: Application) throws {
     app.get("health") { _ -> HTTPStatus in
             .ok
     }
     
+    // swiftlint:disable:next closure_body_length
     app.post("incoming-call") { req async -> Response in
         guard let body = req.body.data,
               let openAIKey = app.storage[OpenAIKeyStorageKey.self] else {
@@ -105,7 +100,6 @@ func routes(_ app: Application) throws {
                     "Authorization": "Bearer \(openAIKey)",
                     "Content-Type": "application/json"
                 ],
-                body: .data(configData),
             )
             _ = try await app.http.client.shared.execute(request: request).get()
         }
@@ -129,30 +123,36 @@ func routes(_ app: Application) throws {
                 )
             }
         }()
-        let config = Constants.loadSessionConfig(systemMessage: systemMessage)
-        let configObject = try! JSONSerialization.jsonObject(with: config.data(using: .utf8)!)
-        let configData = try! JSONSerialization.data(withJSONObject: configObject)
-        let request = try! HTTPClient.Request(
-            url: "https://api.openai.com/v1/realtime/calls/\(callId)/accept",
-            method: .POST,
-            headers: [
-                "Authorization": "Bearer \(openAIKey)",
-                "Content-Type": "application/json"
-            ],
-            body: .data(configData),
-        )
-        let response = try! await app.http.client.shared.execute(request: request).get()
-        var responseBody = response.body
-        let bodyString = responseBody?.readString(length: response.body?.readableBytes ?? 0, encoding: .utf8).map { string in
-            var string = string
-            string.makeContiguousUTF8()
-            return string
-        } ?? ""
-        req.logger.info("/accept responded: \(response.status.code) \(bodyString)")
+    
+        do {
+            let config = Constants.loadSessionConfig(systemMessage: systemMessage)
+            let configObject = try JSONSerialization.jsonObject(with: config.data(using: .utf8) ?? Data())
+            let configData = try JSONSerialization.data(withJSONObject: configObject)
+            let request = try HTTPClient.Request(
+                url: "https://api.openai.com/v1/realtime/calls/\(callId)/accept",
+                method: .POST,
+                headers: [
+                    "Authorization": "Bearer \(openAIKey)",
+                    "Content-Type": "application/json"
+                ],
+                body: .data(configData),
+            )
+            let response = try await app.http.client.shared.execute(request: request).get()
+            var responseBody = response.body
+            let bodyString = responseBody?.readString(length: response.body?.readableBytes ?? 0, encoding: .utf8).map { string in
+                var string = string
+                string.makeContiguousUTF8()
+                return string
+            } ?? ""
+            req.logger.info("/accept responded: \(response.status.code) \(bodyString)")
+        } catch {
+            req.logger.error("/accept failed: \(error)")
+        }
         
+        // swiftlint:disable:next closure_body_length
         Task {
             do {
-                let url = "wss://api.openai.com/v1/realtime?call_id=\(callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)"
+                let url = "wss://api.openai.com/v1/realtime?call_id=\(callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? callId)"
                 try await WebSocket.connect(
                     to: url,
                     headers: [
@@ -190,7 +190,6 @@ func routes(_ app: Application) throws {
                         }
                     }
                 }
-                
             } catch let error as WebSocketClient.Error {
                 if case let .invalidResponseStatus(head) = error {
                     req.logger.error("OpenAI Realtime API returned \(head.status.code).")

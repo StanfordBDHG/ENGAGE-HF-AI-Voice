@@ -95,28 +95,6 @@ enum Constants {
     Remind them to call again tomorrow, and thank them for using the ENGAGE-HF Voice AI system.
     Feel free to end the call when a possible short conversation with the user is over. Make sure to say goodbye to the user before ending the call.
     """
-    
-    static func feedback(content: String) -> String {
-        return """
-        Tell the patient that all questions have been answered for this day.
-        
-        Read the following feedback precisely to the patient:
-        
-        ```
-        \(content)
-        ```
-        
-        Also make sure to tell them their symptom score value.
-        
-        After that, thank the patient for their time and let them know they can now end the call.
-        
-        IMPORTANT:
-        - You can also end the call by calling the `end_call` function, if the patient stops responding or says goodbye.
-        - Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
-        - Do not ask any further health-related questions at this point.
-        - Do not start an unrelated conversation with the patient.
-        """
-    }
 
     /// Directory paths for different questionnaire types
     static let vitalSignsDirectoryPath = "\(dataDirectory)/vital_signs/"
@@ -145,6 +123,28 @@ enum Constants {
         "input_audio_buffer.speech_started",
         "session.created"
     ]
+    
+    static func feedback(content: String) -> String {
+        """
+        Tell the patient that all questions have been answered for this day.
+        
+        Read the following feedback precisely to the patient:
+        
+        ```
+        \(content)
+        ```
+        
+        Also make sure to tell them their symptom score value.
+        
+        After that, thank the patient for their time and let them know they can now end the call.
+        
+        IMPORTANT:
+        - You can also end the call by calling the `end_call` function, if the patient stops responding or says goodbye.
+        - Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
+        - Do not ask any further health-related questions at this point.
+        - Do not start an unrelated conversation with the patient.
+        """
+    }
     
     /// Get the system message for the service including the initial question
     static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String?) -> String? {
