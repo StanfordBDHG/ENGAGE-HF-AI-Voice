@@ -287,8 +287,12 @@ func routes(_ app: Application) throws {
                         "output": "The patient has answered \(count) questions."
                     ]
                 ]
-                
                 try await sendJSON(functionResponse, openAIWs)
+                
+                let responseRequest: [String: Any] = [
+                    "type": "response.create"
+                ]
+                try await sendJSON(responseRequest, openAIWs)
             }
             
             @Sendable
@@ -331,8 +335,11 @@ func routes(_ app: Application) throws {
                         "output": "The response could not be saved. Try again."
                     ]
                 ]
-                
                 try await sendJSON(functionResponse, openAIWs)
+                let responseRequest: [String: Any] = [
+                    "type": "response.create"
+                ]
+                try await sendJSON(responseRequest, openAIWs)
             }
             
             @Sendable
@@ -359,8 +366,12 @@ func routes(_ app: Application) throws {
                         "output": nextQuestion
                     ]
                 ]
-                
                 try await sendJSON(functionResponse, openAIWs)
+                
+                let responseRequest: [String: Any] = [
+                    "type": "response.create"
+                ]
+                try await sendJSON(responseRequest, openAIWs)
             }
             
             @Sendable
@@ -404,8 +415,12 @@ func routes(_ app: Application) throws {
                         "output": initialQuestion
                     ]
                 ]
-                
                 try await sendJSON(functionResponse, openAIWs)
+                
+                let responseRequest: [String: Any] = [
+                    "type": "response.create"
+                ]
+                try await sendJSON(responseRequest, openAIWs)
             }
             
             @Sendable
@@ -417,7 +432,6 @@ func routes(_ app: Application) throws {
                 let responseRequest: [String: Any] = [
                     "type": "response.create"
                 ]
-                
                 try await sendJSON(responseRequest, openAIWs)
             }
             
