@@ -112,7 +112,7 @@ enum Constants {
         
         IMPORTANT:
         - You can also end the call by calling the `end_call` function, if the patient stops responding or says goodbye.
-        Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
+        - Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
         - Do not ask any further health-related questions at this point.
         - Do not start an unrelated conversation with the patient.
         """

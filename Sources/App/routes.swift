@@ -52,15 +52,24 @@ func routes(_ app: Application) throws {
             return Response(status: .internalServerError)
         }
         let callId = event.data.callId
-        req.logger.info("Call Id: \(callId)")
+        let phoneNumber = event.data.sipHeaders
+            .first { $0.name == "From" }?.value
+            .components(separatedBy: ";")
+            .first?
+            .trimmingPrefix { $0 != "<" }
+            .trimmingCharacters(in: CharacterSet(charactersIn: "<>"))
+            .trimmingPrefix("sip:")
+            .components(separatedBy: "@")
+            .first ?? ""
+        req.logger.info("Call Id: \(callId), Phone No: \(phoneNumber)")
         
         // Get encryption key from app storage
         let encryptionKey = app.storage[EncryptionKeyStorageKey.self]
         
         let serviceState = await ServiceState(services: [
-            VitalSignsService(phoneNumber: callId, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
-            KCCQ12Service(phoneNumber: callId, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
-            Q17Service(phoneNumber: callId, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey)
+            VitalSignsService(phoneNumber: phoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
+            KCCQ12Service(phoneNumber: phoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
+            Q17Service(phoneNumber: phoneNumber, logger: req.logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey)
         ])
         
         @Sendable
@@ -74,7 +83,7 @@ func routes(_ app: Application) throws {
                 }
                 
                 let feedbackService = await FeedbackService(
-                    phoneNumber: callId,
+                    phoneNumber: phoneNumber,
                     logger: req.logger,
                     vitalSignsService: vitalSignsService,
                     kccq12Service: kccq12Service,
@@ -85,6 +94,20 @@ func routes(_ app: Application) throws {
                 req.logger.debug("\(error)")
                 return "An error occurred while fetching patient feedback."
             }
+        }
+        
+        @Sendable
+        func hangup() async throws {
+            let request = try HTTPClient.Request(
+                url: "https://api.openai.com/v1/realtime/calls/\(callId)/hangup",
+                method: .POST,
+                headers: [
+                    "Authorization": "Bearer \(openAIKey)",
+                    "Content-Type": "application/json"
+                ],
+                body: .data(configData),
+            )
+            _ = try await app.http.client.shared.execute(request: request).get()
         }
                 
         let systemMessage = await {
@@ -101,9 +124,8 @@ func routes(_ app: Application) throws {
                     serviceState.current,
                     initialQuestion: initialQuestion
                 )
-                return initialSystemMessage ?? (
-                    Constants.initialSystemMessage
-                        + Constants.noUnansweredQuestionsLeft
+                return Constants.initialSystemMessage + (
+                    initialSystemMessage ?? Constants.noUnansweredQuestionsLeft
                 )
             }
         }()
@@ -128,7 +150,7 @@ func routes(_ app: Application) throws {
         } ?? ""
         req.logger.info("/accept responded: \(response.status.code) \(bodyString)")
         
-        Task.detached {
+        Task {
             do {
                 let url = "wss://api.openai.com/v1/realtime?call_id=\(callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)"
                 try await WebSocket.connect(
@@ -136,28 +158,39 @@ func routes(_ app: Application) throws {
                     headers: [
                         "Authorization": "Bearer \(openAIKey)"
                     ],
-                    on: app.eventLoopGroup.next()
+                    on: app.eventLoopGroup
                 ) { openAIWs async in
-                    print("websocket connected!!")
-                    let responseRequest: [String: Any] = [
-                        "type": "response.create"
-                    ]
-                    try! await sendJSON(responseRequest, openAIWs)
-                    
+                    do {
+                        let responseRequest: [String: Any] = [
+                            "type": "response.create"
+                        ]
+                        try await sendJSON(responseRequest, openAIWs)
+                    } catch {
+                        req.logger.error("Couldn't send initial message to OpenAI \(error)")
+                    }
                     // Handle incoming messages from OpenAI
                     openAIWs.onText { openAIWs, text async in
-                        await handleOpenAIMessage(openAIWs: openAIWs, text: text, phoneNumber: callId)
+                        await handleOpenAIMessage(openAIWs: openAIWs, text: text, phoneNumber: phoneNumber)
                     }
                     
                     openAIWs.onClose.whenComplete { result in
                         switch result {
-                        case .success(let closeCode):
-                            req.logger.info("OpenAI WebSocket closed successfully with code: \(closeCode)")
+                        case .success:
+                            req.logger.info("OpenAI WebSocket closed successfully")
                         case .failure(let error):
                             req.logger.error("OpenAI WebSocket closed with error: \(error)")
                         }
+                        Task {
+                            do {
+                                try await hangup()
+                                req.logger.info("Successfully hung up")
+                            } catch {
+                                req.logger.error("Failed to hang up: \(error)")
+                            }
+                        }
                     }
                 }
+                
             } catch let error as WebSocketClient.Error {
                 if case let .invalidResponseStatus(head) = error {
                     req.logger.error("OpenAI Realtime API returned \(head.status.code).")
@@ -174,7 +207,13 @@ func routes(_ app: Application) throws {
                 let sessionConfigJSONString = Constants.loadSessionConfig(systemMessage: systemMessage)
                 do {
                     req.logger.info("Updating session with: \(sessionConfigJSONString)")
-                    try await openAIWs.send(sessionConfigJSONString)
+                    let object = try JSONSerialization.jsonObject(with: sessionConfigJSONString.data(using: .utf8) ?? Data())
+                    let updateObject = [
+                        "type": "session.update",
+                        "session": object
+                    ]
+                    let data = try JSONSerialization.data(withJSONObject: updateObject)
+                    openAIWs.send(data)
                 } catch {
                     req.logger.error("Failed to update session: \(error). Closing web socket.")
                     try? await openAIWs.close()
@@ -207,6 +246,7 @@ func routes(_ app: Application) throws {
             
             @Sendable
             func handleOpenAIFunctionCall(response: OpenAIResponse, openAIWs: WebSocket, phoneNumber: String) async throws {
+                req.logger.debug("Function call \"\(response.name ?? "")\"")
                 let currentService = await serviceState.current
                 switch response.name {
                 case "save_response":
@@ -214,16 +254,7 @@ func routes(_ app: Application) throws {
                 case "count_answered_questions":
                     try await countAnsweredQuestions(service: currentService, response: response, openAIWs: openAIWs, phoneNumber: phoneNumber)
                 case "end_call":
-                    let request = try HTTPClient.Request(
-                        url: "https://api.openai.com/v1/realtime/calls/\(callId)/hangup",
-                        method: .POST,
-                        headers: [
-                            "Authorization": "Bearer \(openAIKey)",
-                            "Content-Type": "application/json"
-                        ],
-                        body: .data(configData),
-                    )
-                    _ = try await app.http.client.shared.execute(request: request).get()
+                    try await hangup()
                 default:
                     req.logger.error("Unknown function call: \(String(describing: response.name))")
                 }
