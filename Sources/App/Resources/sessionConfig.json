@@ -2,6 +2,23 @@
     "type": "realtime",
     "model": "gpt-realtime",
     "instructions": "{{SYSTEM_PROMPT}}",
+    "audio": {
+        "input": {
+            "format": {
+                "type": "audio/pcmu"
+            },
+            "turn_detection": {
+                "type": "semantic_vad"
+            }
+        },
+        "output": {
+            "format": {
+                "type": "audio/pcmu"
+            },
+            "voice": "alloy",
+            "speed": 1.0
+        }
+    },
     "tools": [
         {
             "type": "function",
