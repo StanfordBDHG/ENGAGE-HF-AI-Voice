@@ -139,15 +139,16 @@ enum Constants {
         After that, thank the patient for their time and let them know they can now end the call.
         
         IMPORTANT:
-        - You can also end the call by calling the `end_call` function, if the patient stops responding or says goodbye.
+        - You may the call by calling the `end_call` function, if the patient stops responding or says goodbye.
         - Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
+        - Do NOT end the call while you are speaking; ensure that all the feedback is communicated to the patient.
         - Do not ask any further health-related questions at this point.
         - Do not start an unrelated conversation with the patient.
         """
     }
     
     /// Get the system message for the service including the initial question
-    static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String?) -> String? {
+    static func getSystemMessageForService(_ service: any QuestionnaireService, initialQuestion: String?) -> String? {
         switch service {
         case is VitalSignsService:
             return vitalSignsInstructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
@@ -163,7 +164,7 @@ enum Constants {
     /// Load the session config from the resources directory and inject the system prompt
     static func loadSessionConfig(systemMessage: String) -> String {
         guard let url = Bundle.module.url(forResource: "sessionConfig", withExtension: "json"),
-              var jsonString = try? String(contentsOf: url) else {
+              var jsonString = try? String(contentsOf: url, encoding: .utf8) else {
             fatalError("Could not load sessionConfig.json")
         }
         

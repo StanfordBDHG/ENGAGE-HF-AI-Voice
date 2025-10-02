@@ -15,6 +15,8 @@ authors:
 - family-names: "Madlener"
   given-names: "Nikolai"
   orcid: "https://orcid.org/0009-0006-5059-6617"
+- family-names: "Kraft"
+  given-names: "Paul Johannes"
 title: "ENGAGE-HF-AI-Voice"
 doi: 10.5281/zenodo.7538165
 url: "https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice"

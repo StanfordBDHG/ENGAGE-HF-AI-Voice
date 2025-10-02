@@ -15,3 +15,4 @@ ENGAGE-HF-AI-Voice contributors
 
 * [Paul Schmiedmayer](https://github.com/PSchmiedmayer)
 * [Nikolai Madlener](https://github.com/NikolaiMadlener)
+* [Paul Johannes Kraft](https://github.com/pauljohanneskraft)

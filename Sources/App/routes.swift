@@ -99,7 +99,7 @@ func routes(_ app: Application) throws {
                 headers: [
                     "Authorization": "Bearer \(openAIKey)",
                     "Content-Type": "application/json"
-                ],
+                ]
             )
             _ = try await app.http.client.shared.execute(request: request).get()
         }
@@ -135,7 +135,7 @@ func routes(_ app: Application) throws {
                     "Authorization": "Bearer \(openAIKey)",
                     "Content-Type": "application/json"
                 ],
-                body: .data(configData),
+                body: .data(configData)
             )
             let response = try await app.http.client.shared.execute(request: request).get()
             var responseBody = response.body
@@ -261,7 +261,7 @@ func routes(_ app: Application) throws {
             
             @Sendable
             func saveResponse(
-                service: QuestionnaireService,
+                service: any QuestionnaireService,
                 response: OpenAIResponse,
                 openAIWs: WebSocket,
                 phoneNumber: String
@@ -302,7 +302,7 @@ func routes(_ app: Application) throws {
             
             @Sendable
             func countAnsweredQuestions(
-                service: QuestionnaireService,
+                service: any QuestionnaireService,
                 response: OpenAIResponse,
                 openAIWs: WebSocket,
                 phoneNumber: String
@@ -335,7 +335,7 @@ func routes(_ app: Application) throws {
             }
             
             @Sendable
-            func saveQuestionnaireAnswer(service: QuestionnaireService, parsedArgs: QuestionnaireResponseArgs) async -> Bool {
+            func saveQuestionnaireAnswer(service: any QuestionnaireService, parsedArgs: QuestionnaireResponseArgs) async -> Bool {
                 switch parsedArgs.answer {
                 case .number(let number):
                     return await service.saveQuestionnaireAnswer(
@@ -374,7 +374,7 @@ func routes(_ app: Application) throws {
             
             @Sendable
             func handleSaveSuccess(
-                service: QuestionnaireService,
+                service: any QuestionnaireService,
                 response: OpenAIResponse,
                 openAIWs: WebSocket,
                 phoneNumber: String
@@ -406,7 +406,7 @@ func routes(_ app: Application) throws {
             
             @Sendable
             func handleQuestionnaireComplete(
-                service: QuestionnaireService,
+                service: any QuestionnaireService,
                 response: OpenAIResponse,
                 openAIWs: WebSocket,
                 phoneNumber: String
@@ -430,7 +430,7 @@ func routes(_ app: Application) throws {
             
             @Sendable
             func handleNextServiceAvailable(
-                nextService: QuestionnaireService,
+                nextService: any QuestionnaireService,
                 initialQuestion: String,
                 systemMessage: String,
                 response: OpenAIResponse,
@@ -466,7 +466,7 @@ func routes(_ app: Application) throws {
             }
             
             @Sendable
-            func handleProcessingError(error: Error, response: OpenAIResponse, openAIWs: WebSocket) async throws {
+            func handleProcessingError(error: any Error, response: OpenAIResponse, openAIWs: WebSocket) async throws {
                 req.logger.error("Error processing questionnaire: \(error)")
                 let errorResponse: [String: Any] = [
                     "type": "function_response",

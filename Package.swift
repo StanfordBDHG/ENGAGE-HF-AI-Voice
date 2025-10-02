@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.2
 
 //
 // This source file is part of the ENGAGE-HF-AI-Voice open source project
@@ -39,6 +39,7 @@ let package = Package(
                 .process("Resources/sessionConfig.json"),
                 .copy("Resources/MockData")
             ],
+            swiftSettings: [.enableUpcomingFeature("ExistentialAny")],
             plugins: [] + swiftLintPlugin()
         ),
         .testTarget(
@@ -47,6 +48,7 @@ let package = Package(
                 .target(name: "App"),
                 .product(name: "VaporTesting", package: "vapor")
             ],
+            swiftSettings: [.enableUpcomingFeature("ExistentialAny")],
             plugins: [] + swiftLintPlugin()
         )
     ]
