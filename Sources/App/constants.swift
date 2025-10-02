@@ -13,7 +13,9 @@ enum Constants {
     /// The system prompt
     static let initialSystemMessage = """
     You are a professional assistant trained to help heart failure patients record their daily health measurements over the phone.
-    
+    Tell the patient that this is the ENGAGE-HF phone service, which consists of three sections of questions.
+    Use a friendly tone and make the conversation engaging; be helpful and supportive throughout.
+
     VERY IMPORTANT:
     - You must only speak in English or Spanish. No other language is supported.
     - You start the conversation in English and only switch to Spanish if necessary.
@@ -22,9 +24,6 @@ enum Constants {
     """
 
     static let vitalSignsInstructions = """
-    Tell the patient that this is the ENGAGE-HF phone service, which consists of three sections of questions.
-    Use a friendly tone and make the conversation engaging; be helpful and supportive throughout.
-    
     1. Vital Signs Instructions:
     - Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
       - If the number is not 0, inform the user about their progress and that you will continue with the remaining questions.
@@ -96,20 +95,6 @@ enum Constants {
     Remind them to call again tomorrow, and thank them for using the ENGAGE-HF Voice AI system.
     Feel free to end the call when a possible short conversation with the user is over. Make sure to say goodbye to the user before ending the call.
     """
-    
-    static let feedback = """
-    Tell the patient that all questions have been answered for this day.
-    Use the get_feedback function to obtain the final patient feedback, then read it precisely to the patient.
-    Also make sure to tell them their symptom score value.
-    
-    After that, thank the patient for their time and let them know they can now end the call.
-    
-    IMPORTANT:
-    - You can also end the call by calling the `end_call` function, if the patient stops responding or says goodbye.
-    Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
-    - Do not ask any further health-related questions at this point.
-    - Do not start an unrelated conversation with the patient.
-    """
 
     /// Directory paths for different questionnaire types
     static let vitalSignsDirectoryPath = "\(dataDirectory)/vital_signs/"
@@ -139,15 +124,38 @@ enum Constants {
         "session.created"
     ]
     
+    static func feedback(content: String) -> String {
+        """
+        Tell the patient that all questions have been answered for this day.
+        
+        Read the following feedback precisely to the patient:
+        
+        ```
+        \(content)
+        ```
+        
+        Also make sure to tell them their symptom score value.
+        
+        After that, thank the patient for their time and let them know they can now end the call.
+        
+        IMPORTANT:
+        - You may the call by calling the `end_call` function, if the patient stops responding or says goodbye.
+        - Be sure to say goodbye and acknowledge the end of the call before calling the `end_call` function.
+        - Do NOT end the call while you are speaking; ensure that all the feedback is communicated to the patient.
+        - Do not ask any further health-related questions at this point.
+        - Do not start an unrelated conversation with the patient.
+        """
+    }
+    
     /// Get the system message for the service including the initial question
-    static func getSystemMessageForService(_ service: QuestionnaireService, initialQuestion: String?) -> String? {
+    static func getSystemMessageForService(_ service: any QuestionnaireService, initialQuestion: String?) -> String? {
         switch service {
         case is VitalSignsService:
-            return initialSystemMessage + vitalSignsInstructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            return vitalSignsInstructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is KCCQ12Service:
-            return initialSystemMessage + kccq12Instructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            return kccq12Instructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is Q17Service:
-            return initialSystemMessage + q17Instructions + (initialQuestion.map { "Final Question: \($0)" } ?? "")
+            return q17Instructions + (initialQuestion.map { "Final Question: \($0)" } ?? "")
         default:
             return nil
         }
@@ -156,7 +164,7 @@ enum Constants {
     /// Load the session config from the resources directory and inject the system prompt
     static func loadSessionConfig(systemMessage: String) -> String {
         guard let url = Bundle.module.url(forResource: "sessionConfig", withExtension: "json"),
-              var jsonString = try? String(contentsOf: url) else {
+              var jsonString = try? String(contentsOf: url, encoding: .utf8) else {
             fatalError("Could not load sessionConfig.json")
         }
         

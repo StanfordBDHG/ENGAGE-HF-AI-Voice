@@ -10,10 +10,10 @@ import Vapor
 
 
 actor ServiceState {
-    private var services: [QuestionnaireService]
+    private var services: [any QuestionnaireService]
     private var currentIndex: Int
     
-    var current: QuestionnaireService {
+    var current: any QuestionnaireService {
         services[currentIndex]
     }
     
@@ -22,12 +22,12 @@ actor ServiceState {
     }
     
     
-    init(services: [QuestionnaireService]) {
+    init(services: [any QuestionnaireService]) {
         self.services = services
         self.currentIndex = 0
     }
     
-    func next() -> QuestionnaireService? {
+    func next() -> (any QuestionnaireService)? {
         guard hasNext else {
             return nil
         }

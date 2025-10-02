@@ -30,7 +30,7 @@ struct QuestionnaireResponseArgs: Codable {
     let answer: QuestionnaireResponseAnswer?
 
 
-    init(from decoder: Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         linkId = try container.decode(String.self, forKey: .linkId)
         
@@ -50,7 +50,7 @@ struct QuestionnaireResponseArgs: Codable {
         }
     }
     
-    func encode(to encoder: Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(linkId, forKey: .linkId)
         

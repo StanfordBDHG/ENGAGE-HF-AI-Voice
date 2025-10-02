@@ -1,66 +1,53 @@
 {
-    "type": "session.update",
-    "event_id": "{{EVENT_ID}}",
-    "session": {
-        "modalities": [
-            "text",
-            "audio"
-        ],
-        "instructions": "{{SYSTEM_PROMPT}}",
-        "voice": "alloy",
-        "output_audio_format": "g711_ulaw",
-        "input_audio_format": "g711_ulaw",
-        "turn_detection": {
-            "type": "semantic_vad",
-            "eagerness": "high"
-        },
-        "tools": [
-            {
-                "type": "function",
-                "name": "save_response",
-                "description": "Saves a patient response and returns the next question. This function should be called after a response is recorded to save it. Calling this function multiple times for the same linkId will override the answer value.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "linkId": {
-                            "type": "string",
-                            "description": "The question's linkId"
-                        },
-                        "answer": {
-                            "anyOf": [
-                                { "type": "string" },
-                                { "type": "number" },
-                                { "type": "null" }
-                            ],
-                            "description": "The patient's answer. If the patient is allowed to skip the question, a `null` answer can be used to indicate a skipped question."
-                        }
+    "type": "realtime",
+    "model": "gpt-realtime",
+    "instructions": "{{SYSTEM_PROMPT}}",
+    "tools": [
+        {
+            "type": "function",
+            "name": "save_response",
+            "description": "Saves a patient response and returns the next question. This function should be called after a response is recorded to save it. Calling this function multiple times for the same linkId will override the answer value.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "linkId": {
+                        "type": "string",
+                        "description": "The question's linkId"
                     },
-                    "required": [
-                        "linkId",
-                        "answer"
-                    ],
-                    "additionalProperties": false
-                }
-            },
-            {
-                "type": "function",
-                "name": "get_feedback",
-                "description": "Retrieves the patient feedback.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {}
-                }
-            },
-            {
-                "type": "function",
-                "name": "end_call",
-                "description": "End the conversation with the patient by effectively hanging up the phone.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {}
-                }
+                    "answer": {
+                        "anyOf": [
+                            { "type": "string" },
+                            { "type": "number" },
+                            { "type": "null" }
+                        ],
+                        "description": "The patient's answer. If the patient is allowed to skip the question, a `null` answer can be used to indicate a skipped question."
+                    }
+                },
+                "required": [
+                    "linkId",
+                    "answer"
+                ],
+                "additionalProperties": false
             }
-        ],
-        "tool_choice": "auto"
-    }
+        },
+        {
+            "type": "function",
+            "name": "get_feedback",
+            "description": "Retrieves the patient feedback.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        },
+        {
+            "type": "function",
+            "name": "end_call",
+            "description": "End the conversation with the patient by effectively hanging up the phone.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    ],
+    "tool_choice": "auto"
 }
