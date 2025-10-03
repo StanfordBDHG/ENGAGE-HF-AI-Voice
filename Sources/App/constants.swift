@@ -24,7 +24,7 @@ enum Constants {
     """
 
     static let vitalSignsInstructions = """
-    Section 1 of 3: Vital Signs
+    Section {{SECTION}} of {{TOTAL}}: Vital Signs
     
     Instructions:
     - Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
@@ -49,7 +49,7 @@ enum Constants {
     """
     
     static let kccq12Instructions = """
-    Section 2 of 3: KCCQ-12 Survey
+    Section {{SECTION}} of {{TOTAL}}: KCCQ-12 Survey
     
     Instructions:
     - Inform the patient you need to ask some questions about how their heart failure affects their life.
@@ -73,7 +73,7 @@ enum Constants {
     """
     
     static let q17Instructions = """
-    Section 3 of 3: Last Section
+    Section {{SECTION}} of {{TOTAL}}: Last Section
     
     Instructions:
     - Inform the patient you need to ask one final question.
@@ -153,17 +153,37 @@ enum Constants {
     }
     
     /// Get the system message for the service including the initial question
-    static func getSystemMessageForService(_ service: any QuestionnaireService, initialQuestion: String?) -> String? {
+    static func getSystemMessageForService(
+        _ service: any QuestionnaireService,
+        initialQuestion: String?,
+        sectionProgress: (current: Int, total: Int)
+    ) -> String? {
+        let instructions: String
         switch service {
         case is VitalSignsService:
-            return vitalSignsInstructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            instructions = vitalSignsInstructions
         case is KCCQ12Service:
-            return kccq12Instructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            instructions = kccq12Instructions
         case is Q17Service:
-            return q17Instructions + (initialQuestion.map { "Final Question: \($0)" } ?? "")
+            instructions = q17Instructions
         default:
             return nil
         }
+        
+        // Replace section progress placeholders
+        let instructionsWithProgress = instructions
+            .replacingOccurrences(of: "{{SECTION}}", with: "\(sectionProgress.current)")
+            .replacingOccurrences(of: "{{TOTAL}}", with: "\(sectionProgress.total)")
+        
+        // Add initial question if provided
+        let questionSuffix: String
+        if service is Q17Service {
+            questionSuffix = initialQuestion.map { "Final Question: \($0)" } ?? ""
+        } else {
+            questionSuffix = initialQuestion.map { "Initial Question: \($0)" } ?? ""
+        }
+        
+        return instructionsWithProgress + questionSuffix
     }
 
     /// Load the session config from the resources directory and inject the system prompt

@@ -154,10 +154,13 @@ actor CallHandler {
             + Constants.noUnansweredQuestionsLeft
             + Constants.feedback(content: feedback ?? "Feedback failed to be retrieved.")
         } else {
-            let initialQuestion = await serviceState.current.getNextQuestion()
-            let initialSystemMessage = await Constants.getSystemMessageForService(
-                serviceState.current,
-                initialQuestion: initialQuestion
+            let currentService = await serviceState.current
+            let initialQuestion = await currentService.getNextQuestion()
+            let sectionProgress = await serviceState.getSectionProgress()
+            let initialSystemMessage = Constants.getSystemMessageForService(
+                currentService,
+                initialQuestion: initialQuestion,
+                sectionProgress: sectionProgress
             )
             return Constants.initialSystemMessage + (
                 initialSystemMessage ?? Constants.noUnansweredQuestionsLeft

@@ -79,4 +79,10 @@ actor ServiceState {
     func getQ17Service() -> Q17Service? {
         services.first { $0 is Q17Service } as? Q17Service
     }
+    
+    /// Get the current section number (1-indexed) and total sections
+    /// - Returns: A tuple containing (currentSection, totalSections)
+    func getSectionProgress() -> (current: Int, total: Int) {
+        return (currentIndex + 1, services.count)
+    }
 }
