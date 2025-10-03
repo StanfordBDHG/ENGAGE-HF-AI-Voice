@@ -91,7 +91,10 @@ class QuestionnaireManager: Sendable {
         let answeredCount = answeredLinkIds.count
         let progress = "\(answeredCount + 1) of \(totalQuestions)"
         
-        return QuestionWithProgress(question: nextQuestion, progress: progress)
+        // Include all questions on the first question only
+        let allQuestions = answeredCount == 0 ? questions : nil
+        
+        return QuestionWithProgress(question: nextQuestion, progress: progress, allQuestions: allQuestions)
     }
     
     /// Answer a question in the questionnaire
