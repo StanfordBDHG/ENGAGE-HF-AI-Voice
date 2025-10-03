@@ -1,8 +1,9 @@
 //
-//  CallSession.swift
-//  ENGAGE-HF-AI-Voice
+// This source file is part of the ENGAGE-HF-AI-Voice open source project
 //
-//  Created by Paul Kraft on 03.10.2025.
+// SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
+//
+// SPDX-License-Identifier: MIT
 //
 
 import Foundation
