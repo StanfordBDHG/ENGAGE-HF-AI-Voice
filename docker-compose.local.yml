@@ -33,7 +33,6 @@ services:
     restart: unless-stopped
     ports:
       - "8080:80"
-      - "443:443"
     volumes:
       - ./nginx.local.conf:/etc/nginx/nginx.conf:ro
     networks:
