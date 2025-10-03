@@ -130,7 +130,7 @@ actor CallSession {
     
     private func countAnsweredQuestions(
         service: any QuestionnaireService,
-        response: OpenAIResponse,
+        response: OpenAIResponse
     ) async throws {
         let count = await service.countAnsweredQuestions()
         logger.info("Count of answered questions of current service: \(count)")
@@ -211,7 +211,7 @@ actor CallSession {
     
     private func handleQuestionnaireComplete(
         service: any QuestionnaireService,
-        response: OpenAIResponse,
+        response: OpenAIResponse
     ) async throws {
         await service.saveQuestionnaireResponseToFile()
         
@@ -233,7 +233,7 @@ actor CallSession {
         nextService: any QuestionnaireService,
         initialQuestion: String,
         systemMessage: String,
-        response: OpenAIResponse,
+        response: OpenAIResponse
     ) async throws {
         try await updateSession(systemMessage: systemMessage)
         try await sendJSON([
