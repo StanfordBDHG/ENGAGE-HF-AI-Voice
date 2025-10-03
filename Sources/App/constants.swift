@@ -42,6 +42,17 @@ enum Constants {
     - Always save the answer using the question's linkId and the save_response function.
     - Move to the next question after saving. Ensure the conversation remains fluent and engaging.
 
+    BLOOD PRESSURE HANDLING:
+    - For blood pressure questions, you can collect the values in two ways:
+      1. Sequentially (preferred): Ask for systolic first, then diastolic in separate questions.
+      2. Together (if provided): If the patient provides both values at once (e.g., "120 over 70" or "120/70"), you can save them together.
+    - When the patient provides both blood pressure values together:
+      - Parse the systolic (first number) and diastolic (second number) from their response.
+      - Save the systolic value using linkId "systolic" by calling save_response.
+      - Immediately after, save the diastolic value using linkId "diastolic" by calling save_response.
+      - Confirm both values with the patient after saving.
+    - Sequential collection is still preferred when starting fresh, but accept combined responses to save time.
+
     IMPORTANT:
     - Call save_response after each response is confirmed, but only if the response is in the expected range.
     - Do not let the user end the call before ALL answers are collected.
