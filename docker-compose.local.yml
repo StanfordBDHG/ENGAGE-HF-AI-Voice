@@ -1,0 +1,56 @@
+#
+# This source file is part of the ENGAGE-HF-AI-Voice open source project
+#
+# SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
+#
+# SPDX-License-Identifier: MIT
+# 
+
+
+version: '3.8'
+
+services:
+  app:
+    image: ghcr.io/stanfordbdhg/engage-hf-ai-voice:main
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - INTERNAL_TESTING_MODE=${INTERNAL_TESTING_MODE}
+    volumes:
+      - app-data:/app/Data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "443:443"
+    volumes:
+      - ./nginx.local.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - app-network
+    depends_on:
+      - app
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup=true
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  app-data:
