@@ -49,6 +49,23 @@ actor ServiceState {
         return false
     }
     
+    func getFeedback(phoneNumber: String, logger: Logger) async throws -> String {
+        guard let vitalSignsService = getVitalSignsService(),
+              let kccq12Service = getKCCQ12Service(),
+              let q17Service = getQ17Service() else {
+            throw Abort(.internalServerError, reason: "Service instances not available")
+        }
+        
+        let feedbackService = await FeedbackService(
+            phoneNumber: phoneNumber,
+            logger: logger,
+            vitalSignsService: vitalSignsService,
+            kccq12Service: kccq12Service,
+            q17Service: q17Service
+        )
+        return await feedbackService.feedback() ?? "No feedback available."
+    }
+    
     // MARK: - Service Access Methods
     
     func getVitalSignsService() -> VitalSignsService? {
