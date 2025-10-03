@@ -51,6 +51,14 @@ actor CallSession {
         }
     }
     
+    func sendJSON(_ object: [String: Any]) async throws {
+        let jsonData = try JSONSerialization.data(withJSONObject: object)
+        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+            throw Abort(.internalServerError, reason: "Failed to encode JSON")
+        }
+        try await webSocket.send(jsonString)
+    }
+    
     func updateSession(systemMessage: String) async throws {
         let sessionConfigJSONString = Constants.loadSessionConfig(systemMessage: systemMessage)
         do {
@@ -66,14 +74,6 @@ actor CallSession {
         }
     }
     
-    func sendJSON(_ object: [String: Any]) async throws {
-        let jsonData = try JSONSerialization.data(withJSONObject: object)
-        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-            throw Abort(.internalServerError, reason: "Failed to encode JSON")
-        }
-        try await webSocket.send(jsonString)
-    }
-    
     // MARK: Methods - Helpers
     
     private func handleFunctionCall(response: OpenAIResponse) async throws {
@@ -81,9 +81,9 @@ actor CallSession {
         let currentService = await serviceState.current
         switch response.name {
         case "save_response":
-            try await saveResponse(service: currentService, response: response, webSocket: webSocket, phoneNumber: phoneNumber)
+            try await saveResponse(service: currentService, response: response)
         case "count_answered_questions":
-            try await countAnsweredQuestions(service: currentService, response: response, webSocket: webSocket, phoneNumber: phoneNumber)
+            try await countAnsweredQuestions(service: currentService, response: response)
         case "end_call":
             try await webSocket.close()
         default:
@@ -93,9 +93,7 @@ actor CallSession {
     
     private func saveResponse(
         service: any QuestionnaireService,
-        response: OpenAIResponse,
-        webSocket: WebSocket,
-        phoneNumber: String
+        response: OpenAIResponse
     ) async throws {
         do {
             logger.info("Attempting to save response...")
@@ -117,7 +115,7 @@ actor CallSession {
                 }
             } catch {
                 logger.error("Decoding error details: \(error)")
-                try await sendJSON(webSocket, [
+                try await sendJSON([
                     "type": "function_response",
                     "id": response.callId ?? "",
                     "error": [
@@ -133,13 +131,11 @@ actor CallSession {
     private func countAnsweredQuestions(
         service: any QuestionnaireService,
         response: OpenAIResponse,
-        webSocket: WebSocket,
-        phoneNumber: String
     ) async throws {
         let count = await service.countAnsweredQuestions()
         logger.info("Count of answered questions of current service: \(count)")
 
-        try await sendJSON(webSocket, [
+        try await sendJSON([
             "type": "conversation.item.create",
             "item": [
                 "type": "function_call_output",
@@ -148,17 +144,9 @@ actor CallSession {
             ]
         ])
         
-        try await sendJSON(webSocket, [
+        try await sendJSON([
             "type": "response.create"
         ])
-    }
-    
-    private func sendJSON(_ webSocket: WebSocket, _ object: [String: Any]) async throws {
-        let jsonData = try JSONSerialization.data(withJSONObject: object)
-        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-            throw Abort(.internalServerError, reason: "Failed to encode JSON")
-        }
-        try await webSocket.send(jsonString)
     }
     
     private func saveQuestionnaireAnswer(service: any QuestionnaireService, parsedArgs: QuestionnaireResponseArgs) async -> Bool {
@@ -207,7 +195,7 @@ actor CallSession {
     }
     
     private func handleNextQuestionAvailable(nextQuestion: String, response: OpenAIResponse) async throws {
-        try await sendJSON(webSocket, [
+        try await sendJSON([
             "type": "conversation.item.create",
             "item": [
                 "type": "function_call_output",
@@ -216,7 +204,7 @@ actor CallSession {
             ]
         ])
         
-        try await sendJSON(webSocket, [
+        try await sendJSON([
             "type": "response.create"
         ])
     }
