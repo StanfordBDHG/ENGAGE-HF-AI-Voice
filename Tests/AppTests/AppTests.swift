@@ -68,4 +68,65 @@ struct AppTests {
             """)
         }
     }
+    
+    @Test("Test Section Progress Reporting")
+    func testSectionProgressReporting() async throws {
+        try await withApp { app in
+            let vitalSignsService = await VitalSignsService(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            let q17Service = await Q17Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            
+            let serviceState = await ServiceState(services: [vitalSignsService, kccq12Service, q17Service])
+            
+            // Test initial state (section 1 of 3)
+            var progress = await serviceState.getSectionProgress()
+            #expect(progress.current == 1, "Should start at section 1")
+            #expect(progress.total == 3, "Should have 3 total sections")
+            
+            // Test after moving to next service (section 2 of 3)
+            _ = await serviceState.next()
+            progress = await serviceState.getSectionProgress()
+            #expect(progress.current == 2, "Should be at section 2 after next()")
+            #expect(progress.total == 3, "Should still have 3 total sections")
+            
+            // Test after moving to last service (section 3 of 3)
+            _ = await serviceState.next()
+            progress = await serviceState.getSectionProgress()
+            #expect(progress.current == 3, "Should be at section 3 after second next()")
+            #expect(progress.total == 3, "Should still have 3 total sections")
+        }
+    }
+    
+    @Test("Test Dynamic Section Message Generation")
+    func testDynamicSectionMessages() async throws {
+        try await withApp { app in
+            let vitalSignsService = await VitalSignsService(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            let q17Service = await Q17Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            
+            // Test message for section 1 of 3
+            let message1 = Constants.getSystemMessageForService(
+                vitalSignsService,
+                initialQuestion: nil,
+                sectionProgress: (current: 1, total: 3)
+            )
+            #expect(message1?.contains("Section 1 of 3") ?? false, "Should contain 'Section 1 of 3'")
+            
+            // Test message for section 2 of 3
+            let message2 = Constants.getSystemMessageForService(
+                kccq12Service,
+                initialQuestion: nil,
+                sectionProgress: (current: 2, total: 3)
+            )
+            #expect(message2?.contains("Section 2 of 3") ?? false, "Should contain 'Section 2 of 3'")
+            
+            // Test message for section 3 of 3
+            let message3 = Constants.getSystemMessageForService(
+                q17Service,
+                initialQuestion: nil,
+                sectionProgress: (current: 3, total: 3)
+            )
+            #expect(message3?.contains("Section 3 of 3") ?? false, "Should contain 'Section 3 of 3'")
+        }
+    }
 }

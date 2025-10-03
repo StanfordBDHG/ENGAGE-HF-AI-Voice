@@ -187,6 +187,9 @@ actor CallSession {
         service: any QuestionnaireService,
         response: OpenAIResponse
     ) async throws {
+        // Save progress incrementally after each answer
+        await service.saveQuestionnaireResponseToFile()
+        
         if let nextQuestion = await service.getNextQuestion() {
             try await handleNextQuestionAvailable(nextQuestion: nextQuestion, response: response)
         } else {
@@ -216,14 +219,20 @@ actor CallSession {
         await service.saveQuestionnaireResponseToFile()
         
         if let nextService = await serviceState.next(),
-           let initialQuestion = await nextService.getNextQuestion(),
-           let systemMessage = Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {
-            try await handleNextServiceAvailable(
-                nextService: nextService,
+           let initialQuestion = await nextService.getNextQuestion() {
+            let sectionProgress = await serviceState.getSectionProgress()
+            if let systemMessage = Constants.getSystemMessageForService(
+                nextService,
                 initialQuestion: initialQuestion,
-                systemMessage: systemMessage,
-                response: response,
-            )
+                sectionProgress: sectionProgress
+            ) {
+                try await handleNextServiceAvailable(
+                    nextService: nextService,
+                    initialQuestion: initialQuestion,
+                    systemMessage: systemMessage,
+                    response: response
+                )
+            }
         } else {
             try await handleNoNextService(response: response)
         }
