@@ -78,7 +78,7 @@ enum Constants {
     Instructions:
     - Inform the patient you need to ask one final question.
     
-    Instructions:
+    For each question:
     - Inform the patient you need to ask one last question.
     - Listen to the patient's response and briefly answer any questions they might have.
     - Briefly repeat the patient's response back to them.
