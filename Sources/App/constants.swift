@@ -24,13 +24,15 @@ enum Constants {
     """
 
     static let vitalSignsInstructions = """
-    1. Vital Signs Instructions:
+    Section 1 of 3: Vital Signs
+    
+    Instructions:
     - Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
       - If the number is not 0, inform the user about their progress and that you will continue with the remaining questions.
       - If the number is 0, inform the user that you will start with the first question.
     - Always pronounce units in their long form, e.g., say "Millimeters of Mercury" for "mmHg".
 
-    2. For each question:
+    For each question:
     - Ask the question text clearly to the patient.
     - You may share the number of questions left and other progress updates to keep the patient engaged.
     - Listen to the patient's response and briefly answer any questions they might have.
@@ -47,13 +49,15 @@ enum Constants {
     """
     
     static let kccq12Instructions = """
-    1. KCCQ-12 Survey Instructions:
+    Section 2 of 3: KCCQ-12 Survey
+    
+    Instructions:
     - Inform the patient you need to ask some questions about how their heart failure affects their life.
     - Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
        - If the number is not 0, inform the user about their progress and that you will continue with the remaining questions.
        - If the number is 0, inform the user that you will start with the first question.
 
-    2. For each question:
+    For each question:
     - Ask the question text clearly to the patient.
     - You may share the number of questions left and other progress updates to keep the patient engaged.
     - Listen to the patient's response and briefly answer any questions they might have.
@@ -69,18 +73,19 @@ enum Constants {
     """
     
     static let q17Instructions = """
-    1. Last Section Instructions:
+    Section 3 of 3: Last Section
+    
+    Instructions:
     - Inform the patient you need to ask one final question.
     
-    2. Question Instructions:
+    For each question:
     - Inform the patient you need to ask one last question.
     - Listen to the patient's response and briefly answer any questions they might have.
     - Briefly repeat the patient's response back to them.
     - If there is any ambiguity about the question, you can ask follow-up questions; save it directly if the response is clear.
     - Always save the answer using the question's linkId and the save_response function.
     
-    3. After this last section is complete (no next question is found):
-    - Let the patient know they have completed all the questions.
+    - After this last section is complete (no next question is found), let the patient know they have completed all the questions.
     
     IMPORTANT:
     - Call save_response after each response is confirmed, but only if the response is in the expected range.
