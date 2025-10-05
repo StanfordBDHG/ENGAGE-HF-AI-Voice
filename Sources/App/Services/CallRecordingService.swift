@@ -53,8 +53,8 @@ actor CallRecordingService {
                         
             do {
                 let call = try await api.fetchCall(sid: recording.callSid)
-                let dateCreated = parseTwilioDate(from: recording.dateCreated).map(filePathUsableDateString) ?? recording.dateCreated
-                let fileNamePrefix = "\(call.from)_\(dateCreated)"
+                let dateCreatedString = parseTwilioDate(from: recording.dateCreated).map(filePathUsableDateString)
+                let fileNamePrefix = dateCreatedString.map { "\(call.from)_\($0)" } ?? call.from
                 let wavURL = directory.appending(component: fileNamePrefix + fileNameSuffixWAV)
                 let jsonURL = directory.appending(component: fileNamePrefix + fileNameSuffixJSON)
                 let data = try await api.fetchMediaFile(sid: recording.sid)

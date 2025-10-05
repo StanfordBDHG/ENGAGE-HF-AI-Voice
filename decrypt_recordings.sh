@@ -9,8 +9,8 @@
 # SPDX-License-Identifier: MIT
 #
 
-# Script to decrypt AES-GCM encrypted JSON files
-# Usage: ./decrypt_files.sh <base64_encryption_key>
+# Script to decrypt Twilio call recording files
+# Usage: ./decrypt_recordings.sh <path to private_key.pem>
 
 set -e  # Exit on any error
 
