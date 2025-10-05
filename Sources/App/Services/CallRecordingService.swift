@@ -49,9 +49,9 @@ actor CallRecordingService {
                 let fileURL = directory.appendingPathComponent(fileName)
                 let data = try await api.fetchMediaFile(sid: recording.sid)
                 try data.write(to: fileURL)
-                logger.info("Successfully downloaded recordings file for \(recording.sid).")
+                logger.info("Successfully downloaded recording file for \(recording.sid).")
             } catch {
-                logger.error("Failed to download and store recordings file for \(recording.sid): \(error.localizedDescription)")
+                logger.error("Failed to download and store recording file for \(recording.sid): \(error.localizedDescription)")
             }
         }
     }

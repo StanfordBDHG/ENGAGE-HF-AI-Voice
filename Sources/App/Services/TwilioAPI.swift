@@ -51,7 +51,10 @@ actor TwilioAPI {
             ]
         )
         let response = try await httpClient.execute(request: request).get()
-        let body = try JSONDecoder().decode(TwilioRecordingList.self, from: response.body ?? ByteBuffer())
+        guard let responseBody = response.body else {
+            throw Abort(.badRequest, reason: "Twilio response body was nil")
+        }
+        let body = try JSONDecoder().decode(TwilioRecordingList.self, from: responseBody)
         return body.recordings
     }
     
@@ -63,7 +66,10 @@ actor TwilioAPI {
             ]
         )
         let response = try await httpClient.execute(request: request).get()
-        let body = try JSONDecoder().decode(TwilioRecording.self, from: response.body ?? ByteBuffer())
+        guard let responseBody = response.body else {
+            throw Abort(.badRequest, reason: "Twilio response body was nil")
+        }
+        let body = try JSONDecoder().decode(TwilioRecording.self, from: responseBody)
         return body
     }
     
@@ -75,7 +81,9 @@ actor TwilioAPI {
             ]
         )
         let response = try await httpClient.execute(request: request).get()
-        var body = response.body ?? ByteBuffer()
-        return body.readData(length: body.readableBytes) ?? Data()
+        guard var responseBody = response.body else {
+            throw Abort(.badRequest, reason: "Twilio response body was nil")
+        }
+        return responseBody.readData(length: responseBody.readableBytes) ?? Data()
     }
 }
