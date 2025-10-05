@@ -24,7 +24,7 @@ enum Constants {
     """
 
     static let vitalSignsInstructions = """
-    Section {{SECTION}} of {{TOTAL}}: Vital Signs
+    Section {{CURRENT_SECTION_NUMBER}} of {{TOTAL_SECTION_COUNT}}: Vital Signs
     
     Instructions:
     - Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
@@ -49,7 +49,7 @@ enum Constants {
     """
     
     static let kccq12Instructions = """
-    Section {{SECTION}} of {{TOTAL}}: KCCQ-12 Survey
+    Section {{CURRENT_SECTION_NUMBER}} of {{TOTAL_SECTION_COUNT}}: KCCQ-12 Survey
     
     Instructions:
     - Inform the patient you need to ask some questions about how their heart failure affects their life.
@@ -73,7 +73,7 @@ enum Constants {
     """
     
     static let q17Instructions = """
-    Section {{SECTION}} of {{TOTAL}}: Last Section
+    Section {{CURRENT_SECTION_NUMBER}} of {{TOTAL_SECTION_COUNT}}: Last Section
     
     Instructions:
     - Inform the patient you need to ask one final question.
@@ -156,7 +156,7 @@ enum Constants {
     static func getSystemMessageForService(
         _ service: any QuestionnaireService,
         initialQuestion: String?,
-        sectionProgress: (current: Int, total: Int)
+        sectionProgress: (currentSectionNumber: Int, totalSectionCount: Int)
     ) -> String? {
         let instructions: String
         switch service {
@@ -172,8 +172,8 @@ enum Constants {
         
         // Replace section progress placeholders
         let instructionsWithProgress = instructions
-            .replacingOccurrences(of: "{{SECTION}}", with: "\(sectionProgress.current)")
-            .replacingOccurrences(of: "{{TOTAL}}", with: "\(sectionProgress.total)")
+            .replacingOccurrences(of: "{{CURRENT_SECTION_NUMBER}}", with: "\(sectionProgress.currentSectionNumber)")
+            .replacingOccurrences(of: "{{TOTAL_SECTION_COUNT}}", with: "\(sectionProgress.totalSectionCount)")
         
         // Add initial question if provided
         let questionSuffix: String

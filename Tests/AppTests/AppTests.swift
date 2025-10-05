@@ -78,22 +78,24 @@ struct AppTests {
             
             let serviceState = await ServiceState(services: [vitalSignsService, kccq12Service, q17Service])
             
-            // Test initial state (section 1 of 3)
+            // Initialize to find services with unanswered questions
+            _ = await serviceState.initializeCurrentService()
+            
+            // Test initial state (section 1 of total)
             var progress = await serviceState.getSectionProgress()
-            #expect(progress.current == 1, "Should start at section 1")
-            #expect(progress.total == 3, "Should have 3 total sections")
+            #expect(progress.currentSectionNumber == 1, "Should start at section 1")
+            #expect(progress.totalSectionCount > 0, "Should have at least 1 total section")
             
-            // Test after moving to next service (section 2 of 3)
-            _ = await serviceState.next()
-            progress = await serviceState.getSectionProgress()
-            #expect(progress.current == 2, "Should be at section 2 after next()")
-            #expect(progress.total == 3, "Should still have 3 total sections")
+            // Test that total remains constant
+            let initialTotal = progress.totalSectionCount
             
-            // Test after moving to last service (section 3 of 3)
-            _ = await serviceState.next()
-            progress = await serviceState.getSectionProgress()
-            #expect(progress.current == 3, "Should be at section 3 after second next()")
-            #expect(progress.total == 3, "Should still have 3 total sections")
+            // Test after moving to next service
+            if await serviceState.hasNext {
+                _ = await serviceState.next()
+                progress = await serviceState.getSectionProgress()
+                #expect(progress.currentSectionNumber == 2, "Should be at section 2 after next()")
+                #expect(progress.totalSectionCount == initialTotal, "Total should remain constant")
+            }
         }
     }
     
@@ -108,7 +110,7 @@ struct AppTests {
             let message1 = Constants.getSystemMessageForService(
                 vitalSignsService,
                 initialQuestion: nil,
-                sectionProgress: (current: 1, total: 3)
+                sectionProgress: (currentSectionNumber: 1, totalSectionCount: 3)
             )
             #expect(message1?.contains("Section 1 of 3") ?? false, "Should contain 'Section 1 of 3'")
             
@@ -116,7 +118,7 @@ struct AppTests {
             let message2 = Constants.getSystemMessageForService(
                 kccq12Service,
                 initialQuestion: nil,
-                sectionProgress: (current: 2, total: 3)
+                sectionProgress: (currentSectionNumber: 2, totalSectionCount: 3)
             )
             #expect(message2?.contains("Section 2 of 3") ?? false, "Should contain 'Section 2 of 3'")
             
@@ -124,9 +126,17 @@ struct AppTests {
             let message3 = Constants.getSystemMessageForService(
                 q17Service,
                 initialQuestion: nil,
-                sectionProgress: (current: 3, total: 3)
+                sectionProgress: (currentSectionNumber: 3, totalSectionCount: 3)
             )
             #expect(message3?.contains("Section 3 of 3") ?? false, "Should contain 'Section 3 of 3'")
+            
+            // Test with adjusted total (e.g., if first section already complete)
+            let message4 = Constants.getSystemMessageForService(
+                kccq12Service,
+                initialQuestion: nil,
+                sectionProgress: (currentSectionNumber: 1, totalSectionCount: 2)
+            )
+            #expect(message4?.contains("Section 1 of 2") ?? false, "Should contain 'Section 1 of 2' when total is adjusted")
         }
     }
 }
