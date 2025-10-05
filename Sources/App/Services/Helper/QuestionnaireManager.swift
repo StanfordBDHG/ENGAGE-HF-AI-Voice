@@ -23,6 +23,8 @@ class QuestionnaireManager: Sendable {
     /// The questionnaire being managed
     private let questionnaire: Questionnaire
     
+    private let sharesAllQuestionsIfNeeded: Bool
+    
     /// The current questionnaire response being built
     private var response: QuestionnaireResponse
     
@@ -33,7 +35,8 @@ class QuestionnaireManager: Sendable {
     /// - Parameters:
     ///   - questionnaire: The FHIR questionnaire to manage
     ///   - initialResponse: Optional initial response to start from
-    init(questionnaire: Questionnaire?, initialResponse: QuestionnaireResponse? = nil) {
+    init(questionnaire: Questionnaire?, sharesAllQuestionsIfNeeded: Bool, initialResponse: QuestionnaireResponse? = nil) {
+        self.sharesAllQuestionsIfNeeded = sharesAllQuestionsIfNeeded
         guard let questionnaire else {
             fatalError("QuestionnaireManager initialized with nil questionnaire")
         }
@@ -50,8 +53,8 @@ class QuestionnaireManager: Sendable {
     
     /// Get the next unanswered question
     /// - Returns: The next question to be answered in JSON string format, or nil if all required questions are answered
-    func getNextQuestionString() -> String? {
-        let nextQuestion = getNextQuestion()
+    func getNextQuestionString(includeAllQuestions: Bool) -> String? {
+        let nextQuestion = getNextQuestion(includeAllQuestions: includeAllQuestions)
         guard let nextQuestion else {
             return nil
         }
@@ -63,7 +66,7 @@ class QuestionnaireManager: Sendable {
         return nil
     }
     
-    private func getNextQuestion() -> QuestionWithProgress? {
+    private func getNextQuestion(includeAllQuestions: Bool) -> QuestionWithProgress? {
         let questions = getAllQuestions(from: questionnaire.item ?? [])
         
         let answeredLinkIds = Set(response.item?.compactMap { $0.linkId.value?.string } ?? [])
@@ -91,7 +94,16 @@ class QuestionnaireManager: Sendable {
         let answeredCount = answeredLinkIds.count
         let progress = "\(answeredCount + 1) of \(totalQuestions)"
         
-        return QuestionWithProgress(question: nextQuestion, progress: progress)
+        let unansweredQuestions = sharesAllQuestionsIfNeeded
+            ? questions.filter { question in
+                guard let linkId = question.linkId.value?.string else {
+                    return false
+                }
+                return !answeredLinkIds.contains(linkId)
+            }
+            : nil
+        
+        return QuestionWithProgress(question: nextQuestion, progress: progress, allQuestions: unansweredQuestions)
     }
     
     /// Answer a question in the questionnaire

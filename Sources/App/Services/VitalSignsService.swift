@@ -20,6 +20,7 @@ class VitalSignsService: BaseQuestionnaireService, Sendable {
             directoryPath: Constants.vitalSignsDirectoryPath,
             phoneNumber: phoneNumber,
             logger: logger,
+            sharesAllQuestionsIfNeeded: true,
             featureFlags: featureFlags,
             encryptionKey: encryptionKey
         )
