@@ -43,19 +43,37 @@ actor TwilioAPI {
     }
 
     func fetchRecordings() async throws -> [TwilioRecording] {
-        let response = try await httpClient.get(url: baseURL.appending(path: "Recordings.json").absoluteString).get()
+        let request = try HTTPClient.Request(
+            url: baseURL.appending(path: "Recordings.json"),
+            headers: [
+                "Authorization": authorizationHeaderValue
+            ]
+        )
+        let response = try await httpClient.execute(request: request).get()
         let body = try JSONDecoder().decode(TwilioRecordingList.self, from: response.body ?? ByteBuffer())
         return body.recordings
     }
     
     func fetchRecording(sid: String) async throws -> TwilioRecording {
-        let response = try await httpClient.get(url: baseURL.appending(path: "Recordings/\(sid).json").absoluteString).get()
+        let request = try HTTPClient.Request(
+            url: baseURL.appending(path: "Recordings/\(sid).json"),
+            headers: [
+                "Authorization": authorizationHeaderValue
+            ]
+        )
+        let response = try await httpClient.execute(request: request).get()
         let body = try JSONDecoder().decode(TwilioRecording.self, from: response.body ?? ByteBuffer())
         return body
     }
     
     func fetchMediaFile(sid: String) async throws -> Data {
-        let response = try await httpClient.get(url: baseURL.appending(path: "Recordings/\(sid).wav").absoluteString).get()
+        let request = try HTTPClient.Request(
+            url: baseURL.appending(path: "Recordings/\(sid).wav"),
+            headers: [
+                "Authorization": authorizationHeaderValue
+            ]
+        )
+        let response = try await httpClient.execute(request: request).get()
         var body = response.body ?? ByteBuffer()
         return body.readData(length: body.readableBytes) ?? Data()
     }

@@ -213,11 +213,8 @@ actor CallSession {
         service: any QuestionnaireService,
         response: OpenAIResponse
     ) async throws {
-<<<<<<< Updated upstream
         await service.saveQuestionnaireResponseToFile()
         
-=======
->>>>>>> Stashed changes
         if let nextService = await serviceState.next(),
            let initialQuestion = await nextService.getNextQuestion(),
            let systemMessage = Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {

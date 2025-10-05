@@ -193,7 +193,7 @@ actor CallHandler {
                 httpClient: httpClient
             )
             
-            let recordingService = CallRecordingService(api: twilioAPI)
+            let recordingService = CallRecordingService(api: twilioAPI, logger: logger)
             
             try await recordingService.storeNewestRecordings()
         } catch {
