@@ -51,7 +51,7 @@ decrypt_file() {
     local input_wav="$1"
     local output_file="$2"
     
-    input_json="${file%.wav}.json"
+    input_json="${input_wav%.wav}.json"
     
     if [ ! -f "$input_json" ]; then
         cp "$input_wav" "$output_file"
@@ -124,12 +124,12 @@ try:
     encrypted_recording_file.close()
     
 except Exception as e:
-    print(f'Failed to decrypt $input_file: {e}', file=sys.stderr)
+    print(f'Failed to decrypt $input_wav: {e}', file=sys.stderr)
     sys.exit(1)
 "
     
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to decrypt $input_file"
+        echo "Error: Failed to decrypt $input_wav"
         return 1
     fi
 }
