@@ -53,8 +53,10 @@ actor CallRecordingService {
                         
             do {
                 let call = try await api.fetchCall(sid: recording.callSid)
-                let wavURL = directory.appending(component: call.from + fileNameSuffixWAV)
-                let jsonURL = directory.appending(component: call.from + fileNameSuffixJSON)
+                let dateCreated = parseTwilioDate(from: recording.dateCreated).map(filePathUsableDateString) ?? recording.dateCreated
+                let fileNamePrefix = "\(call.from)_\(dateCreated)"
+                let wavURL = directory.appending(component: fileNamePrefix + fileNameSuffixWAV)
+                let jsonURL = directory.appending(component: fileNamePrefix + fileNameSuffixJSON)
                 let data = try await api.fetchMediaFile(sid: recording.sid)
                 try data.write(to: wavURL)
                 
@@ -72,5 +74,21 @@ actor CallRecordingService {
                 logger.error("Failed to download and store recording file for \(recording.sid): \(error.localizedDescription)")
             }
         }
+    }
+    
+    private func filePathUsableDateString(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "America/Los_Angeles")
+        formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
+        return formatter.string(from: date)
+    }
+    
+    private func parseTwilioDate(from string: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
+        return formatter.date(from: string)
     }
 }
