@@ -12,9 +12,11 @@ import ModelsR4
 /// A struct to wrap the question and progress
 struct QuestionWithProgress: Codable {
     enum CodingKeys: String, CodingKey {
-        case question, progress
+        case question, progress, allQuestions
     }
 
     let question: QuestionnaireItem
     let progress: String
+    // swiftlint:disable:next discouraged_optional_collection
+    let allQuestions: [QuestionnaireItem]?
 }
