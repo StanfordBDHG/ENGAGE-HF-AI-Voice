@@ -17,5 +17,6 @@ struct QuestionWithProgress: Codable {
 
     let question: QuestionnaireItem
     let progress: String
+    // swiftlint:disable:next discouraged_optional_collection
     let allQuestions: [QuestionnaireItem]?
 }
