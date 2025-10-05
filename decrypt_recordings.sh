@@ -51,6 +51,9 @@ decrypt_file() {
     local input_wav="$1"
     local output_file="$2"
     
+    # Create output directory if it doesn't exist
+    mkdir -p "$(dirname "$output_file")"
+    
     input_json="${input_wav%.wav}.json"
     
     if [ ! -f "$input_json" ]; then
@@ -63,8 +66,7 @@ decrypt_file() {
     
     echo "Decrypting: $input_wav -> $output_file"
     
-    # Create output directory if it doesn't exist
-    mkdir -p "$(dirname "$output_file")"
+    
     
     # Decrypt using Python
     python3 -c "
