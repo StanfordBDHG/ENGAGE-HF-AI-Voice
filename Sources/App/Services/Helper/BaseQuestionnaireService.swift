@@ -65,6 +65,9 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
     func saveQuestionnaireAnswer<T>(linkId: String, answer: T) -> Bool {
         do {
             try manager.answerQuestion(linkId: linkId, answer: answer)
+            Task {
+                await saveQuestionnaireResponseToFile()
+            }
             return true
         } catch {
             logger.error("Error saving Questionnaire Answer: \(error)")
