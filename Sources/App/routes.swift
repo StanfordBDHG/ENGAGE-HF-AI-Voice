@@ -14,6 +14,32 @@ func routes(_ app: Application) throws {
             .ok
     }
     
+    app.post("update-recordings") { req async -> Response in
+        guard let twilioAccountSid = app.storage[TwilioAccountSidStorageKey.self],
+              let twilioAPIKey = app.storage[TwilioAPIKeyStorageKey.self],
+              let twilioSecret = app.storage[TwilioSecretStorageKey.self] else {
+                  req.logger.warning("Couldn't update newest recordings due to missing Twilio credentials.")
+                  return Response(status: .internalServerError)
+        }
+        
+        do {
+            let twilioAPI = try TwilioAPI(
+                accountSid: twilioAccountSid,
+                apiKey: twilioAPIKey,
+                secret: twilioSecret,
+                httpClient: app.http.client.shared
+            )
+            
+            let recordingService = CallRecordingService(api: twilioAPI)
+            
+            try await recordingService.storeNewestRecordings()
+        } catch {
+            req.logger.error("Failed to update newest recordings: \(error)")
+        }
+        
+        return Response(status: .ok)
+    }
+    
     app.post("incoming-call") { req async -> Response in
         guard let body = req.body.data else {
             return Response(status: .badRequest)

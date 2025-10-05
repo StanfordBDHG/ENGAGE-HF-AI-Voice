@@ -105,6 +105,7 @@ enum Constants {
     static let vitalSignsDirectoryPath = "\(dataDirectory)/vital_signs/"
     static let kccq12DirectoryPath = "\(dataDirectory)/kccq12_questionnairs/"
     static let q17DirectoryPath = "\(dataDirectory)/q17/"
+    static let callRecordingsDirectoryPath = "\(dataDirectory)/recordings/"
 
     /// Base data directory for storing questionnaire responses
     static let dataDirectory: String = {

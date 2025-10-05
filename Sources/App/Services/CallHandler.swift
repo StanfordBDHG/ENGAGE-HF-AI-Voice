@@ -15,7 +15,10 @@ actor CallHandler {
     let callId: String
     let phoneNumber: String
     let openAIKey: String
-
+    let twilioAccountSid: String?
+    let twilioAPIKey: String?
+    let twilioSecret: String?
+    
     let eventLoopGroup: any EventLoopGroup
     let httpClient: HTTPClient
     let logger: Logger
@@ -34,6 +37,9 @@ actor CallHandler {
         self.callId = callId
         self.phoneNumber = phoneNumber
         self.openAIKey = app.storage[OpenAIKeyStorageKey.self] ?? ""
+        self.twilioAccountSid = app.storage[TwilioAccountSidStorageKey.self]
+        self.twilioAPIKey = app.storage[TwilioAPIKeyStorageKey.self]
+        self.twilioSecret = app.storage[TwilioSecretStorageKey.self]
         
         self.eventLoopGroup = app.eventLoopGroup
         self.httpClient = app.http.client.shared
@@ -77,15 +83,21 @@ actor CallHandler {
     }
     
     func hangup() async throws {
-        let request = try HTTPClient.Request(
-            url: "https://api.openai.com/v1/realtime/calls/\(callId)/hangup",
-            method: .POST,
-            headers: [
-                "Authorization": "Bearer \(openAIKey)",
-                "Content-Type": "application/json"
-            ]
-        )
-        _ = try await httpClient.execute(request: request).get()
+        do {
+            let request = try HTTPClient.Request(
+                url: "https://api.openai.com/v1/realtime/calls/\(callId)/hangup",
+                method: .POST,
+                headers: [
+                    "Authorization": "Bearer \(openAIKey)",
+                    "Content-Type": "application/json"
+                ]
+            )
+            _ = try await httpClient.execute(request: request).get()
+            await updateCallRecordings()
+        } catch {
+            await updateCallRecordings()
+            throw error
+        }
     }
     
     func openWebsocket() async throws {
@@ -162,6 +174,30 @@ actor CallHandler {
             return Constants.initialSystemMessage + (
                 initialSystemMessage ?? Constants.noUnansweredQuestionsLeft
             )
+        }
+    }
+    
+    private func updateCallRecordings() async {
+        guard let twilioAccountSid,
+              let twilioAPIKey,
+              let twilioSecret else {
+            logger.warning("Couldn't update newest recordings due to missing Twilio credentials.")
+            return
+        }
+        
+        do {
+            let twilioAPI = try TwilioAPI(
+                accountSid: twilioAccountSid,
+                apiKey: twilioAPIKey,
+                secret: twilioSecret,
+                httpClient: httpClient
+            )
+            
+            let recordingService = CallRecordingService(api: twilioAPI)
+            
+            try await recordingService.storeNewestRecordings()
+        } catch {
+            logger.error("Failed to update newest recordings: \(error)")
         }
     }
 }

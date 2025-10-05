@@ -54,6 +54,10 @@ public func configure(_ app: Application) async throws {
     app.storage[OpenAIKeyStorageKey.self] = openAIKey
     app.storage[EncryptionKeyStorageKey.self] = encryptionKey
     
+    app.storage[TwilioAccountSidStorageKey.self] = Environment.get("TWILIO_ACCOUNT_SID")
+    app.storage[TwilioAPIKeyStorageKey.self] = Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")
+    app.storage[TwilioSecretStorageKey.self] = Environment.get("TWILIO_SECRET")
+    
     // Configure server
     app.http.server.configuration.port = Environment.get("PORT").flatMap(Int.init) ?? 5000
     
