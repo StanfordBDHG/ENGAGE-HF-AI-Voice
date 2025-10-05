@@ -9,6 +9,20 @@
 import Foundation
 import Vapor
 
+struct TwilioCall: Decodable {
+    enum CodingKeys: String, CodingKey {
+        case sid
+        case from
+        case fromFormatted = "from_formatted"
+        case startTime = "start_time"
+    }
+    
+    let sid: String
+    let from: String
+    let fromFormatted: String
+    let startTime: String
+}
+
 struct TwilioRecording: Decodable {
     enum CodingKeys: String, CodingKey {
         case callSid = "call_sid"
@@ -16,6 +30,17 @@ struct TwilioRecording: Decodable {
         case dateUpdated = "date_updated"
         case duration
         case sid
+        case encryptionDetails = "encryption_details"
+    }
+    
+    struct EncryptionDetails: Decodable {
+        enum CodingKeys: String, CodingKey {
+            case encryptedCEK = "encrypted_cek"
+            case initialVector = "iv"
+        }
+        
+        let encryptedCEK: String
+        let initialVector: String
     }
     
     let callSid: String
@@ -23,6 +48,7 @@ struct TwilioRecording: Decodable {
     let dateUpdated: String
     let duration: String
     let sid: String
+    let encryptionDetails: EncryptionDetails?
 }
 
 private struct TwilioRecordingList: Decodable {
@@ -41,6 +67,21 @@ actor TwilioAPI {
         self.baseURL = baseURL
         self.authorizationHeaderValue = "Basic " + "\(apiKey):\(secret)".base64String()
         self.httpClient = httpClient
+    }
+    
+    func fetchCall(sid: String) async throws -> TwilioCall {
+        let request = try HTTPClient.Request(
+            url: baseURL.appending(path: "Calls/\(sid).json"),
+            headers: [
+                "Authorization": authorizationHeaderValue
+            ]
+        )
+        let response = try await httpClient.execute(request: request).get()
+        guard let responseBody = response.body else {
+            throw Abort(.badRequest, reason: "Twilio response body was nil")
+        }
+        let body = try JSONDecoder().decode(TwilioCall.self, from: responseBody)
+        return body
     }
 
     func fetchRecordings() async throws -> [TwilioRecording] {

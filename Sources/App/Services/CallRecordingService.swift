@@ -9,6 +9,11 @@
 import Foundation
 import Vapor
 
+private struct CallRecordingMetadata: Encodable {
+    let cek: String
+    let iv: String // swiftlint:disable:this identifier_name
+}
+
 actor CallRecordingService {
     let api: TwilioAPI
     let directory: URL
@@ -39,17 +44,30 @@ actor CallRecordingService {
         logger.info("Found \(recordings.count) recordings in Twilio")
         
         for recording in recordings {
-            let fileName = recording.sid + ".wav"
+            let fileNameSuffixWAV = "_" + recording.sid + ".wav"
+            let fileNameSuffixJSON = "_" + recording.sid + ".json"
             
-            if existingFileNames.contains(fileName) {
+            if existingFileNames.contains(where: { $0.hasSuffix(fileNameSuffixWAV) }) {
                 continue
             }
-            
+                        
             do {
-                let fileURL = directory.appendingPathComponent(fileName)
+                let call = try await api.fetchCall(sid: recording.callSid)
+                let wavURL = directory.appending(component: call.from + fileNameSuffixWAV)
+                let jsonURL = directory.appending(component: call.from + fileNameSuffixJSON)
                 let data = try await api.fetchMediaFile(sid: recording.sid)
-                try data.write(to: fileURL)
-                logger.info("Successfully downloaded recording file for \(recording.sid).")
+                try data.write(to: wavURL)
+                
+                if let encryptionDetails = recording.encryptionDetails {
+                    let jsonData = try JSONEncoder().encode(
+                        CallRecordingMetadata(
+                            cek: encryptionDetails.encryptedCEK,
+                            iv: encryptionDetails.initialVector
+                        )
+                    )
+                    try jsonData.write(to: jsonURL)
+                }
+                logger.info("Successfully downloaded recording file for \(recording.sid) at \(wavURL).")
             } catch {
                 logger.error("Failed to download and store recording file for \(recording.sid): \(error.localizedDescription)")
             }
