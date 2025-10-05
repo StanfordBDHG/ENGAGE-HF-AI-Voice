@@ -20,6 +20,7 @@ class Q17Service: BaseQuestionnaireService, Sendable {
             directoryPath: Constants.q17DirectoryPath,
             phoneNumber: phoneNumber,
             logger: logger,
+            sharesAllQuestionsIfNeeded: false,
             featureFlags: featureFlags,
             encryptionKey: encryptionKey
         )

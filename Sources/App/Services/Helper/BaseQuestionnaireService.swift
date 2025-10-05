@@ -28,6 +28,7 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         directoryPath: String,
         phoneNumber: String,
         logger: Logger,
+        sharesAllQuestionsIfNeeded: Bool,
         featureFlags: FeatureFlags,
         encryptionKey: String? = nil
     ) {
@@ -41,14 +42,15 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         )
         self.manager = QuestionnaireManager(
             questionnaire: storage.loadQuestionnaire(),
+            sharesAllQuestionsIfNeeded: sharesAllQuestionsIfNeeded,
             initialResponse: storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         )
     }
     
     /// Get the next question from the questionnaire
     /// - Returns: The next question as a JSON string if available, nil if no more questions
-    func getNextQuestion() async -> String? {
-        manager.getNextQuestionString()
+    func getNextQuestion(includeAllQuestions: Bool) async -> String? {
+        manager.getNextQuestionString(includeAllQuestions: includeAllQuestions)
     }
     
     /// Save the answer to a question to the questionnaire response managed by the manager

@@ -17,7 +17,7 @@ protocol QuestionnaireService: Sendable {
     var phoneNumber: String { get }
     var logger: Logger { get }
     
-    func getNextQuestion() async -> String?
+    func getNextQuestion(includeAllQuestions: Bool) async -> String?
     func saveQuestionnaireAnswer<T>(linkId: String, answer: T) async -> Bool
     func countAnsweredQuestions() -> Int
     func unansweredQuestionsLeft() -> Bool
