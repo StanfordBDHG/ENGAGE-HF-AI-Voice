@@ -51,23 +51,15 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         manager.getNextQuestionString()
     }
     
-    /// Save the questionnaire response to the file by delegating to the storage service
-    func saveQuestionnaireResponseToFile() async {
-        let response = manager.getCurrentResponse()
-        await storage.saveQuestionnaireResponse(phoneNumber: phoneNumber, response: response, logger: logger)
-    }
-    
     /// Save the answer to a question to the questionnaire response managed by the manager
     /// - Parameters:
     ///   - linkId: The question's identifier
     ///   - answer: The answer to the question
     /// - Returns: True if the answer was saved successfully, false otherwise
-    func saveQuestionnaireAnswer<T>(linkId: String, answer: T) -> Bool {
+    func saveQuestionnaireAnswer<T>(linkId: String, answer: T) async -> Bool {
         do {
             try manager.answerQuestion(linkId: linkId, answer: answer)
-            Task {
-                await saveQuestionnaireResponseToFile()
-            }
+            await saveQuestionnaireResponseToFile()
             return true
         } catch {
             logger.error("Error saving Questionnaire Answer: \(error)")
@@ -85,5 +77,13 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
     /// - Returns: True if there are any unanswered questions left, false otherwise
     func unansweredQuestionsLeft() -> Bool {
         !manager.isFinished
+    }
+    
+    // Helpers
+    
+    /// Save the questionnaire response to the file by delegating to the storage service
+    private func saveQuestionnaireResponseToFile() async {
+        let response = manager.getCurrentResponse()
+        await storage.saveQuestionnaireResponse(phoneNumber: phoneNumber, response: response, logger: logger)
     }
 }

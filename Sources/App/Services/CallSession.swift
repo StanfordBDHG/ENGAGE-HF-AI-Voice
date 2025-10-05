@@ -212,9 +212,7 @@ actor CallSession {
     private func handleQuestionnaireComplete(
         service: any QuestionnaireService,
         response: OpenAIResponse
-    ) async throws {
-        await service.saveQuestionnaireResponseToFile()
-        
+    ) async throws {       
         if let nextService = await serviceState.next(),
            let initialQuestion = await nextService.getNextQuestion(),
            let systemMessage = Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {
