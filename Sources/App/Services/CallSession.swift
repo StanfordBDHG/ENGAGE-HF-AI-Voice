@@ -187,7 +187,7 @@ actor CallSession {
         service: any QuestionnaireService,
         response: OpenAIResponse
     ) async throws {
-        if let nextQuestion = await service.getNextQuestion() {
+        if let nextQuestion = await service.getNextQuestion(includeAllQuestions: false) {
             try await handleNextQuestionAvailable(nextQuestion: nextQuestion, response: response)
         } else {
             try await handleQuestionnaireComplete(service: service, response: response)
@@ -216,7 +216,7 @@ actor CallSession {
         await service.saveQuestionnaireResponseToFile()
         
         if let nextService = await serviceState.next(),
-           let initialQuestion = await nextService.getNextQuestion(),
+           let initialQuestion = await nextService.getNextQuestion(includeAllQuestions: true),
            let systemMessage = Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {
             try await handleNextServiceAvailable(
                 nextService: nextService,

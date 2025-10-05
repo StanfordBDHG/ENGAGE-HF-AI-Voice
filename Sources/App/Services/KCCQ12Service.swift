@@ -20,6 +20,7 @@ class KCCQ12Service: BaseQuestionnaireService, Sendable {
             directoryPath: Constants.kccq12DirectoryPath,
             phoneNumber: phoneNumber,
             logger: logger,
+            sharesAllQuestionsIfNeeded: false,
             featureFlags: featureFlags,
             encryptionKey: encryptionKey
         )
