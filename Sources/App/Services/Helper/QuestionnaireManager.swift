@@ -94,7 +94,7 @@ class QuestionnaireManager: Sendable {
         let answeredCount = answeredLinkIds.count
         let progress = "\(answeredCount + 1) of \(totalQuestions)"
         
-        let unansweredQuestions = sharesAllQuestionsIfNeeded
+        let unansweredQuestions = (sharesAllQuestionsIfNeeded && includeAllQuestions)
             ? questions.filter { question in
                 guard let linkId = question.linkId.value?.string else {
                     return false
