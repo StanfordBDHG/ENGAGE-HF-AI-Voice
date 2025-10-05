@@ -65,26 +65,15 @@ To customize the conversation flow and questions, you can replace or modify thes
    ```
 
 4. **Add questionnaire instructions** to `Sources/App/constants.swift`
-   Here is an example of what it could look like:
+   Define instructions that guide the AI on how to conduct this questionnaire section:
    ```swift
    static let yourQuestionnaireInstructions = """
-   Your Questionnaire Instructions:
-   1. Inform the patient about this section of questions.
-   Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
-   If the number is not 0, inform the user about the progress and that you will continue with the remaining questions.
-   If the number is 0, inform the user that you will start with the first/initial question.
-
-   2. For each question:
-   - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
-   - Listen to the patient's response
-   - Confirm their answer
-   - After the answer is confirmed, save the question's linkId and answer using the save_response function
-   - Move to the next question
-
-   IMPORTANT:
-   - Call save_response after each response is confirmed
-   - Don't let the user end the call before ALL answers are collected
-   - The function will show you progress (e.g., "Question 1 of 3") to help track completion
+   Your Questionnaire Section Instructions:
+   - Inform the patient about this section
+   - Use count_answered_questions to track progress
+   - Ask each question clearly and confirm responses
+   - Save responses using save_response function
+   - Ensure all questions are answered before proceeding
    """
    ```
 
@@ -118,14 +107,11 @@ To customize the conversation flow and questions, you can replace or modify thes
 
 ### Other Configuration Options
 
-- **System Message (AI Behavior)**  
-  Edit the `systemMessage` oder `instruction` constants in `Sources/App/constants.swift` to customize AI behavior for each questionnaire.
+- **AI Behavior and System Prompts**  
+  System prompts and instructions for each questionnaire section are defined in `Sources/App/constants.swift`. These control how the AI assistant interacts with patients and can be customized as needed.
 
 - **Session Configuration (Voice, Functions, etc.)**  
-  Modify `sessionConfig.json` in `Sources/App/Resources/` to control OpenAI-specific parameters such as:
-  - Which voice model to use
-  - The available function calls (e.g., saving responses)
-  - Other ChatGPT session settings
+  OpenAI session parameters (voice model, function calls, etc.) are configured in `sessionConfig.json` located in `Sources/App/Resources/`.
 
 ---
 
@@ -192,28 +178,37 @@ To deploy the service in a production environment, follow these steps:
 
 2. **Configure Environment Variables**
    - Create a `.env` file in the deployment directory.
-   - Add your OpenAI API key like this:
+   - Add the following environment variables:
      ```bash
-     OPENAI_API_KEY=<your-api-key>
+     # Required
+     OPENAI_API_KEY=<your-openai-api-key>
+     
+     # Optional - Encryption key for storing questionnaire responses (base64-encoded 32 bytes)
+     # Generate with: openssl rand -base64 32
+     ENCRYPTION_KEY=<your-base64-encryption-key>
+     
+     # Optional - Enable internal testing mode (allows multiple surveys per day, reduced KCCQ12)
+     INTERNAL_TESTING_MODE=false
+     
+     # Optional - Server port (default: 5000 for Xcode, 8080 for Docker)
+     PORT=8080
      ```
 
-3. **Set Up SSL Certificates**
+3. **Set Up SSL Certificates (Docker Secrets)**
    - Create the required SSL certificate directories:
      ```bash
      sudo mkdir -p ./certs
      sudo mkdir -p ./private
      ```
    - Add your SSL certificates:
-     - Place your certificate file which requires a full certificate chain (e.g., `certificate.pem`) in `./certs`.
+     - Place your certificate file with full certificate chain (e.g., `certificate.pem`) in `./certs`.
      - Place your private key file (e.g., `private.key`) in `./private`.
    - Ensure proper permissions:
      ```bash
      sudo chmod 644 ./certs/certificate.pem
      sudo chmod 640 ./private/private.key
      ```
-
-3.1. **Update the Docker Compose file**
-   - If needed, adjust the `secrets` block at the bottom of the file and reference.
+   - These files are mounted as Docker secrets in the nginx container. If needed, adjust the `secrets` block in `docker-compose.prod.yml`:
    ```yaml
    secrets:
      cert_chain:
