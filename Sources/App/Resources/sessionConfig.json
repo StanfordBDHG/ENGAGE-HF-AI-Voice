@@ -8,7 +8,8 @@
                 "type": "audio/pcmu"
             },
             "turn_detection": {
-                "type": "semantic_vad"
+                "type": "semantic_vad",
+                "eagerness": "high"
             }
         },
         "output": {
