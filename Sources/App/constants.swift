@@ -31,7 +31,7 @@ enum Constants {
       - Use this information to understand which linkIds are available for saving responses.
       - You can use this to handle related questions together when appropriate.
     - Always pronounce units in their long form, e.g., say "Millimeters of Mercury" for "mmHg".
-    - The patient has already answered {{ANSWERED_QUESTION_COUNT}} questions in this section.
+    - {{INITIAL_INSTRUCTION}}
 
     For each question:
     - Ask the question text clearly to the patient.
@@ -65,7 +65,7 @@ enum Constants {
     
     Instructions:
     - Inform the patient you need to ask some questions about how their heart failure affects their life.
-    - The patient has already answered {{ANSWERED_QUESTION_COUNT}} questions in this section.
+    - {{INITIAL_INSTRUCTION}}
 
     For each question:
     - Ask the question text clearly to the patient.
@@ -87,7 +87,7 @@ enum Constants {
     
     Instructions:
     - Inform the patient you need to ask one final question.
-    - The patient has already answered {{ANSWERED_QUESTION_COUNT}} questions in this section.
+    - {{INITIAL_INSTRUCTION}}
 
     For each question:
     - Inform the patient you need to ask one last question.
@@ -167,15 +167,18 @@ enum Constants {
     /// Get the system message for the service including the initial question
     static func getSystemMessageForService(_ service: any QuestionnaireService, initialQuestion: String?) async -> String? {
         let answeredQuestionCount = await service.countAnsweredQuestions()
+        let initialInstruction = answeredQuestionCount == 0
+            ? "Inform the user that you will start with the first question."
+            : "Inform the user about their progress and that you will continue with the remaining questions."
         switch service {
         case is VitalSignsService:
-            return vitalSignsInstructions.replacingOccurrences(of: "{{ANSWERED_QUESTION_COUNT}}", with: answeredQuestionCount.description)
+            return vitalSignsInstructions.replacingOccurrences(of: "{{INITIAL_INSTRUCTION}}", with: initialInstruction)
                 + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is KCCQ12Service:
-            return kccq12Instructions.replacingOccurrences(of: "{{ANSWERED_QUESTION_COUNT}}", with: answeredQuestionCount.description)
+            return kccq12Instructions.replacingOccurrences(of: "{{INITIAL_INSTRUCTION}}", with: initialInstruction)
                 + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is Q17Service:
-            return q17Instructions.replacingOccurrences(of: "{{ANSWERED_QUESTION_COUNT}}", with: answeredQuestionCount.description)
+            return q17Instructions.replacingOccurrences(of: "{{INITIAL_INSTRUCTION}}", with: initialInstruction)
                 + (initialQuestion.map { "Final Question: \($0)" } ?? "")
         default:
             return nil
