@@ -11,6 +11,8 @@ name: Deployment
 on:
   workflow_call:
   push:
+    branches:
+      - endCallFix
     tags:
       - '*'
 
