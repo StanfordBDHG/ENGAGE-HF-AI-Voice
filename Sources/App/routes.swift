@@ -55,15 +55,8 @@ func routes(_ app: Application) throws {
             let handler = await CallHandler(callId: callId, phoneNumber: phoneNumber, app: app)
             logger.info("About to accept call \"\(callId)\" from \"\(phoneNumber)\".")
             try await handler.accept()
-            
-            Task<Void, Never> {
-                do {
-                    logger.info("About to open websocket for call \"\(callId)\" from \"\(phoneNumber)\".")
-                    try await handler.openWebsocket()
-                } catch {
-                    logger.error("Call task failed: \(error)")
-                }
-            }
+            logger.info("About to open websocket for call \"\(callId)\" from \"\(phoneNumber)\".")
+            try await handler.openWebsocket()
         } catch {
             req.logger.error("Failed to accept call: \(error)")
             return Response(status: .internalServerError)

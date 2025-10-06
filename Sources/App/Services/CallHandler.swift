@@ -114,16 +114,6 @@ actor CallHandler {
                     webSocket: webSocket,
                     logger: logger
                 )
-                Task {
-                    try? await Task.sleep(for: .seconds(1))
-                    do {
-                        try await session.sendJSON([
-                            "type": "response.create"
-                        ])
-                    } catch {
-                        logger.error("Couldn't send initial message to OpenAI \(error)")
-                    }
-                }
                 // Handle incoming messages from OpenAI
                 webSocket.onText { _, text async in
                     await session.handleMessage(text)
@@ -143,6 +133,17 @@ actor CallHandler {
                         } catch {
                             logger.error("Failed to hang up: \(error)")
                         }
+                    }
+                }
+
+                Task {
+                    try? await Task.sleep(for: .seconds(1))
+                    do {
+                        try await session.sendJSON([
+                            "type": "response.create"
+                        ])
+                    } catch {
+                        logger.error("Couldn't send initial message to OpenAI \(error)")
                     }
                 }
             }
