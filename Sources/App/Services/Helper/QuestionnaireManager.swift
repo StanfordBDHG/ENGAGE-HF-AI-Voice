@@ -103,7 +103,50 @@ class QuestionnaireManager: Sendable {
             }
             : nil
         
-        return QuestionWithProgress(question: nextQuestion, progress: progress, allQuestions: unansweredQuestions)
+        // Check if this question is part of a group
+        let questionGroup = findGroupForQuestion(nextQuestion, in: questionnaire.item ?? [], answeredLinkIds: answeredLinkIds)
+        
+        return QuestionWithProgress(
+            question: nextQuestion,
+            progress: progress,
+            allQuestions: unansweredQuestions,
+            questionGroup: questionGroup
+        )
+    }
+    
+    /// Find the group that contains the given question, if any
+    /// Returns all unanswered questions in the group
+    private func findGroupForQuestion(
+        _ question: QuestionnaireItem,
+        in items: [QuestionnaireItem],
+        answeredLinkIds: Set<String>
+    ) -> [QuestionnaireItem]? {
+        for item in items {
+            // Check if this is a group
+            if item.type.value?.rawValue == "group", let groupItems = item.item {
+                // Check if our question is in this group
+                let questionsInGroup = getAllQuestions(from: groupItems)
+                if questionsInGroup.contains(where: { $0.linkId.value?.string == question.linkId.value?.string }) {
+                    // Return all unanswered questions in this group
+                    let unansweredInGroup = questionsInGroup.filter { q in
+                        guard let linkId = q.linkId.value?.string else {
+                            return false
+                        }
+                        return !answeredLinkIds.contains(linkId)
+                    }
+                    // Only return the group if there are multiple unanswered questions
+                    return unansweredInGroup.count > 1 ? unansweredInGroup : nil
+                }
+            }
+            
+            // Recursively search in sub-items
+            if let subItems = item.item {
+                if let group = findGroupForQuestion(question, in: subItems, answeredLinkIds: answeredLinkIds) {
+                    return group
+                }
+            }
+        }
+        return nil
     }
     
     /// Answer a question in the questionnaire

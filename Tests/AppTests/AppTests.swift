@@ -35,6 +35,34 @@ struct AppTests {
         }
     }
     
+    @Test("Test Question Group Detection")
+    func testQuestionGroupDetection() async throws {
+        try await withApp { app in
+            let vitalSignsService = await VitalSignsService(
+                phoneNumber: "+16502341234",
+                logger: app.logger,
+                featureFlags: app.featureFlags
+            )
+            
+            // Get the next question (should be from blood pressure group)
+            let nextQuestionString = await vitalSignsService.getNextQuestion(includeAllQuestions: true)
+            #expect(nextQuestionString != nil, "Should have a next question")
+            
+            if let questionString = nextQuestionString {
+                let data = questionString.data(using: .utf8)!
+                let decoder = JSONDecoder()
+                let questionWithProgress = try decoder.decode(QuestionWithProgress.self, from: data)
+                
+                // Check if questionGroup is populated for blood pressure questions
+                #expect(questionWithProgress.questionGroup != nil, "Blood pressure questions should have a questionGroup")
+                
+                if let group = questionWithProgress.questionGroup {
+                    #expect(group.count == 2, "Blood pressure group should have 2 questions (systolic and diastolic)")
+                }
+            }
+        }
+    }
+    
     @Test("Test Symptom Score Calculation")
     func testSymptomScoreCalculation() async throws {
         try await withApp { app in
