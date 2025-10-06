@@ -9,7 +9,7 @@
 import Foundation
 import Vapor
 
-// swiftlint:disable:next function_body_length
+
 func routes(_ app: Application) throws {
     app.get("health") { _ -> HTTPStatus in
             .ok
