@@ -46,7 +46,7 @@ enum Constants {
     - Always save the answer using the question's `linkId` and the `save_response` function.
     - Move to the next question after saving. Keep the conversation fluent and engaging.
 
-    BLOOD PRESSURE HANDLING:
+    Blood pressure handling:
     - When asking blood pressure questions, collect the values in one of two ways:
       1. Sequentially: Ask for systolic first, then diastolic in separate questions.
       2. Together: If the patient provides both values (e.g., "120 over 70" or "120/70"), save them together.
@@ -55,7 +55,7 @@ enum Constants {
       - Confirm both values with the patient.
       - Save the systolic value using the `linkId` for the systolic question by calling `save_response`.
       - Immediately after, save the diastolic value using the `linkId` for the diastolic question by calling `save_response`.
-    - Ask the patient about blood pressure and mention that values can be provided in either way.
+    - When you ask the patient about their blood pressure, mention that values can be provided in either way.
 
     IMPORTANT:
     - Call `save_response` after each response is confirmed, but only if it is within the expected range.
@@ -156,7 +156,7 @@ enum Constants {
         \(content)
         ```
         
-        Also, make sure to inform them of their symptom score value.
+        Make sure to inform the patient of their symptom score value, omitting any decimal places in the reported score.
 
         Remind the patient that they can call the ENGAGE-HF Voice AI system again tomorrow.
         After the reminder, thank the patient for their time and let them know they can now end the call.
