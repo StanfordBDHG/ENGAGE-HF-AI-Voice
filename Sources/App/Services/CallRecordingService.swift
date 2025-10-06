@@ -54,7 +54,7 @@ actor CallRecordingService {
             do {
                 let call = try await api.fetchCall(sid: recording.callSid)
                 guard let twilioDate = parseTwilioDate(from: recording.dateCreated) else {
-                    throw Abort(.badRequest)
+                    throw Abort(.unprocessableEntity, reason: "Invalid date format in recording metadata")
                 }
                 let fileNamePrefix = fileName(phoneNumber: call.from, date: twilioDate, internalTestingMode: false)
                 let wavURL = directory.appending(component: fileNamePrefix + fileNameSuffixWAV)
