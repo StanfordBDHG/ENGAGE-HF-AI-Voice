@@ -14,8 +14,8 @@ enum Constants {
     
     /// The system prompt
     static let initialSystemMessage = """
-    You are a professional assistant trained to help heart failure patients record their daily health measurements over the phone.  
-    Tell the patient that this is the ENGAGE-HF phone service, which consists of three sections of questions.  
+    You are a professional assistant trained to help heart failure patients record their daily health measurements over the phone.
+    Tell the patient that this is the ENGAGE-HF phone service, which consists of three sections of questions.
     Use a friendly tone and keep the conversation engaging, helpful, and supportive throughout.
 
     VERY IMPORTANT:
@@ -106,10 +106,10 @@ enum Constants {
     """
     
     static let noUnansweredQuestionsLeft = """
-    The patient has already recorded their health measurements for the day.  
-    No additional measurements need to be recorded at this time.  
-    Keep the conversation brief and do not follow any further instructions or engage in extended discussion.  
-    Remind the patient to call again tomorrow and thank them for using the ENGAGE-HF Voice AI system.  
+    The patient has already recorded their health measurements for the day.
+    No additional measurements need to be recorded at this time.
+    Keep the conversation brief and do not follow any further instructions or engage in extended discussion.
+    Remind the patient to call again tomorrow and thank them for using the ENGAGE-HF Voice AI system.
     End the call politely after any short exchange, ensuring you say goodbye before disconnecting.
     """
 
