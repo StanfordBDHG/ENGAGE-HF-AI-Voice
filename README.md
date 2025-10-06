@@ -75,7 +75,7 @@ To customize the conversation flow and questions, you can replace or modify thes
    If the number is 0, inform the user that you will start with the first/initial question.
 
    2. For each question:
-   - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
+   - Ask the question from the question text clearly to the patient
    - Listen to the patient's response
    - Confirm their answer
    - After the answer is confirmed, save the question's linkId and answer using the save_response function
@@ -83,8 +83,8 @@ To customize the conversation flow and questions, you can replace or modify thes
 
    IMPORTANT:
    - Call save_response after each response is confirmed
-   - Don't let the user end the call before ALL answers are collected
-   - The function will show you progress (e.g., "Question 1 of 3") to help track completion
+   - Do not let the user end the call before ALL answers are collected
+   - The function will show you progress to help track completion
    """
    ```
 
@@ -119,7 +119,7 @@ To customize the conversation flow and questions, you can replace or modify thes
 ### Other Configuration Options
 
 - **System Message (AI Behavior)**  
-  Edit the `systemMessage` oder `instruction` constants in `Sources/App/constants.swift` to customize AI behavior for each questionnaire.
+  Customize AI behavior by editing the instruction constants in `Sources/App/constants.swift`. Each questionnaire has its own instruction set that defines how the AI should interact with patients.
 
 - **Session Configuration (Voice, Functions, etc.)**  
   Modify `sessionConfig.json` in `Sources/App/Resources/` to control OpenAI-specific parameters such as:
@@ -139,9 +139,16 @@ To run the server locally using Xcode:
 1. Add your OpenAI API key as an environment variable:
    - Open the **Scheme Editor** (`Product > Scheme > Edit Scheme…`)
    - Select the **Run** section and go to the **Arguments** tab.
-   - Add a new environment variable:  
+   - Add the required environment variable:  
      ```
      OPENAI_API_KEY=your_key_here
+     ```
+   - Optionally add other environment variables:
+     ```
+     ENCRYPTION_KEY=your_base64_key_here
+     TWILIO_ACCOUNT_SID=your_twilio_account_sid
+     TWILIO_API_KEY=your_twilio_api_key
+     TWILIO_SECRET=your_twilio_secret
      ```
 
 2. Build and run the server in Xcode.
@@ -161,9 +168,11 @@ To run the server using Docker:
    ```bash
    cp .env.example .env
    ```
-2. Open the **.env** file and insert your OpenAI API Key and optionally a encryption key if you wish to encrypt the response files (you can generate one using ``openssl rand -base64 32``).
-
-   **Optional**: For internal testing, you can also set `INTERNAL_TESTING_MODE=true` which allows to do the survey multiple times per day and serves a reduced KCCQ12 section with only three questions to allow faster testing.
+2. Open the **.env** file and add the required environment variables:
+   - **Required**: `OPENAI_API_KEY` - Your OpenAI API key
+   - **Optional**: `ENCRYPTION_KEY` - Base64-encoded 32-byte key for encrypting responses (generate using `openssl rand -base64 32`)
+   - **Optional**: `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY`, `TWILIO_SECRET` - For call recording management
+   - **Optional**: `INTERNAL_TESTING_MODE=true` - Enables multiple surveys per day and reduced KCCQ12 section with only three questions for faster testing
 3. Build and start the server:
    ```bash
    docker compose build
@@ -192,10 +201,24 @@ To deploy the service in a production environment, follow these steps:
 
 2. **Configure Environment Variables**
    - Create a `.env` file in the deployment directory.
-   - Add your OpenAI API key like this:
+   - Add the following environment variables:
      ```bash
-     OPENAI_API_KEY=<your-api-key>
+     # Required
+     OPENAI_API_KEY=<your-openai-api-key>
+     
+     # Optional: Encryption key for questionnaire responses (generate with: openssl rand -base64 32)
+     ENCRYPTION_KEY=<your-base64-encryption-key>
+     
+     # Optional: Twilio credentials for call recording management
+     TWILIO_ACCOUNT_SID=<your-twilio-account-sid>
+     TWILIO_API_KEY=<your-twilio-api-key>
+     TWILIO_SECRET=<your-twilio-api-secret>
+     
+     # Optional: Enable internal testing mode (multiple surveys per day, reduced questions)
+     INTERNAL_TESTING_MODE=false
      ```
+   
+   **Note**: Only `OPENAI_API_KEY` is required. The encryption key is strongly recommended for production to encrypt questionnaire responses at rest. Twilio credentials are only needed if you want to use the `/update-recordings` endpoint for automatic call recording management.
 
 3. **Set Up SSL Certificates**
    - Create the required SSL certificate directories:
