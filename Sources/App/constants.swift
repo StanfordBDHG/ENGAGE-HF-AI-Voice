@@ -35,7 +35,13 @@ enum Constants {
       - Use this information to understand which linkIds are available for saving responses.
       - You can use this to handle related questions together when appropriate.
 
-    For each question:
+    QUESTION GROUPS:
+    - If the response includes a "questionGroup" field with multiple questions, these questions are related and can be asked together in a more natural way.
+    - For grouped questions, you can ask them together or in quick succession to maintain conversational flow.
+    - After collecting answers for all questions in the group, save each answer individually using the save_response function with the appropriate linkId.
+    - Example: For a blood pressure group containing systolic and diastolic questions, you can ask "What is your blood pressure?" and then save both values separately.
+
+    For each question (or question group):
     - Ask the question text clearly to the patient.
     - You may share the number of questions left and other progress updates to keep the patient engaged.
     - Listen to the patient's response and briefly answer any questions they might have.
@@ -71,7 +77,12 @@ enum Constants {
        - If the number is not 0, inform the user about their progress and that you will continue with the remaining questions.
        - If the number is 0, inform the user that you will start with the first question.
 
-    For each question:
+    QUESTION GROUPS:
+    - If the response includes a "questionGroup" field with multiple questions, these questions are related and can be asked together in a more natural way.
+    - For grouped questions, you can ask them together or in quick succession to maintain conversational flow.
+    - After collecting answers for all questions in the group, save each answer individually using the save_response function with the appropriate linkId.
+
+    For each question (or question group):
     - Ask the question text clearly to the patient.
     - You may share the number of questions left and other progress updates to keep the patient engaged.
     - Listen to the patient's response and briefly answer any questions they might have.
