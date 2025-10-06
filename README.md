@@ -23,6 +23,9 @@ SPDX-License-Identifier: MIT
 - **Conversational AI on FHIR Questionnaires**  
   Configures ChatGPT-4o to conduct voice conversations based on FHIR Questionnaires and records user responses in FHIR format on disk (encrypted on rest).
 
+- **Group-Based Question Flow**  
+  Supports FHIR `group` structures to enable more natural conversation flow. The AI can recognize related questions (e.g., blood pressure measurements) and collect them together rather than strictly one-by-one, creating a more natural dialogue.
+
 - **Customizable Conversation Flow**  
   Configure the voice assistant with multiple questionnaires, custom system prompts, and flexible session settings to tailor the conversation flow and data handling.
 
@@ -59,6 +62,35 @@ To customize the conversation flow and questions, you can replace or modify thes
 
 2. **Add your FHIR R4 questionnaire JSON file** to `Sources/App/Resources/` (e.g., `yourQuestionnaire.json`)
 
+   **Using Question Groups for Natural Conversation Flow:**
+   
+   You can use FHIR `group` items to indicate that questions are related and should be handled together. The AI will recognize these groups and ask related questions in a more conversational manner.
+   
+   Example:
+   ```json
+   {
+     "linkId": "blood-pressure-group",
+     "type": "group",
+     "text": "Blood Pressure",
+     "item": [
+       {
+         "linkId": "systolic",
+         "type": "integer",
+         "text": "Systolic Blood Pressure (mmHg)",
+         "required": true
+       },
+       {
+         "linkId": "diastolic",
+         "type": "integer",
+         "text": "Diastolic Blood Pressure (mmHg)",
+         "required": true
+       }
+     ]
+   }
+   ```
+   
+   When the AI encounters a group with multiple unanswered questions, it receives the entire group context and can naturally ask "What is your blood pressure?" and then save both systolic and diastolic values separately.
+
 3. **Add the directory path** to `Sources/App/constants.swift`:
    ```swift
    static let yourQuestionnaireDirectoryPath = "\(dataDirectory)/yourQuestionnaire/"
@@ -74,7 +106,12 @@ To customize the conversation flow and questions, you can replace or modify thes
    If the number is not 0, inform the user about the progress and that you will continue with the remaining questions.
    If the number is 0, inform the user that you will start with the first/initial question.
 
-   2. For each question:
+   QUESTION GROUPS:
+   - If the response includes a "questionGroup" field with multiple questions, these questions are related and can be asked together in a more natural way.
+   - For grouped questions, you can ask them together or in quick succession to maintain conversational flow.
+   - After collecting answers for all questions in the group, save each answer individually using the save_response function with the appropriate linkId.
+
+   2. For each question (or question group):
    - Ask the question from the question text clearly to the patient, start by reading the current progress, then read the question
    - Listen to the patient's response
    - Confirm their answer
