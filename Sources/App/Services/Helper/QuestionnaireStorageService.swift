@@ -143,17 +143,22 @@ class QuestionnaireStorageService: Sendable {
 
     /// Hash the phone number for file naming (includes date for daily rotation)
     private func hashPhoneNumber(_ phoneNumber: String) -> String {
+        fileName(phoneNumber: phoneNumber, date: dateTimeCreated, internalTestingMode: featureFlags.internalTestingMode)
+    }
+}
+
+func fileName(phoneNumber: String, date: Date, internalTestingMode: Bool) -> String {
 #if DEBUG
         return "1"
 #else
         let formatter = DateFormatter()
-        if featureFlags.internalTestingMode {
+        if internalTestingMode {
             // For internal testing, allow for multiple responses per day by including timestamp
             formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
         } else {
             formatter.dateFormat = "yyyy-MM-dd"
         }
-        let today = formatter.string(from: dateTimeCreated)
+        let today = formatter.string(from: date)
         let combinedString = phoneNumber + today
         
         // swiftlint:disable:next force_unwrapping
@@ -161,5 +166,4 @@ class QuestionnaireStorageService: Sendable {
         let hash = SHA256.hash(data: data)
         return hash.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
 #endif
-    }
 }
