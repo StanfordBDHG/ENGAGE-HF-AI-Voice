@@ -56,6 +56,8 @@ actor CallSession {
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
             throw Abort(.internalServerError, reason: "Failed to encode JSON")
         }
+        let uuid = UUID().uuidString
+        logger.info("\(uuid): Sending \(jsonString)")
         try await webSocket.send(jsonString)
     }
     
@@ -215,7 +217,7 @@ actor CallSession {
     ) async throws {
         if let nextService = await serviceState.next(),
            let initialQuestion = await nextService.getNextQuestion(includeAllQuestions: true),
-           let systemMessage = Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {
+           let systemMessage = await Constants.getSystemMessageForService(nextService, initialQuestion: initialQuestion) {
             try await handleNextServiceAvailable(
                 nextService: nextService,
                 initialQuestion: initialQuestion,

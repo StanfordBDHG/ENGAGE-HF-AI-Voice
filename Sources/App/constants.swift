@@ -27,13 +27,11 @@ enum Constants {
     Section 1 of 3: Vital Signs
     
     Instructions:
-    - Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
-      - If the number is not 0, inform the user about their progress and that you will continue with the remaining questions.
-      - If the number is 0, inform the user that you will start with the first question.
-    - Always pronounce units in their long form, e.g., say "Millimeters of Mercury" for "mmHg".
     - When you receive the initial question, it will include an "allQuestions" field listing all questions in this section.
       - Use this information to understand which linkIds are available for saving responses.
       - You can use this to handle related questions together when appropriate.
+    - Always pronounce units in their long form, e.g., say "Millimeters of Mercury" for "mmHg".
+    - The patient has already answered {{ANSWERED_QUESTION_COUNT}} questions in this section.
 
     For each question:
     - Ask the question text clearly to the patient.
@@ -67,9 +65,7 @@ enum Constants {
     
     Instructions:
     - Inform the patient you need to ask some questions about how their heart failure affects their life.
-    - Before you start, use the count_answered_questions function to count the number of questions that have already been answered.
-       - If the number is not 0, inform the user about their progress and that you will continue with the remaining questions.
-       - If the number is 0, inform the user that you will start with the first question.
+    - The patient has already answered {{ANSWERED_QUESTION_COUNT}} questions in this section.
 
     For each question:
     - Ask the question text clearly to the patient.
@@ -91,7 +87,8 @@ enum Constants {
     
     Instructions:
     - Inform the patient you need to ask one final question.
-    
+    - The patient has already answered {{ANSWERED_QUESTION_COUNT}} questions in this section.
+
     For each question:
     - Inform the patient you need to ask one last question.
     - Listen to the patient's response and briefly answer any questions they might have.
@@ -168,14 +165,18 @@ enum Constants {
     }
     
     /// Get the system message for the service including the initial question
-    static func getSystemMessageForService(_ service: any QuestionnaireService, initialQuestion: String?) -> String? {
+    static func getSystemMessageForService(_ service: any QuestionnaireService, initialQuestion: String?) async -> String? {
+        let answeredQuestionCount = await service.countAnsweredQuestions()
         switch service {
         case is VitalSignsService:
-            return vitalSignsInstructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            return vitalSignsInstructions.replacingOccurrences(of: "{{ANSWERED_QUESTION_COUNT}}", with: answeredQuestionCount.description)
+                + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is KCCQ12Service:
-            return kccq12Instructions + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            return kccq12Instructions.replacingOccurrences(of: "{{ANSWERED_QUESTION_COUNT}}", with: answeredQuestionCount.description)
+                + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is Q17Service:
-            return q17Instructions + (initialQuestion.map { "Final Question: \($0)" } ?? "")
+            return q17Instructions.replacingOccurrences(of: "{{ANSWERED_QUESTION_COUNT}}", with: answeredQuestionCount.description)
+                + (initialQuestion.map { "Final Question: \($0)" } ?? "")
         default:
             return nil
         }

@@ -178,6 +178,7 @@ actor CallHandler {
     }
     
     private func updateCallRecordings() async {
+        #if !DEBUG
         guard let twilioAccountSid,
               let twilioAPIKey,
               let twilioSecret else {
@@ -199,5 +200,6 @@ actor CallHandler {
         } catch {
             logger.error("Failed to update newest recordings: \(error)")
         }
+        #endif
     }
 }
