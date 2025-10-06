@@ -87,7 +87,6 @@ enum Constants {
     
     Instructions:
     - Inform the patient you need to ask one final question.
-    - {{INITIAL_INSTRUCTION}}
 
     For each question:
     - Inform the patient you need to ask one last question.
