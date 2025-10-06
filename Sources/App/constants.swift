@@ -108,11 +108,13 @@ enum Constants {
     """
     
     static let noUnansweredQuestionsLeft = """
+    This is a repeated call from the patient.
+
     The patient has already recorded their health measurements for the day.
     No additional measurements need to be recorded at this time.
-    Keep the conversation brief and do not follow any further instructions or engage in extended discussion.
-    Remind the patient to call again tomorrow and thank them for using the ENGAGE-HF Voice AI system.
-    End the call politely after any short exchange, ensuring you say goodbye before disconnecting.
+
+    Please repeat the feedback to the patient and follow the instructions provided with it.
+    Keep the conversation brief and do not follow any additional instructions or engage in extended discussion.
     """
 
     /// Directory paths for different questionnaire types
@@ -156,10 +158,11 @@ enum Constants {
         
         Also, make sure to inform them of their symptom score value.
 
-        Afterward, thank the patient for their time and let them know they can now end the call.
+        Remind the patient that they can call the ENGAGE-HF Voice AI system again tomorrow.
+        After the reminder, thank the patient for their time and let them know they can now end the call.
 
         IMPORTANT:
-        - Never end the call before you didn't allow the user to ask follow-up questions about the feedback.
+        - Never end the call before you didn't allow the patient to ask follow-up questions about the feedback.
         - Do not provide any medical advice; refer them to their clinician if needed.
         - You may call the `end_call` function after the patient says goodbye and the patient finished the conversation.
         - Always say goodbye and acknowledge the end of the call before calling the `end_call` function.
