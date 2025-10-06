@@ -63,7 +63,7 @@
         {
             "type": "function",
             "name": "end_call",
-            "description": "End the conversation with the patient by effectively hanging up the phone.",
+            "description": "End the conversation with the patient by hanging up the phone. This function immediately disconnects the call, so call it only after you have finished speaking and all audio output has been played. Use it only when the system is in a mode where the user could respond.",
             "parameters": {
                 "type": "object",
                 "properties": {}
