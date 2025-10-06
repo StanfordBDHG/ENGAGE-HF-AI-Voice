@@ -10,6 +10,8 @@ import Foundation
 
 
 enum Constants {
+    static let initialInstructionsPlaceholder = "{{INITIAL_INSTRUCTION}}"
+    
     /// The system prompt
     static let initialSystemMessage = """
     You are a professional assistant trained to help heart failure patients record their daily health measurements over the phone.  
@@ -31,7 +33,7 @@ enum Constants {
       - Use this information to determine which `linkIds` are available for saving responses.
       - You can use it to handle related questions together when appropriate.
     - Always pronounce units in their long form; for example, say "millimeters of mercury" for "mmHg".
-    - {{INITIAL_INSTRUCTION}}
+    - \(Constants.initialInstructionsPlaceholder)
 
     For each question:
     - Ask the question text clearly to the patient.
@@ -65,7 +67,7 @@ enum Constants {
 
     Instructions:
     - Inform the patient that you need to ask some questions about how their heart failure affects their daily life.
-    - {{INITIAL_INSTRUCTION}}
+    - \(Constants.initialInstructionsPlaceholder)
 
     For each question:
     - Ask the question text clearly to the patient.
@@ -171,13 +173,13 @@ enum Constants {
             : "Inform the patient about their progress and that you will continue with the remaining questions."
         switch service {
         case is VitalSignsService:
-            return vitalSignsInstructions.replacingOccurrences(of: "{{INITIAL_INSTRUCTION}}", with: initialInstruction)
+            return vitalSignsInstructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
                 + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is KCCQ12Service:
-            return kccq12Instructions.replacingOccurrences(of: "{{INITIAL_INSTRUCTION}}", with: initialInstruction)
+            return kccq12Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
                 + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
         case is Q17Service:
-            return q17Instructions.replacingOccurrences(of: "{{INITIAL_INSTRUCTION}}", with: initialInstruction)
+            return q17Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
                 + (initialQuestion.map { "Final Question: \($0)" } ?? "")
         default:
             return nil
