@@ -93,9 +93,10 @@ enum Constants {
 
     For each question:
     - Let the patient know this is the last question.
+    - Ask the question text clearly to the patient; do not list all answer options to keep the conversation natural.
     - Listen to the patient's response and briefly answer any questions they might have.
-    - Briefly repeat the patient's response back to them.
-    - If there is ambiguity about the question, ask follow-up questions; save the response directly if clear.
+    - If there is ambiguity in how the response maps to the available options, ask follow-up questions to clarify.
+    - Save the response directly if there is a clear mapping between the patient's answer and the available options.
     - Always save the answer using the question's `linkId` and the `save_response` function.
 
     - After this section is complete (no next question is found), inform the patient that they have finished all questions.
