@@ -100,6 +100,7 @@ actor CallHandler {
         }
     }
     
+    // swiftlint:disable:next function_body_length
     func openWebsocket() async throws {
         do {
             try await WebSocket.connect(
@@ -113,13 +114,6 @@ actor CallHandler {
                     webSocket: webSocket,
                     logger: logger
                 )
-                do {
-                    try await session.sendJSON([
-                        "type": "response.create"
-                    ])
-                } catch {
-                    logger.error("Couldn't send initial message to OpenAI \(error)")
-                }
                 // Handle incoming messages from OpenAI
                 webSocket.onText { _, text async in
                     await session.handleMessage(text)
@@ -139,6 +133,17 @@ actor CallHandler {
                         } catch {
                             logger.error("Failed to hang up: \(error)")
                         }
+                    }
+                }
+
+                Task {
+                    try? await Task.sleep(for: .seconds(1))
+                    do {
+                        try await session.sendJSON([
+                            "type": "response.create"
+                        ])
+                    } catch {
+                        logger.error("Couldn't send initial message to OpenAI \(error)")
                     }
                 }
             }
@@ -178,6 +183,7 @@ actor CallHandler {
     }
     
     private func updateCallRecordings() async {
+        #if !DEBUG
         guard let twilioAccountSid,
               let twilioAPIKey,
               let twilioSecret else {
@@ -199,5 +205,6 @@ actor CallHandler {
         } catch {
             logger.error("Failed to update newest recordings: \(error)")
         }
+        #endif
     }
 }

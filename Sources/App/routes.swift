@@ -9,6 +9,7 @@
 import Foundation
 import Vapor
 
+
 func routes(_ app: Application) throws {
     app.get("health") { _ -> HTTPStatus in
             .ok
@@ -44,23 +45,21 @@ func routes(_ app: Application) throws {
             return Response(status: .badRequest)
         }
         
-        Task<Void, Never> {
+        do {
             let logger = app.logger
+            let event = try JSONDecoder().decode(OpenAICAllIncomingEvent.self, from: body)
+            let callId = event.data.callId
+            let phoneNumber = extractPhoneNumberFromSIPHeaders(event.data.sipHeaders) ?? ""
             
-            do {
-                let event = try JSONDecoder().decode(OpenAICAllIncomingEvent.self, from: body)
-                let callId = event.data.callId
-                let phoneNumber = extractPhoneNumberFromSIPHeaders(event.data.sipHeaders) ?? ""
-                
-                logger.info("About to create session handler for call \"\(callId)\" from \"\(phoneNumber)\"")
-                let handler = await CallHandler(callId: callId, phoneNumber: phoneNumber, app: app)
-                logger.info("About to accept call \"\(callId)\" from \"\(phoneNumber)\".")
-                try await handler.accept()
-                logger.info("About to open websocket for call \"\(callId)\" from \"\(phoneNumber)\".")
-                try await handler.openWebsocket()
-            } catch {
-                logger.error("Call task failed: \(error)")
-            }
+            logger.info("About to create session handler for call \"\(callId)\" from \"\(phoneNumber)\"")
+            let handler = await CallHandler(callId: callId, phoneNumber: phoneNumber, app: app)
+            logger.info("About to accept call \"\(callId)\" from \"\(phoneNumber)\".")
+            try await handler.accept()
+            logger.info("About to open websocket for call \"\(callId)\" from \"\(phoneNumber)\".")
+            try await handler.openWebsocket()
+        } catch {
+            req.logger.error("Failed to accept call: \(error)")
+            return Response(status: .internalServerError)
         }
         
         return Response(status: .ok)
