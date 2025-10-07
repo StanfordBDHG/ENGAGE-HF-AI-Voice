@@ -82,8 +82,6 @@ actor TwilioAPI {
         guard let responseBody = response.body else {
             throw Abort(.badRequest, reason: "Twilio response body was nil")
         }
-        var stringBody = responseBody
-        print(stringBody.readString(length: stringBody.readableBytes) ?? "")
         let body = try decoder.decode(TwilioRecordingList.self, from: responseBody)
         return body.recordings
     }
