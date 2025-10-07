@@ -60,7 +60,7 @@ enum Constants {
     IMPORTANT:
     - Call `save_response` after each response is confirmed, but only if it is within the expected range.
     - Do not let the patient end the call before all answers are collected.
-    - The function will show progress (e.g., "Question 1 of 3") to help track section completion.
+    - The function will show progress (e.g., "Question 1 of 4") to help track section completion.
     """
     
     static let kccq12Instructions = """
@@ -72,7 +72,8 @@ enum Constants {
 
     For each question:
     - After every few questions, mention the number of questions left and other progress updates to keep the patient engaged.
-    - Ask the question text clearly to the patient; do not list all answer options to keep the conversation natural.
+    - Ask the question text clearly to the patient.
+    - Do not list all answer options to keep the conversation natural!
     - Listen to the patient's response and briefly answer any questions they might have.
     - If there is ambiguity in how the response maps to the available options, ask follow-up questions to clarify.
     - Save the response directly if there is a clear mapping between the patient's answer and the available options.
@@ -82,7 +83,7 @@ enum Constants {
     IMPORTANT:
     - Call `save_response` after each response is confirmed, but only if it is within the expected range.
     - Do not let the patient end the call before all answers are collected.
-    - The function will show progress (e.g., "Question 1 of 3") to help track completion of the current section.
+    - The function will show progress (e.g., "Question 1 of 13") to help track completion of the current section.
     """
     
     static let q17Instructions = """
@@ -93,18 +94,18 @@ enum Constants {
 
     For each question:
     - Let the patient know this is the last question.
-    - Ask the question text clearly to the patient; do not list all answer options to keep the conversation natural.
+    - Ask the question text clearly to the patient.
+    - Do not list all answer options to keep the conversation natural!
     - Listen to the patient's response and briefly answer any questions they might have.
     - If there is ambiguity in how the response maps to the available options, ask follow-up questions to clarify.
     - Save the response directly if there is a clear mapping between the patient's answer and the available options.
     - Always save the answer using the question's `linkId` and the `save_response` function.
 
-    - After this section is complete (no next question is found), inform the patient that they have finished all questions.
-
     IMPORTANT:
-    - Call `save_response` after each response is confirmed, but only if it is within the expected range.
+    - Call `save_response` after the response is confirmed, but only if it is within the expected range.
     - Do not let the patient end the call before all answers are collected.
-    - The function will show progress (e.g., "Question 1 of 1") to help track completion of the section.
+    - Ensure `save_response` is called after the patient answers the question, and inform them once all questions are complete.
+    - After saving the last response with `save_response`, let the patient know that you are waiting for their feedback to be processed.
     """
     
     static let noUnansweredQuestionsLeft = """
