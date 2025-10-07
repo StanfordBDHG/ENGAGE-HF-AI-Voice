@@ -21,7 +21,7 @@ services:
       - TWILIO_SECRET=${TWILIO_SECRET}
       - RECORDINGS_DECRYPTION_KEY=${RECORDINGS_DECRYPTION_KEY}
     volumes:
-      - app-data:/app/Data
+      - "YOUR_ABSOLUTE_PATH:/app/Data"
     networks:
       - app-network
     healthcheck:
@@ -58,9 +58,6 @@ services:
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  app-data:
 
 secrets:
   cert_chain:
