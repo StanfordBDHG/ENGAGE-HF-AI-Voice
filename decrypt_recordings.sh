@@ -28,7 +28,7 @@ fi
 
 ENCRYPTION_KEY=$(awk '{printf "%s\\n", $0}' "$1")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DECRYPTED_DIR="$SCRIPT_DIR/decrypted"
+DECRYPTED_DIR="$(dirname "$SCRIPT_DIR")/Decrypted Sessions"
 
 # Check if Python3 and cryptography are available
 if ! command -v python3 &> /dev/null; then

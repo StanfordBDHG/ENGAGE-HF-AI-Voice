@@ -20,7 +20,7 @@ services:
       - TWILIO_API_KEY=${TWILIO_API_KEY}
       - TWILIO_SECRET=${TWILIO_SECRET}
     volumes:
-      - app-data:/app/Data
+      - "YOUR_ABSOLUTE_PATH:/app/Data"
     networks:
       - app-network
     healthcheck:
@@ -29,6 +29,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    secrets:
+      - twiliorecording_key
 
   nginx:
     image: nginx:alpine
@@ -52,17 +54,16 @@ services:
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --cleanup=true
+    command: --cleanup=true --interval 60
 
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  app-data:
 
 secrets:
   cert_chain:
     file: ./certs/certificate.pem
   priv_key:
     file: ./private/private.key
+  twiliorecording_key:
+    file: ./private/twiliorecording.key

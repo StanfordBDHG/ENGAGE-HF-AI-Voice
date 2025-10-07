@@ -1,3 +1,5 @@
+#!/bin/bash
+# 
 #
 # This source file is part of the ENGAGE-HF-AI-Voice open source project
 #
@@ -7,8 +9,6 @@
 #
 # SPDX-License-Identifier: MIT
 # 
-
-#!/bin/bash
 
 # Script to decrypt AES-GCM encrypted JSON files
 # Usage: ./decrypt_files.sh <base64_encryption_key>
@@ -24,7 +24,7 @@ fi
 
 ENCRYPTION_KEY="$1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DECRYPTED_DIR="$SCRIPT_DIR/decrypted"
+DECRYPTED_DIR="$(dirname "$SCRIPT_DIR")/Decrypted Sessions"
 
 # Source folders to process
 FOLDERS=("vital_signs" "kccq12_questionnairs" "q17")

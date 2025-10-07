@@ -192,9 +192,15 @@ To deploy the service in a production environment, follow these steps:
 
 2. **Configure Environment Variables**
    - Create a `.env` file in the deployment directory.
-   - Add your OpenAI API key like this:
+   - Obtain all the relevant secrets for the deployment:
+      - `OPENAI_API_KEY`: ...
+   - Add your secrets:
      ```bash
      OPENAI_API_KEY=<your-api-key>
+     ENCRYPTION_KEY=<your-base64-encryption-key>
+     TWILIO_ACCOUNT_SID=<your-twilio-account-sid>
+     TWILIO_API_KEY=<your-twilio-api-key>
+     TWILIO_SECRET=<your-twilio-secret>
      ```
 
 3. **Set Up SSL Certificates**
@@ -205,11 +211,12 @@ To deploy the service in a production environment, follow these steps:
      ```
    - Add your SSL certificates:
      - Place your certificate file which requires a full certificate chain (e.g., `certificate.pem`) in `./certs`.
-     - Place your private key file (e.g., `private.key`) in `./private`.
+     - Place your private key files (e.g., `private.key` (SSL key), `twiliorecording.key` (Twilio decryption key)) in `./private`.
    - Ensure proper permissions:
      ```bash
      sudo chmod 644 ./certs/certificate.pem
      sudo chmod 640 ./private/private.key
+     sudo chmod 640 ./private/twiliorecording.key
      ```
 
 3.1. **Update the Docker Compose file**
@@ -220,6 +227,8 @@ To deploy the service in a production environment, follow these steps:
        file: ./certs/certificate.pem
      priv_key:
        file: ./private/private.key
+     twiliorecording_key:
+       file: ./private/twiliorecording.key
    ```
 
 4. **Adjust the App Data Volume**
@@ -231,7 +240,7 @@ If you want data on the host, mount a host directory instead.
   services:
     app:
       volumes:
-        - "/Users/exampleuser/yourfolder:/app/data"
+        - "YOUR_ABSOLUTE_PATH:/app/data"
   ```
 
   Then you can delete named volume at the bottom section of the docker compose file.
