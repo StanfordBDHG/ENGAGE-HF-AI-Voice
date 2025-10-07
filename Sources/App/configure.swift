@@ -53,6 +53,7 @@ public func configure(_ app: Application) async throws {
     // Store keys in application storage for access in routes
     app.storage[OpenAIKeyStorageKey.self] = openAIKey
     app.storage[EncryptionKeyStorageKey.self] = encryptionKey
+    app.storage[RecordingsDecryptionKeyStorageKey.self] = Environment.get("RECORDINGS_DECRYPTION_KEY")
     
     app.storage[TwilioAccountSidStorageKey.self] = Environment.get("TWILIO_ACCOUNT_SID")
     app.storage[TwilioAPIKeyStorageKey.self] = Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")

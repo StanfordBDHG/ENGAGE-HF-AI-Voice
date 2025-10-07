@@ -8,8 +8,13 @@
 
 import Vapor
 
+// swiftlint:disable file_types_order
 
 // Storage key for encryption key
 struct EncryptionKeyStorageKey: StorageKey {
+    typealias Value = String
+}
+
+struct RecordingsDecryptionKeyStorageKey: StorageKey {
     typealias Value = String
 }

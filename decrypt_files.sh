@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # This source file is part of the ENGAGE-HF-AI-Voice open source project
 #
@@ -6,9 +7,7 @@
 # This file is based on the Vapor template found at https://github.com/vapor/template
 #
 # SPDX-License-Identifier: MIT
-# 
-
-#!/bin/bash
+#
 
 # Script to decrypt AES-GCM encrypted JSON files
 # Usage: ./decrypt_files.sh <base64_encryption_key>
@@ -27,7 +26,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DECRYPTED_DIR="$SCRIPT_DIR/decrypted"
 
 # Source folders to process
-FOLDERS=("vital_signs" "kccq12_questionnairs" "q17")
+FOLDERS=("vital_signs" "kccq12_questionnairs" "q17" "recordings")
 
 # Check if Python3 and cryptography are available
 if ! command -v python3 &> /dev/null; then
@@ -82,8 +81,8 @@ try:
     decrypted = aesgcm.decrypt(nonce, ciphertext_and_tag, None)
     
     # Write decrypted content to output file
-    with open('$output_file', 'w', encoding='utf-8') as f:
-        f.write(decrypted.decode('utf-8'))
+    with open('$output_file', 'wb') as f:
+        f.write(decrypted)
     
     print('Successfully decrypted: $input_file')
     
@@ -136,7 +135,7 @@ for folder in "${FOLDERS[@]}"; do
             failed_files=$((failed_files + 1))
         fi
         
-    done < <(find "$source_folder" -name "*.json" -type f -print0)
+    done < <(find "$source_folder" \( -name "*.json" -o -name "*.wav" \) -type f -print0)
 done
 
 echo ""
