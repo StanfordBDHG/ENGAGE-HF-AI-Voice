@@ -86,7 +86,7 @@ actor CallRecordingService {
                                         
         let decryptedMediaData = try recording.encryptionDetails.map { encryptionDetails in
             guard let decryptor else {
-                throw Abort(.badRequest, reason: "Decryptor is missing for storing encrypted recording")
+                throw Abort(.badRequest, reason: "Decryptor is missing for encrypted recording")
             }
             return try decryptor.decrypt(
                 mediaData,
