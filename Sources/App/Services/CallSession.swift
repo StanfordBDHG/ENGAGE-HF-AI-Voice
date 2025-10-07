@@ -86,7 +86,7 @@ actor CallSession {
         case "count_answered_questions":
             try await countAnsweredQuestions(service: currentService, response: response)
         case "end_call":
-            try await webSocket.close()
+            #warning("Closing the web socket is currently disabled due to https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/issues/45")
         default:
             logger.error("Unknown function call: \(String(describing: response.name))")
         }
