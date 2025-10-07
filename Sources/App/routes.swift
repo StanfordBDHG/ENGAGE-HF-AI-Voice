@@ -31,7 +31,7 @@ func routes(_ app: Application) throws {
                 httpClient: app.http.client.shared
             )
             
-            let recordingService = await CallRecordingService(
+            let recordingService = CallRecordingService(
                 api: twilioAPI,
                 decryptionKey: app.storage[RecordingsDecryptionKeyStorageKey.self],
                 encryptionKey: app.storage[EncryptionKeyStorageKey.self],

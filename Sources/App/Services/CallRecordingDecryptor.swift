@@ -1,13 +1,15 @@
 //
-//  CallRecordingDecryptor.swift
-//  ENGAGE-HF-AI-Voice
+// This source file is part of the ENGAGE-HF-AI-Voice open source project
 //
-//  Created by Paul Kraft on 07.10.2025.
+// SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
+//
+// SPDX-License-Identifier: MIT
 //
 
 import CryptoKit
 import Foundation
 import Security
+
 
 enum CallRecordingDecryptionError: Error {
     case invalidInput
@@ -16,18 +18,12 @@ enum CallRecordingDecryptionError: Error {
 }
 
 class CallRecordingDecryptor {
-    // MARK: Stored Properties
-    
     let privateKey: SecKey
-    
-    // MARK: Initialization
-    
+        
     init(privateKey: SecKey) {
         self.privateKey = privateKey
     }
-    
-    // MARK: Methods
-    
+        
     func decrypt(_ data: Data, initialVector: String, encryptedCEK: String) throws -> Data {
         guard let ivData = Data(base64Encoded: initialVector),
               let encryptedCEKData = Data(base64Encoded: encryptedCEK) else {

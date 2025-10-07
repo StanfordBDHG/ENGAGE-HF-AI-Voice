@@ -9,6 +9,7 @@
 import Foundation
 import Security
 
+
 enum SecKeyError: Error {
     case invalidBase64Data
     case unableToCreate

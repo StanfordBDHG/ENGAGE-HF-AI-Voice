@@ -23,8 +23,7 @@ private struct CallRecordingMetadata: Encodable {
     let trunkSid: String?
 }
 
-@MainActor
-class CallRecordingService: Sendable {
+actor CallRecordingService {
     let api: TwilioAPI
     let decryptor: CallRecordingDecryptor?
     let encryptor: EncryptionService?

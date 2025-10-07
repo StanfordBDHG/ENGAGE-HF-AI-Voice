@@ -10,8 +10,6 @@ import Foundation
 import Vapor
 
 actor CallHandler {
-    // MARK: Stored Properties
-    
     let callId: String
     let phoneNumber: String
     let openAIKey: String
@@ -26,9 +24,7 @@ actor CallHandler {
     let httpClient: HTTPClient
     let logger: Logger
     let serviceState: ServiceState
-    
-    // MARK: Initialization
-    
+        
     init(
         callId: String,
         phoneNumber: String,
@@ -53,9 +49,7 @@ actor CallHandler {
             Q17Service(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey)
         ])
     }
-    
-    // MARK: Methods - Connection
-    
+        
     func accept() async throws {
         do {
             let systemMessage = await initialSystemMessage()
@@ -162,9 +156,7 @@ actor CallHandler {
             throw error
         }
     }
-    
-    // Methods: Helpers
-    
+        
     private func initialSystemMessage() async -> String {
         let hasUnansweredQuestions = await serviceState.initializeCurrentService()
         if !hasUnansweredQuestions {
