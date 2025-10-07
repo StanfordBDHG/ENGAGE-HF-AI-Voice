@@ -60,10 +60,11 @@ actor CallRecordingService {
         logger.info("Found \(existingFileNames.count) existing recordings")
         
         let recordings = try await api.fetchRecordings()
-        logger.info("Found \(recordings.count) recordings in Twilio")
+            .filter { $0.errorCode == nil && $0.status == "completed" }
+        logger.info("Found \(recordings.count) successful recordings in Twilio")
         
         for recording in recordings {
-            if existingFileNames.contains(where: { $0.hasSuffix(recording.sid + ".wav") }) || recording.errorCode != nil {
+            if existingFileNames.contains(where: { $0.hasSuffix(recording.sid + ".wav") }) {
                 continue
             }
                         

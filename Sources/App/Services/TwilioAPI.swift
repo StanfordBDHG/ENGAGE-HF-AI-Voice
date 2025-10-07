@@ -33,6 +33,7 @@ struct TwilioRecording: Decodable {
     let dateUpdated: String
     let duration: String?
     let errorCode: Int?
+    let status: String?
     let encryptionDetails: EncryptionDetails?
 }
 
