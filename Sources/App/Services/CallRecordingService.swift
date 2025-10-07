@@ -93,9 +93,7 @@ actor CallRecordingService {
                 initialVector: encryptionDetails.iv,
                 encryptedCEK: encryptionDetails.encryptedCek
             )
-        } ?? { () -> Data in
-            throw Abort(.badRequest)
-        }()
+        } ?? mediaData
                 
         let fileNamePrefix = fileName(phoneNumber: call.from, date: twilioDate, internalTestingMode: false)
         let wavURL = directory.appending(component: fileNamePrefix + "_" + recording.sid + ".wav")
