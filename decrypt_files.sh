@@ -23,7 +23,7 @@ fi
 
 ENCRYPTION_KEY="$1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DECRYPTED_DIR="$SCRIPT_DIR/decrypted"
+DECRYPTED_DIR="$(dirname "$SCRIPT_DIR")/Decrypted Sessions"
 
 # Source folders to process
 FOLDERS=("vital_signs" "kccq12_questionnairs" "q17" "recordings")
