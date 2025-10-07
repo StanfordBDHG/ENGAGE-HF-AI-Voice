@@ -53,7 +53,7 @@ services:
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --cleanup=true
+    command: --cleanup=true --interval 60
 
 networks:
   app-network:
