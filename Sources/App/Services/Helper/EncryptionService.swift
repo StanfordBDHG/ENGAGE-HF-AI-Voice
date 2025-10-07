@@ -15,8 +15,7 @@ enum EncryptionError: Error {
 }
 
 /// Service for encrypting questionnaire responses using symmetric encryption
-@MainActor
-class EncryptionService: Sendable {
+class EncryptionService {
     private let encryptionKey: SymmetricKey
     
     /// Initialize with a base64-encoded encryption key

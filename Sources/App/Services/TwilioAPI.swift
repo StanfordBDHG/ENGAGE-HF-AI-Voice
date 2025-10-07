@@ -10,44 +10,30 @@ import Foundation
 import Vapor
 
 struct TwilioCall: Decodable {
-    enum CodingKeys: String, CodingKey {
-        case sid
-        case from
-        case fromFormatted = "from_formatted"
-        case startTime = "start_time"
-    }
-    
     let sid: String
     let from: String
-    let fromFormatted: String
+    let to: String
     let startTime: String
+    let endTime: String
+    let duration: String?
+    let trunkSid: String?
+    let queueTime: String?
 }
 
 struct TwilioRecording: Decodable {
-    enum CodingKeys: String, CodingKey {
-        case callSid = "call_sid"
-        case dateCreated = "date_created"
-        case dateUpdated = "date_updated"
-        case duration
-        case sid
-        case encryptionDetails = "encryption_details"
-    }
-    
     struct EncryptionDetails: Decodable {
-        enum CodingKeys: String, CodingKey {
-            case encryptedCEK = "encrypted_cek"
-            case initialVector = "iv"
-        }
-        
-        let encryptedCEK: String
-        let initialVector: String
+        let encryptedCek: String
+        let iv: String // swiftlint:disable:this identifier_name
     }
     
+    let sid: String
     let callSid: String
+    let channels: Int?
     let dateCreated: String
     let dateUpdated: String
-    let duration: String
-    let sid: String
+    let duration: String?
+    let errorCode: Int?
+    let status: String?
     let encryptionDetails: EncryptionDetails?
 }
 
@@ -58,12 +44,15 @@ private struct TwilioRecordingList: Decodable {
 actor TwilioAPI {
     let baseURL: URL
     let authorizationHeaderValue: String
+    let decoder: JSONDecoder
     let httpClient: HTTPClient
     
     init(accountSid: String, apiKey: String, secret: String, httpClient: HTTPClient) throws {
         guard let baseURL = URL(string: "https://api.twilio.com/2010-04-01/Accounts/\(accountSid)") else {
             throw Abort(.badRequest)
         }
+        self.decoder = JSONDecoder()
+        self.decoder.keyDecodingStrategy = .convertFromSnakeCase
         self.baseURL = baseURL
         self.authorizationHeaderValue = "Basic " + "\(apiKey):\(secret)".base64String()
         self.httpClient = httpClient
@@ -80,8 +69,7 @@ actor TwilioAPI {
         guard let responseBody = response.body else {
             throw Abort(.badRequest, reason: "Twilio response body was nil")
         }
-        let body = try JSONDecoder().decode(TwilioCall.self, from: responseBody)
-        return body
+        return try decoder.decode(TwilioCall.self, from: responseBody)
     }
 
     func fetchRecordings() async throws -> [TwilioRecording] {
@@ -95,7 +83,7 @@ actor TwilioAPI {
         guard let responseBody = response.body else {
             throw Abort(.badRequest, reason: "Twilio response body was nil")
         }
-        let body = try JSONDecoder().decode(TwilioRecordingList.self, from: responseBody)
+        let body = try decoder.decode(TwilioRecordingList.self, from: responseBody)
         return body.recordings
     }
     
@@ -110,8 +98,7 @@ actor TwilioAPI {
         guard let responseBody = response.body else {
             throw Abort(.badRequest, reason: "Twilio response body was nil")
         }
-        let body = try JSONDecoder().decode(TwilioRecording.self, from: responseBody)
-        return body
+        return try decoder.decode(TwilioRecording.self, from: responseBody)
     }
     
     func fetchMediaFile(sid: String) async throws -> Data {

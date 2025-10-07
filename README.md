@@ -136,12 +136,18 @@ You can either run the server in Xcode or using Docker.
 
 To run the server locally using Xcode:
 
-1. Add your OpenAI API key as an environment variable:
+1. Add your environment variables:
    - Open the **Scheme Editor** (`Product > Scheme > Edit Scheme…`)
    - Select the **Run** section and go to the **Arguments** tab.
-   - Add a new environment variable:  
+   - Add new environment variables:  
      ```
-     OPENAI_API_KEY=your_key_here
+     OPENAI_API_KEY=<your-api-key>
+     ENCRYPTION_KEY=<your-base64-encryption-key>
+     RECORDINGS_DECRYPTION_KEY=<your-twilio-private-key>
+     
+     TWILIO_ACCOUNT_SID=<your-twilio-account-sid>
+     TWILIO_API_KEY=<your-twilio-api-key>
+     TWILIO_SECRET=<your-twilio-secret>
      ```
 
 2. Build and run the server in Xcode.
@@ -192,9 +198,15 @@ To deploy the service in a production environment, follow these steps:
 
 2. **Configure Environment Variables**
    - Create a `.env` file in the deployment directory.
-   - Add your OpenAI API key like this:
+   - Obtain all the relevant secrets for the deployment:
      ```bash
      OPENAI_API_KEY=<your-api-key>
+     ENCRYPTION_KEY=<your-base64-encryption-key>
+     RECORDINGS_DECRYPTION_KEY=<your-twilio-private-key>
+     
+     TWILIO_ACCOUNT_SID=<your-twilio-account-sid>
+     TWILIO_API_KEY=<your-twilio-api-key>
+     TWILIO_SECRET=<your-twilio-secret>
      ```
 
 3. **Set Up SSL Certificates**
@@ -231,7 +243,7 @@ If you want data on the host, mount a host directory instead.
   services:
     app:
       volumes:
-        - "/Users/exampleuser/yourfolder:/app/data"
+        - "YOUR_ABSOLUTE_PATH:/app/Data"
   ```
 
   Then you can delete named volume at the bottom section of the docker compose file.

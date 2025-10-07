@@ -10,14 +10,10 @@ import Foundation
 import Vapor
 
 actor CallSession {
-    // MARK: Stored Properties
-    
     let phoneNumber: String
     let serviceState: ServiceState
     let logger: Logger
     let webSocket: WebSocket
-
-    // MARK: Initialization
     
     init(phoneNumber: String, serviceState: ServiceState, webSocket: WebSocket, logger: Logger) {
         self.phoneNumber = phoneNumber
@@ -25,9 +21,7 @@ actor CallSession {
         self.webSocket = webSocket
         self.logger = logger
     }
-    
-    // MARK: Methods
-    
+        
     func handleMessage(_ text: String) async {
         do {
             guard let jsonData = text.data(using: .utf8) else {
@@ -74,9 +68,7 @@ actor CallSession {
             try? await webSocket.close()
         }
     }
-    
-    // MARK: Methods - Helpers
-    
+        
     private func handleFunctionCall(response: OpenAIResponse) async throws {
         logger.debug("Function call \"\(response.name ?? "")\"")
         let currentService = await serviceState.current

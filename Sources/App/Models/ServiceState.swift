@@ -65,9 +65,7 @@ actor ServiceState {
         )
         return await feedbackService.feedback() ?? "No feedback available."
     }
-    
-    // MARK: - Service Access Methods
-    
+        
     func getVitalSignsService() -> VitalSignsService? {
         services.first { $0 is VitalSignsService } as? VitalSignsService
     }

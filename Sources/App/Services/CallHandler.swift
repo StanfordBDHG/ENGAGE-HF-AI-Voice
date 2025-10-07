@@ -10,8 +10,6 @@ import Foundation
 import Vapor
 
 actor CallHandler {
-    // MARK: Stored Properties
-    
     let callId: String
     let phoneNumber: String
     let openAIKey: String
@@ -19,20 +17,21 @@ actor CallHandler {
     let twilioAPIKey: String?
     let twilioSecret: String?
     
+    let encryptionKey: String?
+    let recordingsDecryptionKey: String?
+    
     let eventLoopGroup: any EventLoopGroup
     let httpClient: HTTPClient
     let logger: Logger
     let serviceState: ServiceState
-    
-    // MARK: Initialization
-    
+        
     init(
         callId: String,
         phoneNumber: String,
         app: Application,
     ) async {
-        let encryptionKey = app.storage[EncryptionKeyStorageKey.self]
-        let featureFlags = app.featureFlags
+        self.encryptionKey = app.storage[EncryptionKeyStorageKey.self]
+        self.recordingsDecryptionKey = app.storage[RecordingsDecryptionKeyStorageKey.self]
         
         self.callId = callId
         self.phoneNumber = phoneNumber
@@ -45,14 +44,12 @@ actor CallHandler {
         self.httpClient = app.http.client.shared
         self.logger = app.logger
         self.serviceState = await ServiceState(services: [
-            VitalSignsService(phoneNumber: phoneNumber, logger: logger, featureFlags: featureFlags, encryptionKey: encryptionKey),
-            KCCQ12Service(phoneNumber: phoneNumber, logger: logger, featureFlags: featureFlags, encryptionKey: encryptionKey),
-            Q17Service(phoneNumber: phoneNumber, logger: logger, featureFlags: featureFlags, encryptionKey: encryptionKey)
+            VitalSignsService(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
+            KCCQ12Service(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
+            Q17Service(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey)
         ])
     }
-    
-    // MARK: Methods - Connection
-    
+        
     func accept() async throws {
         do {
             let systemMessage = await initialSystemMessage()
@@ -159,9 +156,7 @@ actor CallHandler {
             throw error
         }
     }
-    
-    // Methods: Helpers
-    
+        
     private func initialSystemMessage() async -> String {
         let hasUnansweredQuestions = await serviceState.initializeCurrentService()
         if !hasUnansweredQuestions {
@@ -199,7 +194,12 @@ actor CallHandler {
                 httpClient: httpClient
             )
             
-            let recordingService = CallRecordingService(api: twilioAPI, logger: logger)
+            let recordingService = await CallRecordingService(
+                api: twilioAPI,
+                decryptionKey: recordingsDecryptionKey,
+                encryptionKey: encryptionKey,
+                logger: logger
+            )
             
             try await recordingService.storeNewestRecordings()
         } catch {

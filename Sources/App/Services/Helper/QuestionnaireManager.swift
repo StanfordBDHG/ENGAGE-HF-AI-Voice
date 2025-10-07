@@ -155,9 +155,7 @@ class QuestionnaireManager: Sendable {
     func countAnsweredQuestions() -> Int {
         response.item?.count ?? 0
     }
-    
-    // MARK: - Private Helpers
-    
+        
     /// Recursively get all questions from a questionnaire
     private func getAllQuestions(from items: [QuestionnaireItem]) -> [QuestionnaireItem] {
         items.flatMap { item -> [QuestionnaireItem] in

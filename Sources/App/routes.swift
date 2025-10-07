@@ -31,7 +31,12 @@ func routes(_ app: Application) throws {
                 httpClient: app.http.client.shared
             )
             
-            let recordingService = CallRecordingService(api: twilioAPI, logger: req.logger)
+            let recordingService = CallRecordingService(
+                api: twilioAPI,
+                decryptionKey: app.storage[RecordingsDecryptionKeyStorageKey.self],
+                encryptionKey: app.storage[EncryptionKeyStorageKey.self],
+                logger: req.logger
+            )
             try await recordingService.storeNewestRecordings()
         } catch {
             req.logger.error("Failed to update newest recordings: \(error)")
