@@ -39,7 +39,7 @@ actor CallRecordingService {
     ) {
         self.api = api
         self.decryptor = decryptionKey.flatMap {
-            try? CallRecordingDecryptor(privateKey: .fromPEM($0))
+            try? CallRecordingDecryptor(privateKey: .init(pemRepresentation: $0))
         }
         self.encryptor = encryptionKey.flatMap {
             try? EncryptionService(encryptionKeyBase64: $0)

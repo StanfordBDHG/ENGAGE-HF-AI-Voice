@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
+import CryptoExtras
 import Foundation
 import Vapor
 
@@ -17,9 +18,9 @@ enum CallRecordingDecryptionError: Error {
 }
 
 class CallRecordingDecryptor {
-    let privateKey: SecKey
+    let privateKey: _RSA.Encryption.PrivateKey
         
-    init(privateKey: SecKey) {
+    init(privateKey: _RSA.Encryption.PrivateKey) throws {
         self.privateKey = privateKey
     }
         
@@ -33,8 +34,9 @@ class CallRecordingDecryptor {
             throw CallRecordingDecryptionError.invalidInitialVectorLength
         }
         
-        let cekData = try (try? privateKey.decrypt(encryptedCEKData, using: .rsaEncryptionOAEPSHA256))
-            ?? privateKey.decrypt(encryptedCEKData, using: .rsaEncryptionOAEPSHA1)
+        let cekData = try (try? privateKey.decrypt(encryptedCEKData, padding: .PKCS1_OAEP_SHA256))
+            ?? privateKey.decrypt(encryptedCEKData, padding: .PKCS1_OAEP)
+        
         
         let tagLength = 16
         guard data.count >= tagLength else {
