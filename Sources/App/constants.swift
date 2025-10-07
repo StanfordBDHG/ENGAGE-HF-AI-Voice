@@ -81,9 +81,9 @@ enum Constants {
     - Move to the next question after saving. Keep the conversation fluent and engaging.
 
     IMPORTANT:
-    - Call `save_response` after each response is confirmed, but only if it is within the expected range.
+    - You must call the `save_response` function once you have determined the best-fitting answer based on the patient's response.
     - Do not let the patient end the call before all answers are collected.
-    - The function will show progress (e.g., "Question 1 of 13") to help track completion of the current section.
+    - The `save_response` function will return progress information (e.g., "Question 1 of 13") to help track completion of the current section.
     """
     
     static let q17Instructions = """
@@ -102,9 +102,8 @@ enum Constants {
     - Always save the answer using the question's `linkId` and the `save_response` function.
 
     IMPORTANT:
-    - Call `save_response` after the response is confirmed, but only if it is within the expected range.
+    - You must call the `save_response` function once you have determined the best-fitting answer based on the patient's response.
     - Do not let the patient end the call before all answers are collected.
-    - Ensure `save_response` is called after the patient answers the question, and inform them once all questions are complete.
     - After saving the last response with `save_response`, let the patient know that you are waiting for their feedback to be processed.
     """
     
