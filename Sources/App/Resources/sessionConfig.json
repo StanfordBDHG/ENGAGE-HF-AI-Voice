@@ -50,24 +50,6 @@
                 ],
                 "additionalProperties": false
             }
-        },
-        {
-            "type": "function",
-            "name": "get_feedback",
-            "description": "Retrieves the patient feedback.",
-            "parameters": {
-                "type": "object",
-                "properties": {}
-            }
-        },
-        {
-            "type": "function",
-            "name": "end_call",
-            "description": "End the conversation with the patient by hanging up the phone. This function immediately disconnects the call, so call it only after you have finished speaking and all audio output has been played. Use it only when the system is in a mode where the user could respond.",
-            "parameters": {
-                "type": "object",
-                "properties": {}
-            }
         }
     ],
     "tool_choice": "auto"
