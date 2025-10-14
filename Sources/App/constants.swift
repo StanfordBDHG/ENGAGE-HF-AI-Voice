@@ -164,8 +164,6 @@ enum Constants {
         IMPORTANT:
         - Never end the call before you didn't allow the patient to ask follow-up questions about the feedback.
         - Do not provide any medical advice; refer them to their clinician if needed.
-        - You may call the `end_call` function after the patient says goodbye and the patient finished the conversation.
-        - Always say goodbye and acknowledge the end of the call before calling the `end_call` function.
         - Do not ask any further health-related questions.
         - Do not start an unrelated conversation with the patient.
         """

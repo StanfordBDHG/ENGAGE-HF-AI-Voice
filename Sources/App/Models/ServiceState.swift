@@ -53,6 +53,7 @@ actor ServiceState {
         guard let vitalSignsService = getVitalSignsService(),
               let kccq12Service = getKCCQ12Service(),
               let q17Service = getQ17Service() else {
+            logger.error("Failed to get all service instances while trying to generate a feedback statement.")
             throw Abort(.internalServerError, reason: "Service instances not available")
         }
         
@@ -63,7 +64,12 @@ actor ServiceState {
             kccq12Service: kccq12Service,
             q17Service: q17Service
         )
-        return await feedbackService.feedback() ?? "No feedback available."
+        
+        guard let feedback = await feedbackService.feedback() else {
+            logger.error("FeedbackService wasn't able to generate a feedback statement.")
+            return "No feedback available."
+        }
+        return feedback
     }
         
     func getVitalSignsService() -> VitalSignsService? {
