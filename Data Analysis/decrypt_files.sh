@@ -1,13 +1,12 @@
 #!/bin/bash
+# 
 #
 # This source file is part of the ENGAGE-HF-AI-Voice open source project
 #
-# SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
-#
-# This file is based on the Vapor template found at https://github.com/vapor/template
+# SPDX-FileCopyrightText: 2025 Stanford University and the project authors (see CONTRIBUTORS.md)
 #
 # SPDX-License-Identifier: MIT
-#
+# 
 
 # Script to decrypt AES-GCM encrypted JSON files
 # Usage: ./decrypt_files.sh <base64_encryption_key>
@@ -43,6 +42,20 @@ python3 -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM" 2>/d
 
 # Create decrypted directory if it doesn't exist
 mkdir -p "$DECRYPTED_DIR"
+
+# Helper to get file modification time (seconds since epoch)
+file_mtime() {
+    # macOS uses stat -f %m, Linux uses stat -c %Y
+    if [ -z "${1-}" ] || [ ! -e "$1" ]; then
+        echo 0
+        return
+    fi
+    if [ "$(uname)" = "Darwin" ]; then
+        stat -f %m "$1" 2>/dev/null || echo 0
+    else
+        stat -c %Y "$1" 2>/dev/null || echo 0
+    fi
+}
 
 # Function to decrypt a single file
 decrypt_file() {
@@ -81,8 +94,8 @@ try:
     decrypted = aesgcm.decrypt(nonce, ciphertext_and_tag, None)
     
     # Write decrypted content to output file
-    with open('$output_file', 'wb') as f:
-        f.write(decrypted)
+    with open('$output_file', 'w', encoding='utf-8') as f:
+        f.write(decrypted.decode('utf-8'))
     
     print('Successfully decrypted: $input_file')
     
@@ -101,47 +114,62 @@ except Exception as e:
 total_files=0
 processed_files=0
 failed_files=0
+skipped_files=0
 
 echo "Starting decryption process..."
 echo "Source directory: $SCRIPT_DIR"
 echo "Output directory: $DECRYPTED_DIR"
 echo ""
 
-# Process each folder
+# Process each configured folder
 for folder in "${FOLDERS[@]}"; do
     source_folder="$SCRIPT_DIR/$folder"
     dest_folder="$DECRYPTED_DIR/$folder"
-    
+
     if [ ! -d "$source_folder" ]; then
         echo "Warning: Source folder '$source_folder' does not exist, skipping..."
         continue
     fi
-    
+
     echo "Processing folder: $folder"
-    
+
     # Find all JSON files in the source folder and its subfolders
     while IFS= read -r -d '' file; do
         # Get relative path from source folder
         rel_path="${file#$source_folder/}"
-        
+
         # Create corresponding output path
         output_file="$dest_folder/$rel_path"
-        
+
         total_files=$((total_files + 1))
-        
+
+        # If destination exists, compare mtimes to decide whether to skip
+        if [ -f "$output_file" ]; then
+            src_mtime=$(file_mtime "$file")
+            dest_mtime=$(file_mtime "$output_file")
+            if [ "$dest_mtime" -ge "$src_mtime" ]; then
+                echo "Skipping (up-to-date): $output_file"
+                skipped_files=$((skipped_files + 1))
+                continue
+            else
+                echo "Re-decrypting (outdated): $output_file"
+            fi
+        fi
+
         if decrypt_file "$file" "$output_file"; then
             processed_files=$((processed_files + 1))
         else
             failed_files=$((failed_files + 1))
         fi
-        
-    done < <(find "$source_folder" \( -name "*.json" -o -name "*.wav" \) -type f -print0)
+
+    done < <(find "$source_folder" -name "*.json" -type f -print0)
 done
 
 echo ""
 echo "Decryption complete!"
 echo "Total files found: $total_files"
 echo "Successfully processed: $processed_files"
+echo "Skipped (already existed): $skipped_files"
 echo "Failed: $failed_files"
 
 if [ $failed_files -gt 0 ]; then
