@@ -55,13 +55,13 @@ actor CallSession {
     }
     
     func updateSession(systemMessage: String) async throws {
-        let sessionConfigJSONString = Constants.loadSessionConfig(systemMessage: systemMessage)
         do {
-            logger.info("Updating session with: \(sessionConfigJSONString)")
-            let object = try JSONSerialization.jsonObject(with: sessionConfigJSONString.data(using: .utf8) ?? Data())
+            logger.info("Updating session with new instructions.")
             try await sendJSON([
                 "type": "session.update",
-                "session": object
+                "session": [
+                    "instructions": systemMessage,
+                ]
             ])
         } catch {
             logger.error("Failed to update session: \(error). Closing web socket.")
