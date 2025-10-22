@@ -60,7 +60,7 @@ actor CallSession {
             try await sendJSON([
                 "type": "session.update",
                 "session": [
-                    "instructions": systemMessage,
+                    "instructions": systemMessage
                 ]
             ])
         } catch {
