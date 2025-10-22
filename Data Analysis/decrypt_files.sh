@@ -94,8 +94,8 @@ try:
     decrypted = aesgcm.decrypt(nonce, ciphertext_and_tag, None)
     
     # Write decrypted content to output file
-    with open('$output_file', 'w', encoding='utf-8') as f:
-        f.write(decrypted.decode('utf-8'))
+    with open('$output_file', 'wb') as f:
+        f.write(decrypted)
     
     print('Successfully decrypted: $input_file')
     
@@ -162,7 +162,7 @@ for folder in "${FOLDERS[@]}"; do
             failed_files=$((failed_files + 1))
         fi
 
-    done < <(find "$source_folder" -name "*.json" -type f -print0)
+    done < <(find "$source_folder" \( -name "*.json" -o -name "*.wav" \) -type f -print0)
 done
 
 echo ""
