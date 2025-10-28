@@ -8,6 +8,7 @@
 
 import Foundation
 
+// swiftlint:disable line_length
 
 enum Constants {
     static let initialInstructionsPlaceholder = "{{INITIAL_INSTRUCTION}}"
