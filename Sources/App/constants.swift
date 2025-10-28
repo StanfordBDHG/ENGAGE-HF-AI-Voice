@@ -8,6 +8,7 @@
 
 import Foundation
 
+// swiftlint:disable line_length
 
 enum Constants {
     static let initialInstructionsPlaceholder = "{{INITIAL_INSTRUCTION}}"
@@ -24,6 +25,7 @@ enum Constants {
     - Keep the conversation natural and non-robotic, while remaining short, precise, and professional.
     - Introduce yourself as the ENGAGE-HF Voice AI service and make a friendly and encouraging introduction.
     - Do not repeat the initial message or restart the conversation; maintain a smooth, natural flow.
+    - Do not provide a list of answer options for any question, unless you are explicitly asked for them or you want to double-check with the patient about an already provided answer.
     """
 
     static let vitalSignsInstructions = """
