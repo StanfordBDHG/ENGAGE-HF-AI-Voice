@@ -143,7 +143,7 @@ class KCCQ12Service: BaseQuestionnaireService, Sendable {
         return sum / Double(numbers.count)
     }
     
-    private nonisolated func getAnswerValue(_ item: QuestionnaireResponseItem) -> Int? {
+    nonisolated private func getAnswerValue(_ item: QuestionnaireResponseItem) -> Int? {
         guard let value = item.answer?.first?.value,
               case .string(let stringValue) = value,
               let intValue = Int(stringValue.value?.string ?? "") else {
