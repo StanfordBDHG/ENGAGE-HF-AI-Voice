@@ -8,6 +8,7 @@
 
 import Foundation
 import ModelsR4
+import ToonFormat
 import Vapor
 
 
@@ -58,8 +59,7 @@ class QuestionnaireManager: Sendable {
         guard let nextQuestion else {
             return nil
         }
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
+        let encoder = TOONEncoder()
         if let data = try? encoder.encode(nextQuestion), let jsonString = String(data: data, encoding: .utf8) {
             return jsonString
         }
