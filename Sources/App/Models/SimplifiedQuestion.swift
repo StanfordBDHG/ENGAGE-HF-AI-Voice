@@ -33,7 +33,7 @@ struct SimplifiedQuestion: Encodable {
     /// An optional note providing additional context for the question
     let note: String?
     /// The available answer options (for choice-type questions)
-    let answerOptions: [SimplifiedAnswerOption]?
+    let answerOptions: [SimplifiedAnswerOption]
     /// The minimum allowed value (for integer-type questions)
     let minValue: Int?
     /// The maximum allowed value (for integer-type questions)

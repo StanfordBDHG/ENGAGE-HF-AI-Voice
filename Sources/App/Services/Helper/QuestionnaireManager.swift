@@ -43,6 +43,8 @@ class QuestionnaireManager: Sendable {
     /// Whether all required questions have been answered
     private(set) var isFinished: Bool = false
     
+    // MARK: - Initializer
+    
     /// Initialize a new questionnaire manager
     /// - Parameters:
     ///   - questionnaire: The FHIR questionnaire to manage
@@ -68,6 +70,33 @@ class QuestionnaireManager: Sendable {
         
         updateFinishedState()
     }
+    
+    // MARK: - Type Methods
+    
+    /// Extract a note string from a FHIR extension array matching the note URL
+    private static func extractNote(from extensions: [ModelsR4.Extension]) -> String? {
+        extensions
+            .first { ext in
+                ext.url.value?.url.absoluteString == noteExtensionURL
+            }
+            .flatMap { ext in
+                if case .string(let str) = ext.value {
+                    return str.value?.string
+                }
+                return nil
+            }
+    }
+    
+    /// Generate a descriptive, URL-safe code from a display string
+    /// e.g. "Extremely Limited" -> "extremely-limited"
+    private static func descriptiveCode(from display: String) -> String {
+        display.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
+    }
+    
+    // MARK: - Instance Methods
     
     /// Get the next unanswered question
     /// - Returns: The next question to be answered in JSON string format, or nil if all required questions are answered
@@ -111,16 +140,26 @@ class QuestionnaireManager: Sendable {
         let answeredCount = answeredLinkIds.count
         let progress = "\(answeredCount + 1) of \(totalQuestions)"
         
-        let unansweredQuestions: [SimplifiedQuestion]? = (sharesAllQuestionsIfNeeded && includeAllQuestions)
-            ? questions.filter { question in
-                guard let linkId = question.linkId.value?.string else {
-                    return false
-                }
-                return !answeredLinkIds.contains(linkId)
-            }.map { simplify($0) }
-            : nil
+        let allQuestions: [SimplifiedQuestion]
         
-        return QuestionWithProgress(question: simplify(nextQuestion), progress: progress, allQuestions: unansweredQuestions)
+        if sharesAllQuestionsIfNeeded && includeAllQuestions {
+            allQuestions = questions
+                .filter { question in
+                    guard let linkId = question.linkId.value?.string else {
+                        return false
+                    }
+                    return !answeredLinkIds.contains(linkId)
+                }
+                .map { simplify($0) }
+        } else {
+            allQuestions = []
+        }
+        
+        return QuestionWithProgress(
+            question: simplify(nextQuestion),
+            progress: progress,
+            allQuestions: allQuestions.isEmpty ? nil : allQuestions
+        )
     }
     
     /// Answer a question in the questionnaire
@@ -191,7 +230,9 @@ class QuestionnaireManager: Sendable {
     /// Build and store the code mapping for a question's answer options
     private func buildCodeMapping(for item: QuestionnaireItem) {
         let linkId = item.linkId.value?.string ?? ""
-        guard let options = item.answerOption else { return }
+        guard let options = item.answerOption else {
+            return
+        }
         
         var linkCodeMapping: [String: String] = [:]
         for option in options {
@@ -215,18 +256,20 @@ class QuestionnaireManager: Sendable {
         let required = item.required?.value?.bool ?? false
         
         // Extract note from item-level extensions
-        let note = Self.extractNote(from: item.`extension`)
+        let note = Self.extractNote(from: item.`extension` ?? [])
         
         // Process answer options for choice questions
-        var answerOptions: [SimplifiedAnswerOption]?
+        var answerOptions: [SimplifiedAnswerOption] = []
         if let options = item.answerOption {
             answerOptions = options.compactMap { option -> SimplifiedAnswerOption? in
-                guard case .coding(let coding) = option.value else { return nil }
+                guard case .coding(let coding) = option.value else {
+                    return nil
+                }
                 let display = coding.display?.value?.string ?? ""
                 let descriptiveCode = Self.descriptiveCode(from: display)
                 
                 // Extract note from answer option extensions
-                let optionNote = Self.extractNote(from: option.`extension`)
+                let optionNote = Self.extractNote(from: option.`extension` ?? [])
                 
                 return SimplifiedAnswerOption(code: descriptiveCode, display: display, note: optionNote)
             }
@@ -252,31 +295,10 @@ class QuestionnaireManager: Sendable {
             text: text,
             required: required,
             note: note,
-            answerOptions: answerOptions?.isEmpty == true ? nil : answerOptions,
+            answerOptions: answerOptions,
             minValue: minValue,
             maxValue: maxValue
         )
-    }
-    
-    /// Extract a note string from a FHIR extension array matching the note URL
-    private static func extractNote(from extensions: [ModelsR4.Extension]?) -> String? {
-        extensions?.first { ext in
-            ext.url.value?.url.absoluteString == noteExtensionURL
-        }.flatMap { ext in
-            if case .string(let str) = ext.value {
-                return str.value?.string
-            }
-            return nil
-        }
-    }
-    
-    /// Generate a descriptive, URL-safe code from a display string
-    /// e.g. "Extremely Limited" -> "extremely-limited"
-    private static func descriptiveCode(from display: String) -> String {
-        display.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: "-")
     }
     
     /// Resolve a descriptive answer code back to the original numeric code
