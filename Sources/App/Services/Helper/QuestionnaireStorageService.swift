@@ -130,7 +130,9 @@ class QuestionnaireStorageService: Sendable {
                 logger.info("Saving questionnaire response without encryption")
             }
             
-            try dataToWrite.write(to: URL(fileURLWithPath: filePath(phoneNumber)))
+            let path = filePath(phoneNumber)
+            try dataToWrite.write(to: URL(fileURLWithPath: path))
+            print("Saved response at: \(path)")
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")
         }

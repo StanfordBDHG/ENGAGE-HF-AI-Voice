@@ -172,19 +172,22 @@ enum Constants {
         let initialInstruction = answeredQuestionCount == 0
             ? "Inform the patient that you will start with the first question."
             : "Inform the patient about their progress and that you will continue with the remaining questions."
-        switch service {
+        let response: String? = switch service {
         case is VitalSignsService:
-            return vitalSignsInstructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            vitalSignsInstructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
+                + (initialQuestion.map { "\n\n\($0)" } ?? "")
         case is KCCQ12Service:
-            return kccq12Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            kccq12Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
+                + (initialQuestion.map { "\n\n\($0)" } ?? "")
         case is Q17Service:
-            return q17Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                + (initialQuestion.map { "Final Question: \($0)" } ?? "")
+            q17Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
+                + (initialQuestion.map { "\n\n\($0)" } ?? "")
         default:
-            return nil
+            nil
         }
+        
+        print(response ?? "null")
+        return response
     }
 
     /// Load the session config from the resources directory and inject the system prompt

@@ -21,6 +21,14 @@ enum QuestionnaireManagerError: Error {
 /// It maintains an internal FHIR questionnaire response that is populated as answers are provided.
 @MainActor
 class QuestionnaireManager: Sendable {
+    // MARK: - Constants
+    
+    private static let noteExtensionURL = "http://bdh.stanford.edu/fhir/StructureDefinition/note"
+    private static let minValueURL = "http://hl7.org/fhir/StructureDefinition/minValue"
+    private static let maxValueURL = "http://hl7.org/fhir/StructureDefinition/maxValue"
+    
+    // MARK: - Properties
+    
     /// The questionnaire being managed
     private let questionnaire: Questionnaire
     
@@ -28,6 +36,9 @@ class QuestionnaireManager: Sendable {
     
     /// The current questionnaire response being built
     private var response: QuestionnaireResponse
+    
+    /// Mapping from [linkId: [descriptiveCode: originalNumericCode]] for resolving descriptive answer codes
+    private var codeMapping: [String: [String: String]] = [:]
     
     /// Whether all required questions have been answered
     private(set) var isFinished: Bool = false
@@ -47,6 +58,12 @@ class QuestionnaireManager: Sendable {
             self.response = initialResponse
         } else {
             self.response = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.inProgress))
+        }
+        
+        // Build code mapping for all questions upfront so descriptive codes can be resolved when answers arrive
+        let allQuestions = getAllQuestions(from: questionnaire.item ?? [])
+        for question in allQuestions {
+            buildCodeMapping(for: question)
         }
         
         updateFinishedState()
@@ -94,16 +111,16 @@ class QuestionnaireManager: Sendable {
         let answeredCount = answeredLinkIds.count
         let progress = "\(answeredCount + 1) of \(totalQuestions)"
         
-        let unansweredQuestions = (sharesAllQuestionsIfNeeded && includeAllQuestions)
+        let unansweredQuestions: [SimplifiedQuestion]? = (sharesAllQuestionsIfNeeded && includeAllQuestions)
             ? questions.filter { question in
                 guard let linkId = question.linkId.value?.string else {
                     return false
                 }
                 return !answeredLinkIds.contains(linkId)
-            }
+            }.map { simplify($0) }
             : nil
         
-        return QuestionWithProgress(question: nextQuestion, progress: progress, allQuestions: unansweredQuestions)
+        return QuestionWithProgress(question: simplify(nextQuestion), progress: progress, allQuestions: unansweredQuestions)
     }
     
     /// Answer a question in the questionnaire
@@ -116,10 +133,11 @@ class QuestionnaireManager: Sendable {
         let responseItem = QuestionnaireResponseItem(linkId: FHIRPrimitive(FHIRString(linkId)))
         let answerItem = QuestionnaireResponseItemAnswer()
         
-        // Set value based on type
+        // Set value based on type, resolving descriptive codes back to numeric codes for string answers
         switch answer {
         case let stringAnswer as String:
-            answerItem.value = .string(FHIRPrimitive(FHIRString(stringAnswer)))
+            let resolvedAnswer = resolveAnswer(linkId: linkId, answer: stringAnswer)
+            answerItem.value = .string(FHIRPrimitive(FHIRString(resolvedAnswer)))
         case let intAnswer as Int:
             answerItem.value = .integer(FHIRPrimitive(FHIRInteger(FHIRInteger.IntegerLiteralType(intAnswer))))
         case _ as NSNull:
@@ -166,6 +184,108 @@ class QuestionnaireManager: Sendable {
             }
             return []
         }
+    }
+    
+    // MARK: - Question Simplification
+    
+    /// Build and store the code mapping for a question's answer options
+    private func buildCodeMapping(for item: QuestionnaireItem) {
+        let linkId = item.linkId.value?.string ?? ""
+        guard let options = item.answerOption else { return }
+        
+        var linkCodeMapping: [String: String] = [:]
+        for option in options {
+            guard case .coding(let coding) = option.value else { continue }
+            let originalCode = coding.code?.value?.string ?? ""
+            let display = coding.display?.value?.string ?? ""
+            let descriptiveCode = Self.descriptiveCode(from: display)
+            linkCodeMapping[descriptiveCode] = originalCode
+        }
+        
+        if !linkCodeMapping.isEmpty {
+            codeMapping[linkId] = linkCodeMapping
+        }
+    }
+    
+    /// Convert a FHIR QuestionnaireItem into a SimplifiedQuestion with inlined notes and descriptive codes
+    private func simplify(_ item: QuestionnaireItem) -> SimplifiedQuestion {
+        let linkId = item.linkId.value?.string ?? ""
+        let type = item.type.value?.rawValue ?? ""
+        let text = item.text?.value?.string ?? ""
+        let required = item.required?.value?.bool ?? false
+        
+        // Extract note from item-level extensions
+        let note = Self.extractNote(from: item.`extension`)
+        
+        // Process answer options for choice questions
+        var answerOptions: [SimplifiedAnswerOption]?
+        if let options = item.answerOption {
+            answerOptions = options.compactMap { option -> SimplifiedAnswerOption? in
+                guard case .coding(let coding) = option.value else { return nil }
+                let display = coding.display?.value?.string ?? ""
+                let descriptiveCode = Self.descriptiveCode(from: display)
+                
+                // Extract note from answer option extensions
+                let optionNote = Self.extractNote(from: option.`extension`)
+                
+                return SimplifiedAnswerOption(code: descriptiveCode, display: display, note: optionNote)
+            }
+        }
+        
+        // Extract min/max values from extensions for integer types
+        var minValue: Int?
+        var maxValue: Int?
+        if type == "integer", let extensions = item.`extension` {
+            for ext in extensions {
+                let url = ext.url.value?.url.absoluteString ?? ""
+                if url == Self.minValueURL, case .integer(let val) = ext.value {
+                    minValue = Int(val.value?.integer ?? 0)
+                } else if url == Self.maxValueURL, case .integer(let val) = ext.value {
+                    maxValue = Int(val.value?.integer ?? 0)
+                }
+            }
+        }
+        
+        return SimplifiedQuestion(
+            linkId: linkId,
+            type: type,
+            text: text,
+            required: required,
+            note: note,
+            answerOptions: answerOptions?.isEmpty == true ? nil : answerOptions,
+            minValue: minValue,
+            maxValue: maxValue
+        )
+    }
+    
+    /// Extract a note string from a FHIR extension array matching the note URL
+    private static func extractNote(from extensions: [ModelsR4.Extension]?) -> String? {
+        extensions?.first { ext in
+            ext.url.value?.url.absoluteString == noteExtensionURL
+        }.flatMap { ext in
+            if case .string(let str) = ext.value {
+                return str.value?.string
+            }
+            return nil
+        }
+    }
+    
+    /// Generate a descriptive, URL-safe code from a display string
+    /// e.g. "Extremely Limited" -> "extremely-limited"
+    private static func descriptiveCode(from display: String) -> String {
+        display.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
+    }
+    
+    /// Resolve a descriptive answer code back to the original numeric code
+    /// If no mapping is found, the answer is returned as-is
+    private func resolveAnswer(linkId: String, answer: String) -> String {
+        if let mapping = codeMapping[linkId], let originalCode = mapping[answer] {
+            return originalCode
+        }
+        return answer
     }
     
     /// Update the finished state based on required questions
