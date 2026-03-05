@@ -185,8 +185,6 @@ enum Constants {
         default:
             nil
         }
-        
-        print(response ?? "null")
         return response
     }
 

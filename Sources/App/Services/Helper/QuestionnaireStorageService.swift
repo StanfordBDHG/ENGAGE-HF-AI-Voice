@@ -132,7 +132,6 @@ class QuestionnaireStorageService: Sendable {
             
             let path = filePath(phoneNumber)
             try dataToWrite.write(to: URL(fileURLWithPath: path))
-            print("Saved response at: \(path)")
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")
         }
