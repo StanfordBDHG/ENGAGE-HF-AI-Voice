@@ -40,6 +40,10 @@ enum Constants {
 
     For each question:
     - Ask the question text clearly to the patient.
+    - For the two blood pressure questions:
+        - Ask for the blood pressure reading as one single question.
+        - Keep it short, do not mention blood pressure as being two separate values (e.g. top/bottom or systolic/diastolic).
+        - Unless otherwise necessary, do not mention systolic and diastolic blood pressure as separate values or questions.
     - You may share the number of questions left and other progress updates to keep the patient engaged.
     - Listen to the patient's response and briefly answer any questions they might have.
     - Briefly repeat the patient's response back to them.
@@ -47,17 +51,6 @@ enum Constants {
     - If the patient does not have an answer, use `null` as the answer value.
     - Always save the answer using the question's `linkId` and the `save_response` function.
     - Move to the next question after saving. Keep the conversation fluent and engaging.
-
-    Blood pressure handling:
-    - When asking blood pressure questions, collect the values in one of two ways:
-      1. Sequentially: Ask for systolic first, then diastolic in separate questions.
-      2. Together: If the patient provides both values (e.g., "120 over 70" or "120/70"), save them together.
-    - When both values are provided:
-      - Parse systolic (first number) and diastolic (second number) from the response.
-      - Confirm both values with the patient.
-      - Save the systolic value using the `linkId` for the systolic question by calling `save_response`.
-      - Immediately after, save the diastolic value using the `linkId` for the diastolic question by calling `save_response`.
-    - When you ask the patient about their blood pressure, mention that values can be provided in either way.
 
     IMPORTANT:
     - Call `save_response` after each response is confirmed, but only if it is within the expected range.
@@ -78,6 +71,8 @@ enum Constants {
     - Do not list all answer options to keep the conversation natural!
     - Listen to the patient's response and briefly answer any questions they might have.
     - If there is ambiguity in how the response maps to the available options, ask follow-up questions to clarify.
+    - Only save the response, if you have asked the question and the patient has given a clear answer.
+    - Do not guess or otherwise infer responses from previous answers.
     - Save the response directly if there is a clear mapping between the patient's answer and the available options.
     - Always save the answer using the question's `linkId` and the `save_response` function.
     - Move to the next question after saving. Keep the conversation fluent and engaging.
@@ -177,19 +172,20 @@ enum Constants {
         let initialInstruction = answeredQuestionCount == 0
             ? "Inform the patient that you will start with the first question."
             : "Inform the patient about their progress and that you will continue with the remaining questions."
-        switch service {
+        let response: String? = switch service {
         case is VitalSignsService:
-            return vitalSignsInstructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            vitalSignsInstructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
+                + (initialQuestion.map { "\n\n\($0)" } ?? "")
         case is KCCQ12Service:
-            return kccq12Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                + (initialQuestion.map { "Initial Question: \($0)" } ?? "")
+            kccq12Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
+                + (initialQuestion.map { "\n\n\($0)" } ?? "")
         case is Q17Service:
-            return q17Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                + (initialQuestion.map { "Final Question: \($0)" } ?? "")
+            q17Instructions.replacingOccurrences(of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
+                + (initialQuestion.map { "\n\n\($0)" } ?? "")
         default:
-            return nil
+            nil
         }
+        return response
     }
 
     /// Load the session config from the resources directory and inject the system prompt
