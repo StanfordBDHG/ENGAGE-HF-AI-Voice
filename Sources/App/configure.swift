@@ -30,17 +30,16 @@ public func configure(_ app: Application) async throws {
     if app.environment == .testing {
         encryptionKey = nil // No encryption in testing
     } else {
-        guard let key = Environment.get("ENCRYPTION_KEY") else {
-            throw Abort(.internalServerError, reason: "Missing ENCRYPTION_KEY. An encryption key is required in non-testing environments.")
+        if let key = Environment.get("ENCRYPTION_KEY") {
+            guard let keyData = Data(base64Encoded: key),
+                  keyData.count == 32 else {
+                throw Abort(
+                    .internalServerError,
+                    reason: "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
+                )
+            }
+            encryptionKey = key
         }
-        guard let keyData = Data(base64Encoded: key),
-              keyData.count == 32 else {
-            throw Abort(
-                .internalServerError,
-                reason: "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
-            )
-        }
-        encryptionKey = key
     }
     
     // Store keys in application storage for access in routes
