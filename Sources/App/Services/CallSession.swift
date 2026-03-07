@@ -67,8 +67,8 @@ actor CallSession {
                 "type": "session.update",
                 "session": [
                     "type": "realtime",
-                    "instructions": systemMessage
-                ]
+                    "instructions": systemMessage,
+                ],
             ])
         } catch {
             logger.error("Failed to update session: \(error). Closing web socket.")
@@ -143,8 +143,8 @@ actor CallSession {
             "item": [
                 "type": "function_call_output",
                 "call_id": callId,
-                "output": output
-            ]
+                "output": output,
+            ],
         ])
     }
 
@@ -230,7 +230,8 @@ actor CallSession {
     }
 
     private func handleNextQuestionAvailable(nextQuestion: String, response: OpenAIResponse)
-        async throws {
+        async throws
+    {
         try await sendFunctionOutput(callId: response.callId ?? "", output: nextQuestion)
         try await sendResponseCreate()
     }
@@ -243,7 +244,8 @@ actor CallSession {
             let initialQuestion = await nextService.getNextQuestion(includeAllQuestions: true),
             let systemMessage = await Constants.getSystemMessageForService(
                 nextService, initialQuestion: initialQuestion
-            ) {
+            )
+        {
             try await handleNextServiceAvailable(
                 nextService: nextService,
                 initialQuestion: initialQuestion,

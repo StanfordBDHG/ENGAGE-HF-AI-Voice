@@ -114,7 +114,8 @@ private struct OpenAICAllIncomingEvent: Decodable {
 }
 
 private func extractPhoneNumberFromSIPHeaders(_ headers: [OpenAICAllIncomingEvent.SIPHeader])
-    -> String? {
+    -> String?
+{
     headers
         .first { $0.name == "From" }?.value
         .components(separatedBy: ";")
