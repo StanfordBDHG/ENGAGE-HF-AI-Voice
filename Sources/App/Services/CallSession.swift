@@ -86,14 +86,10 @@ actor CallSession {
             try await countAnsweredQuestions(service: currentService, response: response)
         case "end_call":
             // Closing the web socket is currently disabled due to https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/issues/45
-            try await sendJSON([
-                "type": "conversation.item.create",
-                "item": [
-                    "type": "function_call_output",
-                    "call_id": response.callId ?? "",
-                    "output": "Call end acknowledged."
-                ]
-            ])
+            try await sendFunctionOutput(
+                callId: response.callId ?? "",
+                output: "Call end acknowledged."
+            )
         default:
             logger.error("Unknown function call: \(String(describing: response.name))")
         }
@@ -114,10 +110,12 @@ actor CallSession {
 
             do {
                 let parsedArgs = try JSONDecoder().decode(
-                    QuestionnaireResponseArgs.self, from: argumentsData)
+                    QuestionnaireResponseArgs.self, from: argumentsData
+                )
                 logger.info("Parsed arguments: \(parsedArgs)")
                 let saveResult = await saveQuestionnaireAnswer(
-                    service: service, parsedArgs: parsedArgs)
+                    service: service, parsedArgs: parsedArgs
+                )
                 switch saveResult {
                 case .saved:
                     try await handleSaveSuccess(service: service, response: response)
@@ -128,19 +126,30 @@ actor CallSession {
                 }
             } catch {
                 logger.error("Decoding error details: \(error)")
-                try await sendJSON([
-                    "type": "conversation.item.create",
-                    "item": [
-                        "type": "function_call_output",
-                        "call_id": response.callId ?? "",
-                        "output":
-                            "Failed to decode parameters; please adhere to the JSON schema definitions."
-                    ]
-                ])
+                try await sendFunctionOutput(
+                    callId: response.callId ?? "",
+                    output:
+                        "Failed to decode parameters; please adhere to the JSON schema definitions."
+                )
             }
         } catch {
             try await handleProcessingError(error: error, response: response)
         }
+    }
+
+    private func sendFunctionOutput(callId: String, output: String) async throws {
+        try await sendJSON([
+            "type": "conversation.item.create",
+            "item": [
+                "type": "function_call_output",
+                "call_id": callId,
+                "output": output
+            ]
+        ])
+    }
+
+    private func sendResponseCreate() async throws {
+        try await sendJSON(["type": "response.create"])
     }
 
     private func countAnsweredQuestions(
@@ -149,19 +158,11 @@ actor CallSession {
     ) async throws {
         let count = await service.countAnsweredQuestions()
         logger.info("Count of answered questions of current service: \(count)")
-
-        try await sendJSON([
-            "type": "conversation.item.create",
-            "item": [
-                "type": "function_call_output",
-                "call_id": response.callId ?? "",
-                "output": "The patient has answered \(count) questions."
-            ]
-        ])
-
-        try await sendJSON([
-            "type": "response.create"
-        ])
+        try await sendFunctionOutput(
+            callId: response.callId ?? "",
+            output: "The patient has answered \(count) questions."
+        )
+        try await sendResponseCreate()
     }
 
     private func saveQuestionnaireAnswer(
@@ -186,17 +187,11 @@ actor CallSession {
     }
 
     private func handleSaveFailure(response: OpenAIResponse) async throws {
-        try await sendJSON([
-            "type": "conversation.item.create",
-            "item": [
-                "type": "function_call_output",
-                "call_id": response.callId ?? "",
-                "output": "The response could not be saved. Try again."
-            ]
-        ])
-        try await sendJSON([
-            "type": "response.create"
-        ])
+        try await sendFunctionOutput(
+            callId: response.callId ?? "",
+            output: "The response could not be saved. Try again."
+        )
+        try await sendResponseCreate()
     }
 
     private func handleSkipAttempt(
@@ -204,33 +199,23 @@ actor CallSession {
         response: OpenAIResponse
     ) async throws {
         logger.info("Null answer received — asking AI to confirm skip with patient.")
+        let callId = response.callId ?? ""
         if let currentQuestion = await service.getNextQuestion(includeAllQuestions: false) {
-            try await sendJSON([
-                "type": "conversation.item.create",
-                "item": [
-                    "type": "function_call_output",
-                    "call_id": response.callId ?? "",
-                    "output": """
-                    The question was NOT skipped. A null answer is only allowed if the patient explicitly \
-                    asked to skip this question. Please re-ask the question and wait for a clear answer. \
-                    Current question: \(currentQuestion)
-                    """
-                ]
-            ])
+            try await sendFunctionOutput(
+                callId: callId,
+                output:
+                    "The question was NOT skipped. A null answer is only allowed if the patient explicitly "
+                    + "asked to skip this question. Please re-ask the question and wait for a clear answer. "
+                    + "Current question: \(currentQuestion)"
+            )
         } else {
-            try await sendJSON([
-                "type": "conversation.item.create",
-                "item": [
-                    "type": "function_call_output",
-                    "call_id": response.callId ?? "",
-                    "output":
-                        "The question was NOT skipped. Please re-ask the question and wait for a clear answer from the patient."
-                ]
-            ])
+            try await sendFunctionOutput(
+                callId: callId,
+                output:
+                    "The question was NOT skipped. Please re-ask the question and wait for a clear answer from the patient."
+            )
         }
-        try await sendJSON([
-            "type": "response.create"
-        ])
+        try await sendResponseCreate()
     }
 
     private func handleSaveSuccess(
@@ -246,18 +231,8 @@ actor CallSession {
 
     private func handleNextQuestionAvailable(nextQuestion: String, response: OpenAIResponse)
         async throws {
-        try await sendJSON([
-            "type": "conversation.item.create",
-            "item": [
-                "type": "function_call_output",
-                "call_id": response.callId ?? "",
-                "output": nextQuestion
-            ]
-        ])
-
-        try await sendJSON([
-            "type": "response.create"
-        ])
+        try await sendFunctionOutput(callId: response.callId ?? "", output: nextQuestion)
+        try await sendResponseCreate()
     }
 
     private func handleQuestionnaireComplete(
@@ -267,12 +242,13 @@ actor CallSession {
         if let nextService = await serviceState.next(),
             let initialQuestion = await nextService.getNextQuestion(includeAllQuestions: true),
             let systemMessage = await Constants.getSystemMessageForService(
-                nextService, initialQuestion: initialQuestion) {
+                nextService, initialQuestion: initialQuestion
+            ) {
             try await handleNextServiceAvailable(
                 nextService: nextService,
                 initialQuestion: initialQuestion,
                 systemMessage: systemMessage,
-                response: response,
+                response: response
             )
         } else {
             try await handleNoNextService(response: response)
@@ -286,39 +262,22 @@ actor CallSession {
         response: OpenAIResponse
     ) async throws {
         try await updateSession(systemMessage: systemMessage)
-        try await sendJSON([
-            "type": "conversation.item.create",
-            "item": [
-                "type": "function_call_output",
-                "call_id": response.callId ?? "",
-                "output": initialQuestion
-            ]
-        ])
-
-        try await sendJSON([
-            "type": "response.create"
-        ])
+        try await sendFunctionOutput(callId: response.callId ?? "", output: initialQuestion)
+        try await sendResponseCreate()
     }
 
     private func handleNoNextService(response: OpenAIResponse) async throws {
         let feedback = try await serviceState.getFeedback(phoneNumber: phoneNumber, logger: logger)
         let systemMessage = Constants.feedback(content: feedback)
         try await updateSession(systemMessage: systemMessage)
-
-        try await sendJSON([
-            "type": "response.create"
-        ])
+        try await sendResponseCreate()
     }
 
     private func handleProcessingError(error: any Error, response: OpenAIResponse) async throws {
         logger.error("Error processing questionnaire: \(error)")
-        try await sendJSON([
-            "type": "conversation.item.create",
-            "item": [
-                "type": "function_call_output",
-                "call_id": response.callId ?? "",
-                "output": "Failed to process questionnaire"
-            ]
-        ])
+        try await sendFunctionOutput(
+            callId: response.callId ?? "",
+            output: "Failed to process questionnaire"
+        )
     }
 }

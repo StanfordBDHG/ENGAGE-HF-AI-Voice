@@ -140,7 +140,7 @@ enum Constants {
         #if DEBUG
             // Use the source tree MockData folder directly so changes persist across builds
             let thisFile = URL(fileURLWithPath: #filePath)
-            let sourcesApp = thisFile.deletingLastPathComponent() // Sources/App/
+            let sourcesApp = thisFile.deletingLastPathComponent()  // Sources/App/
             return sourcesApp.appendingPathComponent("Resources/MockData").path
         #else
             let fileManager = FileManager.default
@@ -197,16 +197,16 @@ enum Constants {
             switch service {
             case is VitalSignsService:
                 vitalSignsInstructions.replacingOccurrences(
-                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                    + (initialQuestion.map { "\n\n\($0)" } ?? "")
+                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction
+                ) + (initialQuestion.map { "\n\n\($0)" } ?? "")
             case is KCCQ12Service:
                 kccq12Instructions.replacingOccurrences(
-                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                    + (initialQuestion.map { "\n\n\($0)" } ?? "")
+                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction
+                ) + (initialQuestion.map { "\n\n\($0)" } ?? "")
             case is Q17Service:
                 q17Instructions.replacingOccurrences(
-                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction)
-                    + (initialQuestion.map { "\n\n\($0)" } ?? "")
+                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction
+                ) + (initialQuestion.map { "\n\n\($0)" } ?? "")
             default:
                 nil
             }
