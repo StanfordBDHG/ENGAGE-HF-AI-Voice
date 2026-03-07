@@ -9,6 +9,7 @@
 import Foundation
 
 // swiftlint:disable file_types_order
+// swiftlint:disable line_length
 
 // MARK: - Vital Signs Section
 
@@ -18,7 +19,6 @@ struct VitalSignsSection: QuestionnaireSection {
     let directoryPath = Constants.vitalSignsDirectoryPath
     let sharesAllQuestions = true
 
-    // swiftlint:disable line_length
     let instructions = """
         Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): Vital Signs
 
@@ -52,7 +52,6 @@ struct VitalSignsSection: QuestionnaireSection {
         - If the patient does not respond clearly, re-ask the question. Do NOT skip or save a null answer unless the patient explicitly requests it.
         - The function will show progress (e.g., "Question 1 of 4") to help track section completion.
         """
-    // swiftlint:enable line_length
 }
 
 // MARK: - KCCQ-12 Section
