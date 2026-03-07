@@ -16,69 +16,82 @@ actor CallHandler {
     let twilioAccountSid: String?
     let twilioAPIKey: String?
     let twilioSecret: String?
-    
+
     let encryptionKey: String?
     let recordingsDecryptionKey: String?
-    
+
     let eventLoopGroup: any EventLoopGroup
     let httpClient: HTTPClient
     let logger: Logger
-    let serviceState: ServiceState
-        
+    let coordinator: CallFlowCoordinator
+
     init(
         callId: String,
         phoneNumber: String,
-        app: Application,
+        app: Application
     ) async throws {
         self.encryptionKey = app.storage[EncryptionKeyStorageKey.self]
         self.recordingsDecryptionKey = app.storage[RecordingsDecryptionKeyStorageKey.self]
-        
+
         self.callId = callId
         self.phoneNumber = phoneNumber
         self.openAIKey = app.storage[OpenAIKeyStorageKey.self] ?? ""
         self.twilioAccountSid = app.storage[TwilioAccountSidStorageKey.self]
         self.twilioAPIKey = app.storage[TwilioAPIKeyStorageKey.self]
         self.twilioSecret = app.storage[TwilioSecretStorageKey.self]
-        
+
         self.eventLoopGroup = app.eventLoopGroup
         self.httpClient = app.http.client.shared
         self.logger = app.logger
-        self.serviceState = try await ServiceState(services: [
-            VitalSignsService(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
-            KCCQ12Service(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
-            Q17Service(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey)
-        ])
+
+        let featureFlags = app.featureFlags
+        let sections: [any QuestionnaireSection] = [
+            VitalSignsSection(),
+            KCCQ12Section(internalTestingMode: featureFlags.internalTestingMode),
+            Q17Section(),
+        ]
+        self.coordinator = try await CallFlowCoordinator.create(
+            sections: sections,
+            phoneNumber: phoneNumber,
+            logger: logger,
+            featureFlags: featureFlags,
+            encryptionKey: encryptionKey,
+            feedbackProvider: EngageHFFeedbackProvider()
+        )
     }
-        
+
     func accept() async throws {
         do {
-            let systemMessage = await initialSystemMessage()
+            let systemMessage = await coordinator.initialSystemMessage()
             let config = try Constants.loadSessionConfig(systemMessage: systemMessage)
-            let configObject = try JSONSerialization.jsonObject(with: config.data(using: .utf8) ?? Data())
+            let configObject = try JSONSerialization.jsonObject(
+                with: config.data(using: .utf8) ?? Data())
             let configData = try JSONSerialization.data(withJSONObject: configObject)
             let request = try HTTPClient.Request(
                 url: "https://api.openai.com/v1/realtime/calls/\(callId)/accept",
                 method: .POST,
                 headers: [
                     "Authorization": "Bearer \(openAIKey)",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 ],
                 body: .data(configData)
             )
             let response = try await httpClient.execute(request: request).get()
             var responseBody = response.body
-            let bodyString = responseBody?.readString(length: response.body?.readableBytes ?? 0, encoding: .utf8).map { string in
-                var string = string
-                string.makeContiguousUTF8()
-                return string
-            } ?? ""
+            let bodyString =
+                responseBody?.readString(length: response.body?.readableBytes ?? 0, encoding: .utf8)
+                .map { string in
+                    var string = string
+                    string.makeContiguousUTF8()
+                    return string
+                } ?? ""
             logger.info("/accept responded: \(response.status.code) \(bodyString)")
         } catch {
             logger.error("/accept failed: \(error)")
             throw error
         }
     }
-    
+
     func hangup() async throws {
         do {
             let request = try HTTPClient.Request(
@@ -86,7 +99,7 @@ actor CallHandler {
                 method: .POST,
                 headers: [
                     "Authorization": "Bearer \(openAIKey)",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 ]
             )
             _ = try await httpClient.execute(request: request).get()
@@ -96,18 +109,19 @@ actor CallHandler {
             throw error
         }
     }
-    
+
     // swiftlint:disable:next function_body_length
     func openWebsocket() async throws {
         do {
             try await WebSocket.connect(
-                to: "wss://api.openai.com/v1/realtime?call_id=\(callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? callId)",
+                to:
+                    "wss://api.openai.com/v1/realtime?call_id=\(callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? callId)",
                 headers: ["Authorization": "Bearer \(openAIKey)"],
                 on: eventLoopGroup
             ) { [self] webSocket async in
                 let session = CallSession(
                     phoneNumber: phoneNumber,
-                    serviceState: serviceState,
+                    coordinator: coordinator,
                     webSocket: webSocket,
                     logger: logger
                 )
@@ -115,7 +129,7 @@ actor CallHandler {
                 webSocket.onText { _, text async in
                     await session.handleMessage(text)
                 }
-                
+
                 webSocket.onClose.whenComplete { [self] result in
                     switch result {
                     case .success:
@@ -145,7 +159,7 @@ actor CallHandler {
                 }
             }
         } catch let error as WebSocketClient.Error {
-            if case let .invalidResponseStatus(head) = error {
+            if case .invalidResponseStatus(let head) = error {
                 logger.error("OpenAI Realtime API returned \(head.status.code).")
             } else {
                 logger.error("Error connecting to the OpenAI Realtime API: \(error)")
@@ -156,55 +170,37 @@ actor CallHandler {
             throw error
         }
     }
-        
-    private func initialSystemMessage() async -> String {
-        let hasUnansweredQuestions = await serviceState.initializeCurrentService()
-        if !hasUnansweredQuestions {
-            let feedback = try? await serviceState.getFeedback(phoneNumber: phoneNumber, logger: logger)
-            logger.info("No services have unanswered questions. Updating session with feedback.")
-            return Constants.initialSystemMessage
-            + Constants.noUnansweredQuestionsLeft
-            + Constants.feedback(content: feedback ?? "Feedback failed to be retrieved.")
-        } else {
-            let initialQuestion = await serviceState.current.getNextQuestion(includeAllQuestions: true)
-            let initialSystemMessage = await Constants.getSystemMessageForService(
-                serviceState.current,
-                initialQuestion: initialQuestion
-            )
-            return Constants.initialSystemMessage + (
-                initialSystemMessage ?? Constants.noUnansweredQuestionsLeft
-            )
-        }
-    }
-    
+
     private func updateCallRecordings() async {
         #if !DEBUG
-        guard let twilioAccountSid,
-              let twilioAPIKey,
-              let twilioSecret else {
-            logger.warning("Couldn't update newest recordings due to missing Twilio credentials.")
-            return
-        }
-        
-        do {
-            let twilioAPI = try TwilioAPI(
-                accountSid: twilioAccountSid,
-                apiKey: twilioAPIKey,
-                secret: twilioSecret,
-                httpClient: httpClient
-            )
-            
-            let recordingService = try CallRecordingService(
-                api: twilioAPI,
-                decryptionKey: recordingsDecryptionKey,
-                encryptionKey: encryptionKey,
-                logger: logger
-            )
-            
-            try await recordingService.storeNewestRecordings()
-        } catch {
-            logger.error("Failed to update newest recordings: \(error)")
-        }
+            guard let twilioAccountSid,
+                let twilioAPIKey,
+                let twilioSecret
+            else {
+                logger.warning(
+                    "Couldn't update newest recordings due to missing Twilio credentials.")
+                return
+            }
+
+            do {
+                let twilioAPI = try TwilioAPI(
+                    accountSid: twilioAccountSid,
+                    apiKey: twilioAPIKey,
+                    secret: twilioSecret,
+                    httpClient: httpClient
+                )
+
+                let recordingService = try CallRecordingService(
+                    api: twilioAPI,
+                    decryptionKey: recordingsDecryptionKey,
+                    encryptionKey: encryptionKey,
+                    logger: logger
+                )
+
+                try await recordingService.storeNewestRecordings()
+            } catch {
+                logger.error("Failed to update newest recordings: \(error)")
+            }
         #endif
     }
 }

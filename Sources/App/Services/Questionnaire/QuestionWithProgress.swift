@@ -8,7 +8,6 @@
 
 import Foundation
 
-
 /// A struct to wrap the question(s) and progress.
 /// When `allQuestions` is set, only `allQuestions` and `progress` are encoded.
 /// When `allQuestions` is nil, only `question` and `progress` are encoded.

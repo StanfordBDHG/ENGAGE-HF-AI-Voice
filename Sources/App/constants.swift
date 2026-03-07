@@ -13,6 +13,8 @@ import Vapor
 
 enum Constants {
     static let initialInstructionsPlaceholder = "{{INITIAL_INSTRUCTION}}"
+    static let sectionIndexPlaceholder = "{{SECTION_INDEX}}"
+    static let sectionCountPlaceholder = "{{SECTION_COUNT}}"
 
     /// The system prompt
     static let initialSystemMessage = """
@@ -34,89 +36,6 @@ enum Constants {
         - Do NOT interpret silence, acknowledgments, or filler words as answers.
         - Only use a `null` answer if the patient explicitly and clearly says they want to skip the question or that they do not have the information (e.g., "I don't know", "I didn't measure that", "skip this one").
         - When in doubt, always re-ask the question rather than moving on.
-        """
-
-    static let vitalSignsInstructions = """
-        Section 1 of 3: Vital Signs
-
-        Instructions:
-        - When you receive the initial question, it will include an `allQuestions` field listing all questions in this section.
-          - Use this information to determine which `linkIds` are available for saving responses.
-          - You can use it to handle related questions together when appropriate.
-        - Always pronounce units in their long form; for example, say "millimeters of mercury" for "mmHg".
-        - \(Constants.initialInstructionsPlaceholder)
-
-        For each question:
-        - Ask the question text clearly to the patient.
-        - For the two blood pressure questions (linkIds: `systolic` and `diastolic`):
-            - Ask for the blood pressure as a single, natural question (e.g., "What is your current blood pressure reading, in millimeters of mercury?").
-            - Do NOT ask for systolic and diastolic as two separate questions upfront.
-            - If the patient gives both values at once (e.g., "120 over 80"), interpret "X over Y" as systolic=X and diastolic=Y. Save both using two separate `save_response` calls with their respective linkIds.
-            - If the patient gives only one number, ask for the other one. You may use the terms "systolic" (the top/first number) and "diastolic" (the bottom/second number) when clarifying.
-            - Always confirm the values back to the patient, e.g., "I noted 120 as your systolic and 80 as your diastolic blood pressure."
-            - If the patient seems to have swapped the values (e.g., systolic < diastolic), gently ask them to double-check and correct if needed before saving.
-        - You may share the number of questions left and other progress updates to keep the patient engaged.
-        - Listen to the patient's response and briefly answer any questions they might have.
-        - Briefly repeat the patient's response back to them.
-        - If there is ambiguity about the question, ask follow-up questions; save the response directly if clear.
-        - Only use `null` as the answer if the patient explicitly says they want to skip or do not have the information. Never use `null` because of silence or unclear responses — re-ask instead.
-        - Always save the answer using the question's `linkId` and the `save_response` function.
-        - Move to the next question after saving. Keep the conversation fluent and engaging.
-
-        IMPORTANT:
-        - Call `save_response` after each response is confirmed, but only if it is within the expected range.
-        - Do not let the patient end the call before all answers are collected.
-        - If the patient does not respond clearly, re-ask the question. Do NOT skip or save a null answer unless the patient explicitly requests it.
-        - The function will show progress (e.g., "Question 1 of 4") to help track section completion.
-        """
-
-    static let kccq12Instructions = """
-        Section 2 of 3: KCCQ-12 Survey
-
-        Instructions:
-        - Inform the patient that you need to ask some questions about how their heart failure affects their daily life.
-        - \(Constants.initialInstructionsPlaceholder)
-
-        For each question:
-        - After every few questions, mention the number of questions left and other progress updates to keep the patient engaged.
-        - Ask the question text clearly to the patient.
-        - Do not list all answer options to keep the conversation natural!
-        - Listen to the patient's response and briefly answer any questions they might have.
-        - If there is ambiguity in how the response maps to the available options, ask follow-up questions to clarify.
-        - Only save the response if you have asked the question and the patient has given a clear, explicit answer.
-        - Do not guess or otherwise infer responses from previous answers.
-        - If the patient does not respond, gives a vague answer, or just says "ok"/"sure"/"yeah", re-ask the question. Do NOT skip or move on.
-        - Save the response directly if there is a clear mapping between the patient's answer and the available options.
-        - Always save the answer using the question's `linkId` and the `save_response` function.
-        - Move to the next question after saving. Keep the conversation fluent and engaging.
-
-        IMPORTANT:
-        - You must call the `save_response` function once you have determined the best-fitting answer based on the patient's response.
-        - Do not let the patient end the call before all answers are collected.
-        - If the patient does not respond clearly, re-ask the question. Do NOT skip or save a null answer unless the patient explicitly requests it.
-        - The `save_response` function will return progress information (e.g., "Question 1 of 13") to help track completion of the current section.
-        """
-
-    static let q17Instructions = """
-        Section 3 of 3: Last Section
-
-        Instructions:
-        - Inform the patient that you need to ask one final question.
-
-        For each question:
-        - Let the patient know this is the last question.
-        - Ask the question text clearly to the patient.
-        - Do not list all answer options to keep the conversation natural!
-        - Listen to the patient's response and briefly answer any questions they might have.
-        - If there is ambiguity in how the response maps to the available options, ask follow-up questions to clarify.
-        - If the patient does not respond clearly, re-ask the question. Do NOT skip or save a null answer unless the patient explicitly requests it.
-        - Save the response directly if there is a clear mapping between the patient's answer and the available options.
-        - Always save the answer using the question's `linkId` and the `save_response` function.
-
-        IMPORTANT:
-        - You must call the `save_response` function once you have determined the best-fitting answer based on the patient's response.
-        - Do not let the patient end the call before all answers are collected.
-        - After saving the last response with `save_response`, let the patient know that you are waiting for their feedback to be processed.
         """
 
     static let noUnansweredQuestionsLeft = """
@@ -182,35 +101,6 @@ enum Constants {
         - Do not ask any further health-related questions.
         - Do not start an unrelated conversation with the patient.
         """
-    }
-
-    /// Get the system message for the service including the initial question
-    static func getSystemMessageForService(
-        _ service: any QuestionnaireService, initialQuestion: String?
-    ) async -> String? {
-        let answeredQuestionCount = await service.countAnsweredQuestions()
-        let initialInstruction =
-            answeredQuestionCount == 0
-            ? "Inform the patient that you will start with the first question."
-            : "Inform the patient about their progress and that you will continue with the remaining questions."
-        let response: String? =
-            switch service {
-            case is VitalSignsService:
-                vitalSignsInstructions.replacingOccurrences(
-                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction
-                ) + (initialQuestion.map { "\n\n\($0)" } ?? "")
-            case is KCCQ12Service:
-                kccq12Instructions.replacingOccurrences(
-                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction
-                ) + (initialQuestion.map { "\n\n\($0)" } ?? "")
-            case is Q17Service:
-                q17Instructions.replacingOccurrences(
-                    of: Constants.initialInstructionsPlaceholder, with: initialInstruction
-                ) + (initialQuestion.map { "\n\n\($0)" } ?? "")
-            default:
-                nil
-            }
-        return response
     }
 
     /// Load the session config from the resources directory and inject the system prompt
