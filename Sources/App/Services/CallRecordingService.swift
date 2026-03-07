@@ -6,7 +6,6 @@
 // SPDX-License-Identifier: MIT
 //
 
-import Crypto
 import Foundation
 import Vapor
 
@@ -18,35 +17,19 @@ private struct CallRecordingMetadata: Encodable {
     let callEnd: String?
     let callSid: String?
     let recordingSid: String?
-    let fromHash: String?
-    let toHash: String?
+    let from: String?
+    let to: String?
     let queueTime: String?
     let trunkSid: String?
 }
 
 actor CallRecordingService {
-    private static let outputDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "America/Los_Angeles")
-        formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
-        return formatter
-    }()
-
-    private static let twilioDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
-        return formatter
-    }()
-
     let api: TwilioAPI
     let decryptor: CallRecordingDecryptor?
     let encryptor: EncryptionService?
     let directory: URL
     let logger: Logger
-
+    
     init(
         api: TwilioAPI,
         decryptionKey: String?,
@@ -56,36 +39,15 @@ actor CallRecordingService {
     ) {
         self.api = api
         self.decryptor = decryptionKey.flatMap {
-            do {
-                return try CallRecordingDecryptor(privateKey: .init(pemRepresentation: $0))
-            } catch {
-                logger.warning("Failed to initialize CallRecordingDecryptor: \(error)")
-                return nil
-            }
+            try? CallRecordingDecryptor(privateKey: .init(pemRepresentation: $0))
         }
         self.encryptor = encryptionKey.flatMap {
-            do {
-                return try EncryptionService(encryptionKeyBase64: $0)
-            } catch {
-                logger.warning("Failed to initialize EncryptionService for recordings: \(error)")
-                return nil
-            }
+            try? EncryptionService(encryptionKeyBase64: $0)
         }
         self.directory = directory
         self.logger = logger
     }
-
-    private static func hashPhoneNumber(_ phoneNumber: String) -> String {
-        guard let data = phoneNumber.data(using: .utf8) else {
-            return ""
-        }
-        return SHA256.hash(data: data)
-            .compactMap { String(format: "%02x", $0) }
-            .joined()
-            .prefix(16)
-            .description
-    }
-
+    
     func storeNewestRecordings() async throws {
         let fileManager = FileManager.default
         let existingFileNames: [String]
@@ -96,63 +58,52 @@ actor CallRecordingService {
             existingFileNames = []
         }
         logger.info("Found \(existingFileNames.count) existing recordings")
-
+        
         let recordings = try await api.fetchRecordings()
             .filter { $0.errorCode == nil && $0.status == "completed" }
         logger.info("Found \(recordings.count) successful recordings in Twilio")
-
+        
         for recording in recordings {
             if existingFileNames.contains(where: { $0.hasSuffix(recording.sid + ".wav") }) {
                 continue
             }
-
+                        
             do {
                 let outputURL = try await storeRecording(recording)
-                logger.info(
-                    "Successfully downloaded recording file for \(recording.sid) in \(outputURL)."
-                )
+                logger.info("Successfully downloaded recording file for \(recording.sid) in \(outputURL).")
             } catch {
-                logger.error(
-                    "Failed to download and store recording file for \(recording.sid): \(error.localizedDescription)"
-                )
+                logger.error("Failed to download and store recording file for \(recording.sid): \(error.localizedDescription)")
             }
         }
     }
-
+    
     private func storeRecording(_ recording: TwilioRecording) async throws -> URL {
         let call = try await api.fetchCall(sid: recording.callSid)
         guard let twilioDate = parseTwilioDate(from: recording.dateCreated) else {
             throw Abort(.badRequest)
         }
-
+        
         let mediaData = try await api.fetchMediaFile(sid: recording.sid)
-
-        let decryptedMediaData =
-            try recording.encryptionDetails.map { encryptionDetails in
-                guard let decryptor else {
-                    throw Abort(.badRequest, reason: "Decryptor is missing for encrypted recording")
-                }
-                return try decryptor.decrypt(
-                    mediaData,
-                    initialVector: encryptionDetails.iv,
-                    encryptedCEK: encryptionDetails.encryptedCek
-                )
-            } ?? mediaData
-
-        let fileNamePrefix = FileNaming.fileName(
-            phoneNumber: call.from,
-            date: twilioDate,
-            internalTestingMode: false
-        )
+                                        
+        let decryptedMediaData = try recording.encryptionDetails.map { encryptionDetails in
+            guard let decryptor else {
+                throw Abort(.badRequest, reason: "Decryptor is missing for encrypted recording")
+            }
+            return try decryptor.decrypt(
+                mediaData,
+                initialVector: encryptionDetails.iv,
+                encryptedCEK: encryptionDetails.encryptedCek
+            )
+        } ?? mediaData
+                
+        let fileNamePrefix = FileNaming.fileName(phoneNumber: call.from, date: twilioDate, internalTestingMode: false)
         let wavURL = directory.appending(component: fileNamePrefix + "_" + recording.sid + ".wav")
         let jsonURL = directory.appending(component: fileNamePrefix + "_" + recording.sid + ".json")
-
+        
         let encryptedMediaData = try encryptor?.encrypt(decryptedMediaData) ?? decryptedMediaData
-        logger.info(
-            "\(recording.sid) - Media size: \(mediaData.count) --> \(encryptedMediaData.count)"
-        )
+        logger.info("\(recording.sid) - Media size: \(mediaData.count) --> \(encryptedMediaData.count)")
         try encryptedMediaData.write(to: wavURL)
-
+        
         let metadata = CallRecordingMetadata(
             callDuration: call.duration,
             recordingDuration: recording.duration,
@@ -161,8 +112,8 @@ actor CallRecordingService {
             callEnd: rewriteTwilioDate(call.endTime),
             callSid: call.sid,
             recordingSid: recording.sid,
-            fromHash: Self.hashPhoneNumber(call.from),
-            toHash: Self.hashPhoneNumber(call.to),
+            from: call.from,
+            to: call.to,
             queueTime: call.queueTime,
             trunkSid: call.trunkSid
         )
@@ -170,22 +121,28 @@ actor CallRecordingService {
         encoder.outputFormatting = .prettyPrinted
         let jsonData = try encoder.encode(metadata)
         let encryptedJsonData = try encryptor?.encrypt(jsonData) ?? jsonData
-        logger.info(
-            "\(recording.sid) - Json size: \(jsonData.count) --> \(encryptedJsonData.count)"
-        )
+        logger.info("\(recording.sid) - Json size: \(jsonData.count) --> \(encryptedJsonData.count)")
         try encryptedJsonData.write(to: jsonURL)
         return wavURL
     }
-
+    
     private func rewriteTwilioDate(_ string: String) -> String {
         parseTwilioDate(from: string).map(filePathUsableDateString) ?? string
     }
-
+    
     private func filePathUsableDateString(for date: Date) -> String {
-        Self.outputDateFormatter.string(from: date)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "America/Los_Angeles")
+        formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
+        return formatter.string(from: date)
     }
-
+    
     private func parseTwilioDate(from string: String) -> Date? {
-        Self.twilioDateFormatter.date(from: string)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
+        return formatter.date(from: string)
     }
 }
