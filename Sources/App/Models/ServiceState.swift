@@ -35,10 +35,6 @@ actor ServiceState {
         return current
     }
     
-    func reset() {
-        currentIndex = 0
-    }
-    
     func initializeCurrentService() async -> Bool {
         for (index, service) in services.enumerated() where await service.unansweredQuestionsLeft() {
             currentIndex = index

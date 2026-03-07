@@ -41,7 +41,7 @@ actor CallSession {
                 logger.error("OpenAI Error: \(error.message) (Code: \(error.code ?? "unknown"))")
             }
         } catch {
-            logger.info("Error processing OpenAI message: \(error)")
+            logger.error("Error processing OpenAI message: \(error)")
         }
     }
     
@@ -79,7 +79,15 @@ actor CallSession {
         case "count_answered_questions":
             try await countAnsweredQuestions(service: currentService, response: response)
         case "end_call":
-            #warning("Closing the web socket is currently disabled due to https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/issues/45")
+            // Closing the web socket is currently disabled due to https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/issues/45
+            try await sendJSON([
+                "type": "conversation.item.create",
+                "item": [
+                    "type": "function_call_output",
+                    "call_id": response.callId ?? "",
+                    "output": "Call end acknowledged."
+                ]
+            ])
         default:
             logger.error("Unknown function call: \(String(describing: response.name))")
         }
@@ -110,10 +118,11 @@ actor CallSession {
             } catch {
                 logger.error("Decoding error details: \(error)")
                 try await sendJSON([
-                    "type": "function_response",
-                    "id": response.callId ?? "",
-                    "error": [
-                        "message": "Failed to decode parameters; please adhere to the JSON schema definitions."
+                    "type": "conversation.item.create",
+                    "item": [
+                        "type": "function_call_output",
+                        "call_id": response.callId ?? "",
+                        "output": "Failed to decode parameters; please adhere to the JSON schema definitions."
                     ]
                 ])
             }
@@ -255,10 +264,11 @@ actor CallSession {
     private func handleProcessingError(error: any Error, response: OpenAIResponse) async throws {
         logger.error("Error processing questionnaire: \(error)")
         try await sendJSON([
-            "type": "function_response",
-            "id": response.callId ?? "",
-            "error": [
-                "message": "Failed to process questionnaire"
+            "type": "conversation.item.create",
+            "item": [
+                "type": "function_call_output",
+                "call_id": response.callId ?? "",
+                "output": "Failed to process questionnaire"
             ]
         ])
     }

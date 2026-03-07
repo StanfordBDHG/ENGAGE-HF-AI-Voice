@@ -271,13 +271,13 @@ To decrypt questionnaire response files for analysis:
    pip3 install cryptography
    ```
 
-2. **Run the decryption script** (make sure you're in the directory containing the `/vital_signs`, `/kccq12_questionnairs`, and `/q17` folders):
+2. **Run the decryption script** (make sure you're in the directory containing the `/vital_signs`, `/kccq12_questionnaires`, and `/q17` folders):
    ```bash
    chmod +x decrypt_files.sh # make it executable
    ./decrypt_files.sh <your-base64-encryption-key>
    ```
 
-The script will decrypt all files from `./vital_signs/`, `./kccq12_questionnairs/`, and `./q17/` directories and save them to `./decrypted/`.
+The script will decrypt all files from `./vital_signs/`, `./kccq12_questionnaires/`, and `./q17/` directories and save them to `./decrypted/`.
 
 ---
 

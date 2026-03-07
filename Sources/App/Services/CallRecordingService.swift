@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
+import Crypto
 import Foundation
 import Vapor
 
@@ -17,8 +18,8 @@ private struct CallRecordingMetadata: Encodable {
     let callEnd: String?
     let callSid: String?
     let recordingSid: String?
-    let from: String?
-    let to: String?
+    let fromHash: String?
+    let toHash: String?
     let queueTime: String?
     let trunkSid: String?
 }
@@ -39,10 +40,20 @@ actor CallRecordingService {
     ) {
         self.api = api
         self.decryptor = decryptionKey.flatMap {
-            try? CallRecordingDecryptor(privateKey: .init(pemRepresentation: $0))
+            do {
+                return try CallRecordingDecryptor(privateKey: .init(pemRepresentation: $0))
+            } catch {
+                logger.warning("Failed to initialize CallRecordingDecryptor: \(error)")
+                return nil
+            }
         }
         self.encryptor = encryptionKey.flatMap {
-            try? EncryptionService(encryptionKeyBase64: $0)
+            do {
+                return try EncryptionService(encryptionKeyBase64: $0)
+            } catch {
+                logger.warning("Failed to initialize EncryptionService for recordings: \(error)")
+                return nil
+            }
         }
         self.directory = directory
         self.logger = logger
@@ -96,7 +107,7 @@ actor CallRecordingService {
             )
         } ?? mediaData
                 
-        let fileNamePrefix = fileName(phoneNumber: call.from, date: twilioDate, internalTestingMode: false)
+        let fileNamePrefix = FileNaming.fileName(phoneNumber: call.from, date: twilioDate, internalTestingMode: false)
         let wavURL = directory.appending(component: fileNamePrefix + "_" + recording.sid + ".wav")
         let jsonURL = directory.appending(component: fileNamePrefix + "_" + recording.sid + ".json")
         
@@ -112,8 +123,8 @@ actor CallRecordingService {
             callEnd: rewriteTwilioDate(call.endTime),
             callSid: call.sid,
             recordingSid: recording.sid,
-            from: call.from,
-            to: call.to,
+            fromHash: Self.hashPhoneNumber(call.from),
+            toHash: Self.hashPhoneNumber(call.to),
             queueTime: call.queueTime,
             trunkSid: call.trunkSid
         )
@@ -126,23 +137,42 @@ actor CallRecordingService {
         return wavURL
     }
     
+    private static let outputDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "America/Los_Angeles")
+        formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
+        return formatter
+    }()
+    
+    private static let twilioDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
+        return formatter
+    }()
+    
     private func rewriteTwilioDate(_ string: String) -> String {
         parseTwilioDate(from: string).map(filePathUsableDateString) ?? string
     }
     
     private func filePathUsableDateString(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "America/Los_Angeles")
-        formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
-        return formatter.string(from: date)
+        Self.outputDateFormatter.string(from: date)
     }
     
     private func parseTwilioDate(from string: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
-        return formatter.date(from: string)
+        Self.twilioDateFormatter.date(from: string)
+    }
+    
+    private static func hashPhoneNumber(_ phoneNumber: String) -> String {
+        guard let data = phoneNumber.data(using: .utf8) else {
+            return ""
+        }
+        return SHA256.hash(data: data)
+            .compactMap { String(format: "%02x", $0) }
+            .joined()
+            .prefix(16)
+            .description
     }
 }

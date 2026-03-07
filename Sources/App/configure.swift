@@ -20,8 +20,7 @@ public func configure(_ app: Application) async throws {
         openAIKey = "dummy-key-for-testing"
     } else {
         guard let key = Environment.get("OPENAI_API_KEY") else {
-            app.logger.error("Missing OpenAI API key. Please set it in the .env file.")
-            exit(1)
+            throw Abort(.internalServerError, reason: "Missing OpenAI API key. Please set it in the .env file.")
         }
         openAIKey = key
     }
@@ -31,23 +30,17 @@ public func configure(_ app: Application) async throws {
     if app.environment == .testing {
         encryptionKey = nil // No encryption in testing
     } else {
-        encryptionKey = Environment.get("ENCRYPTION_KEY")
-        if encryptionKey == nil {
-            app.logger.warning("No encryption key provided. Questionnaire responses will be stored unencrypted.")
-        } else {
-            // swiftlint:disable:next force_unwrapping
-            guard let keyData = Data(base64Encoded: encryptionKey!),
-                  keyData.count == 32 else {
-                app.logger.warning(
-                    """
-                    Invalid encryption key provided (must be base64-encoded and 32 bytes when decoded).
-                    Questionnaire responses will be stored unencrypted.
-                    """
-                )
-                encryptionKey = nil
-                return
-            }
+        guard let key = Environment.get("ENCRYPTION_KEY") else {
+            throw Abort(.internalServerError, reason: "Missing ENCRYPTION_KEY. An encryption key is required in non-testing environments.")
         }
+        guard let keyData = Data(base64Encoded: key),
+              keyData.count == 32 else {
+            throw Abort(
+                .internalServerError,
+                reason: "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
+            )
+        }
+        encryptionKey = key
     }
     
     // Store keys in application storage for access in routes
@@ -58,6 +51,7 @@ public func configure(_ app: Application) async throws {
     app.storage[TwilioAccountSidStorageKey.self] = Environment.get("TWILIO_ACCOUNT_SID")
     app.storage[TwilioAPIKeyStorageKey.self] = Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")
     app.storage[TwilioSecretStorageKey.self] = Environment.get("TWILIO_SECRET")
+    app.storage[WebhookSecretStorageKey.self] = Environment.get("WEBHOOK_SECRET")
     
     // Configure server
     app.http.server.configuration.port = Environment.get("PORT").flatMap(Int.init) ?? 5000

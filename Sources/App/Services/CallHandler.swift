@@ -29,7 +29,7 @@ actor CallHandler {
         callId: String,
         phoneNumber: String,
         app: Application,
-    ) async {
+    ) async throws {
         self.encryptionKey = app.storage[EncryptionKeyStorageKey.self]
         self.recordingsDecryptionKey = app.storage[RecordingsDecryptionKeyStorageKey.self]
         
@@ -43,7 +43,7 @@ actor CallHandler {
         self.eventLoopGroup = app.eventLoopGroup
         self.httpClient = app.http.client.shared
         self.logger = app.logger
-        self.serviceState = await ServiceState(services: [
+        self.serviceState = try await ServiceState(services: [
             VitalSignsService(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
             KCCQ12Service(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey),
             Q17Service(phoneNumber: phoneNumber, logger: logger, featureFlags: app.featureFlags, encryptionKey: encryptionKey)
@@ -53,7 +53,7 @@ actor CallHandler {
     func accept() async throws {
         do {
             let systemMessage = await initialSystemMessage()
-            let config = Constants.loadSessionConfig(systemMessage: systemMessage)
+            let config = try Constants.loadSessionConfig(systemMessage: systemMessage)
             let configObject = try JSONSerialization.jsonObject(with: config.data(using: .utf8) ?? Data())
             let configData = try JSONSerialization.data(withJSONObject: configObject)
             let request = try HTTPClient.Request(

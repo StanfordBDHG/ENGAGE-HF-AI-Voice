@@ -40,12 +40,22 @@ func routes(_ app: Application) throws {
             try await recordingService.storeNewestRecordings()
         } catch {
             req.logger.error("Failed to update newest recordings: \(error)")
+            return Response(status: .internalServerError)
         }
         
         return Response(status: .ok)
     }
     
     app.post("incoming-call") { req async -> Response in
+        // Validate webhook secret if configured
+        if let webhookSecret = app.storage[WebhookSecretStorageKey.self] {
+            let authHeader = req.headers[.authorization].first ?? ""
+            guard authHeader == "Bearer \(webhookSecret)" else {
+                req.logger.warning("Unauthorized incoming-call request: invalid or missing webhook secret.")
+                return Response(status: .unauthorized)
+            }
+        }
+        
         guard let body = req.body.data else {
             return Response(status: .badRequest)
         }
@@ -57,7 +67,7 @@ func routes(_ app: Application) throws {
             let phoneNumber = extractPhoneNumberFromSIPHeaders(event.data.sipHeaders) ?? ""
             
             logger.info("About to create session handler for call \"\(callId)\" from \"\(phoneNumber)\"")
-            let handler = await CallHandler(callId: callId, phoneNumber: phoneNumber, app: app)
+            let handler = try await CallHandler(callId: callId, phoneNumber: phoneNumber, app: app)
             logger.info("About to accept call \"\(callId)\" from \"\(phoneNumber)\".")
             try await handler.accept()
             logger.info("About to open websocket for call \"\(callId)\" from \"\(phoneNumber)\".")

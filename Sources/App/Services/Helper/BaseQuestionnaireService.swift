@@ -31,7 +31,7 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         sharesAllQuestionsIfNeeded: Bool,
         featureFlags: FeatureFlags,
         encryptionKey: String? = nil
-    ) {
+    ) throws {
         self.phoneNumber = phoneNumber
         self.logger = logger
         self.storage = QuestionnaireStorageService(
@@ -40,7 +40,7 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
             featureFlags: featureFlags,
             encryptionKey: encryptionKey
         )
-        self.manager = QuestionnaireManager(
+        self.manager = try QuestionnaireManager(
             questionnaire: storage.loadQuestionnaire(),
             sharesAllQuestionsIfNeeded: sharesAllQuestionsIfNeeded,
             initialResponse: storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)

@@ -64,15 +64,12 @@ struct PatientData {
                 return .same
             case 4:
                 return .better
-            default:
+            case 5:
                 return .better
+            default:
+                return .same
             }
         }
-    }
-    
-    struct Feedback {
-        let vitals: String
-        let survey: String
     }
     
     let systolicBP: Int

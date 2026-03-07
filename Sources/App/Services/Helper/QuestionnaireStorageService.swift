@@ -32,7 +32,11 @@ class QuestionnaireStorageService: Sendable {
         
         // Initialize encryption service if key is provided
         if let encryptionKey = encryptionKey {
-            self.encryptionService = try? EncryptionService(encryptionKeyBase64: encryptionKey)
+            do {
+                self.encryptionService = try EncryptionService(encryptionKeyBase64: encryptionKey)
+            } catch {
+                self.encryptionService = nil
+            }
         } else {
             self.encryptionService = nil
         }
@@ -67,9 +71,7 @@ class QuestionnaireStorageService: Sendable {
 
         guard fileManager.fileExists(atPath: filePath(phoneNumber)) else {
             logger.info("Could not read data from \(filePath(phoneNumber)) file")
-            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
-            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
-            return questionnaireResponse
+            return makeEmptyResponse(phoneNumber: phoneNumber)
         }
 
         do {
@@ -90,9 +92,7 @@ class QuestionnaireStorageService: Sendable {
             return try decoder.decode(QuestionnaireResponse.self, from: jsonData)
         } catch {
             logger.error("Failed to load questionnaire response: \(error)")
-            let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
-            questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
-            return questionnaireResponse
+            return makeEmptyResponse(phoneNumber: phoneNumber)
         }
     }
     
@@ -144,11 +144,18 @@ class QuestionnaireStorageService: Sendable {
 
     /// Hash the phone number for file naming (includes date for daily rotation)
     private func hashPhoneNumber(_ phoneNumber: String) -> String {
-        fileName(phoneNumber: phoneNumber, date: dateTimeCreated, internalTestingMode: featureFlags.internalTestingMode)
+        FileNaming.fileName(phoneNumber: phoneNumber, date: dateTimeCreated, internalTestingMode: featureFlags.internalTestingMode)
+    }
+    
+    private func makeEmptyResponse(phoneNumber: String) -> QuestionnaireResponse {
+        let questionnaireResponse = QuestionnaireResponse(status: FHIRPrimitive(QuestionnaireResponseStatus.completed))
+        questionnaireResponse.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
+        return questionnaireResponse
     }
 }
 
-func fileName(phoneNumber: String, date: Date, internalTestingMode: Bool) -> String {
+enum FileNaming {
+    static func fileName(phoneNumber: String, date: Date, internalTestingMode: Bool) -> String {
 #if DEBUG
         return "1"
 #else
@@ -167,4 +174,5 @@ func fileName(phoneNumber: String, date: Date, internalTestingMode: Bool) -> Str
         let hash = SHA256.hash(data: data)
         return hash.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
 #endif
+    }
 }

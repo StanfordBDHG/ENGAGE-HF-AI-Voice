@@ -49,10 +49,10 @@ class QuestionnaireManager: Sendable {
     /// - Parameters:
     ///   - questionnaire: The FHIR questionnaire to manage
     ///   - initialResponse: Optional initial response to start from
-    init(questionnaire: Questionnaire?, sharesAllQuestionsIfNeeded: Bool, initialResponse: QuestionnaireResponse? = nil) {
+    init(questionnaire: Questionnaire?, sharesAllQuestionsIfNeeded: Bool, initialResponse: QuestionnaireResponse? = nil) throws {
         self.sharesAllQuestionsIfNeeded = sharesAllQuestionsIfNeeded
         guard let questionnaire else {
-            fatalError("QuestionnaireManager initialized with nil questionnaire")
+            throw Abort(.internalServerError, reason: "QuestionnaireManager initialized with nil questionnaire")
         }
         self.questionnaire = questionnaire
         

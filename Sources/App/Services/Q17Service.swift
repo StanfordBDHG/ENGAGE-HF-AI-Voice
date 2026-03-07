@@ -14,8 +14,8 @@ import Vapor
 /// Service for managing Q17 questionnaire
 @MainActor
 class Q17Service: BaseQuestionnaireService, Sendable {
-    init(phoneNumber: String, logger: Logger, featureFlags: FeatureFlags, encryptionKey: String? = nil) {
-        super.init(
+    init(phoneNumber: String, logger: Logger, featureFlags: FeatureFlags, encryptionKey: String? = nil) throws {
+        try super.init(
             questionnaireName: "q17",
             directoryPath: Constants.q17DirectoryPath,
             phoneNumber: phoneNumber,

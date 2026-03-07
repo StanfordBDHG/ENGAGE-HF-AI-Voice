@@ -14,8 +14,8 @@ import Vapor
 /// Service for managing KCCQ12 questionnaire
 @MainActor
 class KCCQ12Service: BaseQuestionnaireService, Sendable {
-    init(phoneNumber: String, logger: Logger, featureFlags: FeatureFlags, encryptionKey: String? = nil) {
-        super.init(
+    init(phoneNumber: String, logger: Logger, featureFlags: FeatureFlags, encryptionKey: String? = nil) throws {
+        try super.init(
             questionnaireName: featureFlags.internalTestingMode ? "kccq12Short" : "kccq12",
             directoryPath: Constants.kccq12DirectoryPath,
             phoneNumber: phoneNumber,
@@ -144,11 +144,9 @@ class KCCQ12Service: BaseQuestionnaireService, Sendable {
     }
     
     nonisolated private func getAnswerValue(_ item: QuestionnaireResponseItem) -> Int? {
-        guard let value = item.answer?.first?.value,
-              case .string(let stringValue) = value,
-              let intValue = Int(stringValue.value?.string ?? "") else {
+        guard let answer = item.answer?.first else {
             return nil
         }
-        return intValue
+        return answer.integerAnswerValue()
     }
 }

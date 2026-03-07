@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Vapor
 
 // swiftlint:disable line_length
 
@@ -116,14 +117,14 @@ enum Constants {
 
     /// Directory paths for different questionnaire types
     static let vitalSignsDirectoryPath = "\(dataDirectory)/vital_signs/"
-    static let kccq12DirectoryPath = "\(dataDirectory)/kccq12_questionnairs/"
+    static let kccq12DirectoryPath = "\(dataDirectory)/kccq12_questionnaires/"
     static let q17DirectoryPath = "\(dataDirectory)/q17/"
     static let callRecordingsDirectoryPath = "\(dataDirectory)/recordings/"
 
     /// Base data directory for storing questionnaire responses
     static let dataDirectory: String = {
 #if DEBUG
-        return Bundle.module.bundlePath + "/Contents/Resources/MockData"
+        return Bundle.module.bundlePath + "/MockData"
 #else
         let fileManager = FileManager.default
         let currentDirectoryPath = fileManager.currentDirectoryPath
@@ -189,20 +190,16 @@ enum Constants {
     }
 
     /// Load the session config from the resources directory and inject the system prompt
-    static func loadSessionConfig(systemMessage: String) -> String {
+    static func loadSessionConfig(systemMessage: String) throws -> String {
         guard let url = Bundle.module.url(forResource: "sessionConfig", withExtension: "json"),
-              var jsonString = try? String(contentsOf: url, encoding: .utf8) else {
-            fatalError("Could not load sessionConfig.json")
+              let jsonString = try? String(contentsOf: url, encoding: .utf8) else {
+            throw Abort(.internalServerError, reason: "Could not load sessionConfig.json")
         }
         
         // Escape newlines and quotes in the system message
         let escapedMessage = systemMessage
             .replacingOccurrences(of: "\n", with: "\\n")
             .replacingOccurrences(of: "\"", with: "\\\"")
-        jsonString = jsonString.replacingOccurrences(
-            of: "{{EVENT_ID}}",
-            with: UUID().uuidString
-        )
         return jsonString.replacingOccurrences(
             of: "{{SYSTEM_PROMPT}}",
             with: escapedMessage

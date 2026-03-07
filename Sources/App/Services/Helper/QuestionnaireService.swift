@@ -22,3 +22,19 @@ protocol QuestionnaireService: Sendable {
     func countAnsweredQuestions() -> Int
     func unansweredQuestionsLeft() -> Bool
 }
+
+extension QuestionnaireResponseItemAnswer {
+    func integerAnswerValue() -> Int? {
+        guard let value else {
+            return nil
+        }
+        switch value {
+        case .integer(let integerValue):
+            return Int(integerValue.value?.integer ?? 0)
+        case .string(let stringValue):
+            return Int(stringValue.value?.string ?? "")
+        default:
+            return nil
+        }
+    }
+}
