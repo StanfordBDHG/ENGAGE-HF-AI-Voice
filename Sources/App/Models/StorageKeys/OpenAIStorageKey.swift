@@ -8,8 +8,13 @@
 
 import Vapor
 
+// swiftlint:disable file_types_order
 
 // Storage key for OpenAI API key
 struct OpenAIKeyStorageKey: StorageKey {
+    typealias Value = String
+}
+
+struct OpenAIWebhookSecretStorageKey: StorageKey {
     typealias Value = String
 }

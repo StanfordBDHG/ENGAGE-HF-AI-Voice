@@ -13,48 +13,57 @@ public func configure(_ app: Application) async throws {
     // Initialize feature flags
     let featureFlags = FeatureFlags()
     app.featureFlags = featureFlags
-    
+
     // Environment variables
     let openAIKey: String
     if app.environment == .testing {
         openAIKey = "dummy-key-for-testing"
     } else {
         guard let key = Environment.get("OPENAI_API_KEY") else {
-            throw Abort(.internalServerError, reason: "Missing OpenAI API key. Please set it in the .env file.")
+            throw Abort(
+                .internalServerError,
+                reason: "Missing OpenAI API key. Please set it in the .env file."
+            )
         }
         openAIKey = key
     }
-    
+
     // Encryption key (optional for development)
     var encryptionKey: String?
     if app.environment == .testing {
-        encryptionKey = nil // No encryption in testing
+        encryptionKey = nil  // No encryption in testing
     } else {
         if let key = Environment.get("ENCRYPTION_KEY") {
             guard let keyData = Data(base64Encoded: key),
-                  keyData.count == 32 else {
+                keyData.count == 32
+            else {
                 throw Abort(
                     .internalServerError,
-                    reason: "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
+                    reason:
+                        "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
                 )
             }
             encryptionKey = key
         }
     }
-    
+
     // Store keys in application storage for access in routes
     app.storage[OpenAIKeyStorageKey.self] = openAIKey
+    app.storage[OpenAIWebhookSecretStorageKey.self] = Environment.get("OPENAI_WEBHOOK_SECRET")
+
     app.storage[EncryptionKeyStorageKey.self] = encryptionKey
-    app.storage[RecordingsDecryptionKeyStorageKey.self] = Environment.get("RECORDINGS_DECRYPTION_KEY")
-    
+    app.storage[RecordingsDecryptionKeyStorageKey.self] = Environment.get(
+        "RECORDINGS_DECRYPTION_KEY"
+    )
+
     app.storage[TwilioAccountSidStorageKey.self] = Environment.get("TWILIO_ACCOUNT_SID")
-    app.storage[TwilioAPIKeyStorageKey.self] = Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")
+    app.storage[TwilioAPIKeyStorageKey.self] =
+        Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")
     app.storage[TwilioSecretStorageKey.self] = Environment.get("TWILIO_SECRET")
-    app.storage[WebhookSecretStorageKey.self] = Environment.get("WEBHOOK_SECRET")
-    
+
     // Configure server
     app.http.server.configuration.port = Environment.get("PORT").flatMap(Int.init) ?? 5000
-    
+
     // Register routes
     try routes(app)
 }

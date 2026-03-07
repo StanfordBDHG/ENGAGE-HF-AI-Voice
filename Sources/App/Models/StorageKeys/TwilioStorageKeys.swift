@@ -21,7 +21,3 @@ struct TwilioAPIKeyStorageKey: StorageKey {
 struct TwilioSecretStorageKey: StorageKey {
     typealias Value = String
 }
-
-struct WebhookSecretStorageKey: StorageKey {
-    typealias Value = String
-}

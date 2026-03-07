@@ -1,11 +1,6 @@
 {
     "item": [
-        {
-            "linkId": "wellbeing-comparison",
-            "answer": [
-                { "valueString": "1" }
-            ]
-        }
+
     ],
     "resourceType": "QuestionnaireResponse",
     "status": "completed",
