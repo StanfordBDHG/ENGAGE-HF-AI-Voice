@@ -65,7 +65,8 @@ actor CallHandler {
             let systemMessage = await coordinator.initialSystemMessage()
             let config = try Constants.loadSessionConfig(systemMessage: systemMessage)
             let configObject = try JSONSerialization.jsonObject(
-                with: config.data(using: .utf8) ?? Data())
+                with: config.data(using: .utf8) ?? Data()
+            )
             let configData = try JSONSerialization.data(withJSONObject: configObject)
             let request = try HTTPClient.Request(
                 url: "https://api.openai.com/v1/realtime/calls/\(callId)/accept",
@@ -178,7 +179,8 @@ actor CallHandler {
                 let twilioSecret
             else {
                 logger.warning(
-                    "Couldn't update newest recordings due to missing Twilio credentials.")
+                    "Couldn't update newest recordings due to missing Twilio credentials."
+                )
                 return
             }
 

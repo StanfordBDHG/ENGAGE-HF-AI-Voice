@@ -43,7 +43,9 @@ enum KCCQ12ScoreCalculator {
             .filter { linkIds.contains($0.linkId.value?.string ?? "") }
             .filter { $0.answer?.first?.integerAnswerValue() != 6 }
             .compactMap { item -> Double? in
-                guard let value = item.answer?.first?.integerAnswerValue() else { return nil }
+                guard let value = item.answer?.first?.integerAnswerValue() else {
+                    return nil
+                }
                 return (100.0 * Double(value - 1)) / 4.0
             }
         return answers.count >= 2 ? average(answers) : nil
@@ -62,7 +64,9 @@ enum KCCQ12ScoreCalculator {
             items.first { $0.linkId.value?.string == linkId }
                 .flatMap { $0.answer?.first?.integerAnswerValue() }
         }
-        guard answers.count == 4 else { return nil }
+        guard answers.count == 4 else {
+            return nil
+        }
 
         let denominators = [4.0, 6.0, 6.0, 4.0]
         let scores = zip(answers, denominators).map { answer, denom in
@@ -82,7 +86,9 @@ enum KCCQ12ScoreCalculator {
             items.first { $0.linkId.value?.string == linkId }
                 .flatMap { $0.answer?.first?.integerAnswerValue() }
         }
-        guard answers.count == 2 else { return nil }
+        guard answers.count == 2 else {
+            return nil
+        }
         return average(answers.map { (100.0 * Double($0 - 1)) / 4.0 })
     }
 
@@ -98,7 +104,9 @@ enum KCCQ12ScoreCalculator {
             items.first { $0.linkId.value?.string == linkId }
                 .flatMap { $0.answer?.first?.integerAnswerValue() }
         }
-        guard answers.count == 3 else { return nil }
+        guard answers.count == 3 else {
+            return nil
+        }
         let scores = answers.filter { $0 != 6 }.map { (100.0 * Double($0 - 1)) / 4.0 }
         return scores.count >= 2 ? average(scores) : nil
     }
@@ -106,7 +114,9 @@ enum KCCQ12ScoreCalculator {
     // MARK: - Helpers
 
     private static func average(_ values: [Double]) -> Double? {
-        guard !values.isEmpty else { return nil }
+        guard !values.isEmpty else {
+            return nil
+        }
         return values.reduce(0, +) / Double(values.count)
     }
 }

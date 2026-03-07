@@ -107,13 +107,17 @@ class QuestionnaireResponseStore: Sendable {
     }
 
     private func decryptIfNeeded(_ data: Data, logger: Logger) throws -> Data {
-        guard let encryptionService else { return data }
+        guard let encryptionService else {
+            return data
+        }
         logger.info("Decrypting questionnaire response")
         return try encryptionService.decrypt(data)
     }
 
     private func encryptIfNeeded(_ data: Data, logger: Logger) throws -> Data {
-        guard let encryptionService else { return data }
+        guard let encryptionService else {
+            return data
+        }
         logger.info("Encrypting questionnaire response")
         return try encryptionService.encrypt(data)
     }

@@ -75,12 +75,13 @@ struct AppTests {
             )
             let feedback = await coordinator.generateFeedback()
 
-            #expect(
-                feedback == """
-                    Your blood pressure and pulse are normal.
-                    Your symptom score is 50.0, which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                    You feel worse compared to 3 months ago.
-                    """)
+            let expected = """
+                Your blood pressure and pulse are normal.
+                Your symptom score is 50.0, which means you have a lot of symptoms \
+                from your heart failure that make it hard to do everyday activities.
+                You feel worse compared to 3 months ago.
+                """
+            #expect(feedback == expected)
         }
     }
 }

@@ -75,6 +75,37 @@ class FHIRQuestionnaireEngine: Sendable {
         updateFinishedState()
     }
 
+    // MARK: - Type Methods
+
+    static func flattenItems(_ items: [QuestionnaireItem]) -> [QuestionnaireItem] {
+        items.flatMap { item -> [QuestionnaireItem] in
+            if let subItems = item.item {
+                return flattenItems(subItems)
+            } else if item.type.value?.rawValue != "display" {
+                return [item]
+            }
+            return []
+        }
+    }
+
+    private static func extractNote(from extensions: [ModelsR4.Extension]) -> String? {
+        extensions
+            .first { $0.url.value?.url.absoluteString == noteExtensionURL }
+            .flatMap { ext in
+                if case .string(let str) = ext.value {
+                    return str.value?.string
+                }
+                return nil
+            }
+    }
+
+    private static func descriptiveCode(from display: String) -> String {
+        display.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
+    }
+
     // MARK: - Public Interface
 
     /// Returns the next unanswered question as a JSON string, or nil if finished.
@@ -154,15 +185,21 @@ class FHIRQuestionnaireEngine: Sendable {
 
         let nextItem =
             items.first { item in
-                guard let linkId = item.linkId.value?.string else { return false }
+                guard let linkId = item.linkId.value?.string else {
+                    return false
+                }
                 return (item.required?.value?.bool ?? false) && !answeredIds.contains(linkId)
             }
             ?? items.first { item in
-                guard let linkId = item.linkId.value?.string else { return false }
+                guard let linkId = item.linkId.value?.string else {
+                    return false
+                }
                 return !answeredIds.contains(linkId)
             }
 
-        guard let nextItem else { return nil }
+        guard let nextItem else {
+            return nil
+        }
 
         let progress = "\(answeredIds.count + 1) of \(items.count)"
 
@@ -171,7 +208,9 @@ class FHIRQuestionnaireEngine: Sendable {
             allQuestions =
                 items
                 .filter { item in
-                    guard let linkId = item.linkId.value?.string else { return false }
+                    guard let linkId = item.linkId.value?.string else {
+                        return false
+                    }
                     return !answeredIds.contains(linkId)
                 }
                 .map { simplify($0) }
@@ -186,24 +225,13 @@ class FHIRQuestionnaireEngine: Sendable {
         )
     }
 
-    // MARK: - FHIR Item Traversal
-
-    static func flattenItems(_ items: [QuestionnaireItem]) -> [QuestionnaireItem] {
-        items.flatMap { item -> [QuestionnaireItem] in
-            if let subItems = item.item {
-                return flattenItems(subItems)
-            } else if item.type.value?.rawValue != "display" {
-                return [item]
-            }
-            return []
-        }
-    }
-
     // MARK: - Code Mapping
 
     private func buildCodeMapping(for item: QuestionnaireItem) {
         let linkId = item.linkId.value?.string ?? ""
-        guard let options = item.answerOption else { return }
+        guard let options = item.answerOption else {
+            return
+        }
 
         var mapping: [String: String] = [:]
         for option in options {
@@ -233,7 +261,9 @@ class FHIRQuestionnaireEngine: Sendable {
         var answerOptions: [SimplifiedAnswerOption] = []
         if let options = item.answerOption {
             answerOptions = options.compactMap { option -> SimplifiedAnswerOption? in
-                guard case .coding(let coding) = option.value else { return nil }
+                guard case .coding(let coding) = option.value else {
+                    return nil
+                }
                 let display = coding.display?.value?.string ?? ""
                 let code = Self.descriptiveCode(from: display)
                 let optionNote = Self.extractNote(from: option.`extension` ?? [])
@@ -272,32 +302,14 @@ class FHIRQuestionnaireEngine: Sendable {
         let items = Self.flattenItems(questionnaire.item ?? [])
         let answeredIds = Set(response.item?.compactMap { $0.linkId.value?.string } ?? [])
         isFinished = items.allSatisfy { item in
-            guard let linkId = item.linkId.value?.string else { return true }
+            guard let linkId = item.linkId.value?.string else {
+                return true
+            }
             return !(item.required?.value?.bool ?? false) || answeredIds.contains(linkId)
         }
         response.status = FHIRPrimitive(
             isFinished
                 ? QuestionnaireResponseStatus.completed : QuestionnaireResponseStatus.inProgress
         )
-    }
-
-    // MARK: - Helpers
-
-    private static func extractNote(from extensions: [ModelsR4.Extension]) -> String? {
-        extensions
-            .first { $0.url.value?.url.absoluteString == noteExtensionURL }
-            .flatMap { ext in
-                if case .string(let str) = ext.value {
-                    return str.value?.string
-                }
-                return nil
-            }
-    }
-
-    private static func descriptiveCode(from display: String) -> String {
-        display.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: "-")
     }
 }

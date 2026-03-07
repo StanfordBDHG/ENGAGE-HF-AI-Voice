@@ -30,8 +30,8 @@ actor CallFlowCoordinator {
 
     init(
         engines: [FHIRQuestionnaireEngine],
-        feedbackProvider: (any FeedbackProvider)? = nil,
-        logger: Logger
+        logger: Logger,
+        feedbackProvider: (any FeedbackProvider)? = nil
     ) {
         self.engines = engines
         self.feedbackProvider = feedbackProvider
@@ -61,7 +61,10 @@ actor CallFlowCoordinator {
             )
         }
         return CallFlowCoordinator(
-            engines: engines, feedbackProvider: feedbackProvider, logger: logger)
+            engines: engines,
+            logger: logger,
+            feedbackProvider: feedbackProvider
+        )
     }
 
     // MARK: - Section Navigation
@@ -78,7 +81,9 @@ actor CallFlowCoordinator {
 
     /// Advance to the next section. Returns the engine if available, nil if all sections done.
     func advanceToNextSection() async -> FHIRQuestionnaireEngine? {
-        guard currentIndex < engines.count - 1 else { return nil }
+        guard currentIndex < engines.count - 1 else {
+            return nil
+        }
         currentIndex += 1
         return currentEngine
     }
@@ -135,7 +140,9 @@ actor CallFlowCoordinator {
 
     /// Generate feedback using the registered provider.
     func generateFeedback() async -> String? {
-        guard let feedbackProvider else { return nil }
+        guard let feedbackProvider else {
+            return nil
+        }
         return await feedbackProvider.feedback(from: engines)
     }
 

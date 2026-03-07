@@ -8,6 +8,8 @@
 
 import Foundation
 
+// swiftlint:disable file_types_order
+
 // MARK: - Vital Signs Section
 
 struct VitalSignsSection: QuestionnaireSection {
@@ -16,7 +18,7 @@ struct VitalSignsSection: QuestionnaireSection {
     let directoryPath = Constants.vitalSignsDirectoryPath
     let sharesAllQuestions = true
 
-    // swiftlint:disable:next line_length
+    // swiftlint:disable line_length
     let instructions = """
         Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): Vital Signs
 
@@ -50,6 +52,7 @@ struct VitalSignsSection: QuestionnaireSection {
         - If the patient does not respond clearly, re-ask the question. Do NOT skip or save a null answer unless the patient explicitly requests it.
         - The function will show progress (e.g., "Question 1 of 4") to help track section completion.
         """
+    // swiftlint:enable line_length
 }
 
 // MARK: - KCCQ-12 Section
@@ -61,11 +64,6 @@ struct KCCQ12Section: QuestionnaireSection {
 
     let resourceName: String
 
-    init(internalTestingMode: Bool = false) {
-        self.resourceName = internalTestingMode ? "kccq12Short" : "kccq12"
-    }
-
-    // swiftlint:disable:next line_length
     let instructions = """
         Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): KCCQ-12 Survey
 
@@ -92,6 +90,10 @@ struct KCCQ12Section: QuestionnaireSection {
         - If the patient does not respond clearly, re-ask the question. Do NOT skip or save a null answer unless the patient explicitly requests it.
         - The `save_response` function will return progress information (e.g., "Question 1 of 13") to help track completion of the current section.
         """
+
+    init(internalTestingMode: Bool = false) {
+        self.resourceName = internalTestingMode ? "kccq12Short" : "kccq12"
+    }
 }
 
 // MARK: - Q17 Section
@@ -102,7 +104,6 @@ struct Q17Section: QuestionnaireSection {
     let directoryPath = Constants.q17DirectoryPath
     let sharesAllQuestions = false
 
-    // swiftlint:disable:next line_length
     let instructions = """
         Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): Last Section
 
