@@ -20,7 +20,7 @@ struct VitalSignsSection: QuestionnaireSection {
     let sharesAllQuestions = true
 
     let instructions = """
-        Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): Vital Signs
+        Section \(Constants.sectionNumberPlaceholder) of \(Constants.sectionCountPlaceholder): Vital Signs
 
         Instructions:
         - When you receive the initial question, it will include an `allQuestions` field listing all questions in this section.
@@ -64,7 +64,7 @@ struct KCCQ12Section: QuestionnaireSection {
     let resourceName: String
 
     let instructions = """
-        Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): KCCQ-12 Survey
+        Section \(Constants.sectionNumberPlaceholder) of \(Constants.sectionCountPlaceholder): KCCQ-12 Survey
 
         Instructions:
         - Inform the patient that you need to ask some questions about how their heart failure affects their daily life.
@@ -104,7 +104,7 @@ struct Q17Section: QuestionnaireSection {
     let sharesAllQuestions = false
 
     let instructions = """
-        Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): Last Section
+        Section \(Constants.sectionNumberPlaceholder) of \(Constants.sectionCountPlaceholder): Last Section
 
         Instructions:
         - Inform the patient that you need to ask one final question.

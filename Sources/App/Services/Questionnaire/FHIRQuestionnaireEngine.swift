@@ -183,17 +183,17 @@ class FHIRQuestionnaireEngine: Sendable {
 
     // MARK: - Public Interface
 
-    /// Returns the next unanswered question as a JSON string, or nil if finished.
-    func nextQuestionJSON(includeAllQuestions: Bool) -> String? {
+    /// Returns the next unanswered question as an encoded string, or nil if finished.
+    func nextQuestionString(includeAllQuestions: Bool) -> String? {
         guard let payload = nextQuestionPayload(includeAllQuestions: includeAllQuestions) else {
             return nil
         }
         guard let data = try? TOONEncoder().encode(payload),
-            let json = String(data: data, encoding: .utf8)
+            let result = String(data: data, encoding: .utf8)
         else {
             return nil
         }
-        return json
+        return result
     }
 
     /// Record an answer for a given linkId.

@@ -13,7 +13,7 @@ extension CallSession {
         response: OpenAIResponse
     ) async throws {
         if let nextEngine = await coordinator.advanceToNextSection() {
-            let initialQuestion = await nextEngine.nextQuestionJSON(includeAllQuestions: true)
+            let initialQuestion = await nextEngine.nextQuestionString(includeAllQuestions: true)
             if let systemMessage = await coordinator.sectionSystemMessage(
                 for: nextEngine, initialQuestion: initialQuestion
             ) {

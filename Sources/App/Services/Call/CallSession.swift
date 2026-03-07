@@ -187,7 +187,7 @@ actor CallSession {
         engine: FHIRQuestionnaireEngine,
         response: OpenAIResponse
     ) async throws {
-        if let nextQuestion = await engine.nextQuestionJSON(includeAllQuestions: false) {
+        if let nextQuestion = await engine.nextQuestionString(includeAllQuestions: false) {
             try await handleNextQuestionAvailable(nextQuestion: nextQuestion, response: response)
         } else {
             try await handleQuestionnaireComplete(response: response)
