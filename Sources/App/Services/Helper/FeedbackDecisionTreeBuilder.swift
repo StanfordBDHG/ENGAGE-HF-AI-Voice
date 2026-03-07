@@ -15,129 +15,129 @@ enum FeedbackDecisionTreeBuilder {
     static func buildTree(data: PatientData) -> DecisionNode<String> {
         let feedbackNode111 = DecisionNode(
             leafValue: """
-                Your blood pressure and pulse are lower than normal.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure and pulse are lower than normal.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode112 = DecisionNode(
             leafValue: """
-                Your blood pressure and pulse are lower than normal.
-                Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure and pulse are lower than normal.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode121 = DecisionNode(
             leafValue: """
-                Your blood pressure is low and your pulse is normal.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is low and your pulse is normal.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode122 = DecisionNode(
             leafValue: """
-                Your blood pressure is low and your pulse is normal.
-                Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is low and your pulse is normal.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode131 = DecisionNode(
             leafValue: """
-                Your pulse is higher than normal and your blood pressure is low.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your pulse is higher than normal and your blood pressure is low.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode132 = DecisionNode(
             leafValue: """
-                Your pulse is higher than normal and your blood pressure is low.
-                Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your pulse is higher than normal and your blood pressure is low.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode211 = DecisionNode(
             leafValue: """
-                Your blood pressure is normal and pulse is low.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is normal and pulse is low.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode212 = DecisionNode(
             leafValue: """
-                Your blood pressure is normal and pulse is low.
-                Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is normal and pulse is low.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode221 = DecisionNode(
             leafValue: """
-                Your blood pressure and pulse are normal.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure and pulse are normal.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode222 = DecisionNode(
             leafValue: """
-                Your blood pressure and pulse are normal.
-                Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure and pulse are normal.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode231 = DecisionNode(
             leafValue: """
-                Your blood pressure is normal and pulse is high.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is normal and pulse is high.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode232 = DecisionNode(
             leafValue: """
-                Your blood pressure is normal and pulse is high.
-                Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is normal and pulse is high.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode311 = DecisionNode(
             leafValue: """
-                Your blood pressure is high and pulse is low.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is high and pulse is low.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode312 = DecisionNode(
             leafValue: """
-                Your blood pressure is high and pulse is low.
-                Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is high and pulse is low.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode321 = DecisionNode(
             leafValue: """
-                Your blood pressure is high and pulse is normal.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is high and pulse is normal.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode322 = DecisionNode(
             leafValue: """
-                Your blood pressure is high and pulse is normal.
-                Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure is high and pulse is normal.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode331 = DecisionNode(
             leafValue: """
-                Your blood pressure and pulse are high.
-                Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-                You feel \(data.conditionChange) compared to 3 months ago.
-                """
+            Your blood pressure and pulse are high.
+            Your symptom score is \(data.symptomScore), which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         let feedbackNode332 = DecisionNode(
             leafValue: """
-                        Your blood pressure and pulse are high.
-                        Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
-                        You feel \(data.conditionChange) compared to 3 months ago.
-                        """
+            Your blood pressure and pulse are high.
+            Your symptom score is \(data.symptomScore), which means your heart failure doesn't stop you much from doing your normal daily activities.
+            You feel \(data.conditionChange) compared to 3 months ago.
+            """
         )
         
         // Symptom Score
