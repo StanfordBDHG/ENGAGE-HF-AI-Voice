@@ -71,7 +71,7 @@ struct PatientData {
             }
         }
     }
-
+    
     let systolicBP: Int
     let diastolicBP: Int
     let heartRate: Int
