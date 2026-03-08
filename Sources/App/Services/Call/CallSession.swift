@@ -11,13 +11,15 @@ import Vapor
 
 actor CallSession {
     let phoneNumber: String
-    let serviceState: ServiceState
+    let coordinator: CallFlowCoordinator
     let logger: Logger
     let webSocket: WebSocket
 
-    init(phoneNumber: String, serviceState: ServiceState, webSocket: WebSocket, logger: Logger) {
+    init(
+        phoneNumber: String, coordinator: CallFlowCoordinator, webSocket: WebSocket, logger: Logger
+    ) {
         self.phoneNumber = phoneNumber
-        self.serviceState = serviceState
+        self.coordinator = coordinator
         self.webSocket = webSocket
         self.logger = logger
     }
@@ -72,12 +74,12 @@ actor CallSession {
 
     private func handleFunctionCall(response: OpenAIResponse) async throws {
         logger.debug("Function call \"\(response.name ?? "")\"")
-        let currentService = await serviceState.current
+        let engine = await coordinator.currentEngine
         switch response.name {
         case "save_response":
-            try await saveResponse(service: currentService, response: response)
+            try await saveResponse(engine: engine, response: response)
         case "count_answered_questions":
-            try await countAnsweredQuestions(service: currentService, response: response)
+            try await countAnsweredQuestions(engine: engine, response: response)
         case "end_call":
             // Closing the web socket is currently disabled due to https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/issues/45
             try await sendFunctionOutput(
@@ -91,7 +93,7 @@ actor CallSession {
     }
 
     private func saveResponse(
-        service: any QuestionnaireService,
+        engine: FHIRQuestionnaireEngine,
         response: OpenAIResponse
     ) async throws {
         do {
@@ -105,14 +107,10 @@ actor CallSession {
                 let parsedArgs = try JSONDecoder().decode(
                     QuestionnaireResponseArgs.self, from: argumentsData
                 )
-                let saveResult = await saveQuestionnaireAnswer(
-                    service: service, parsedArgs: parsedArgs
+                try await saveQuestionnaireAnswer(
+                    engine: engine, parsedArgs: parsedArgs
                 )
-                if saveResult {
-                    try await handleSaveSuccess(service: service, response: response)
-                } else {
-                    try await handleSaveFailure(response: response)
-                }
+                try await handleSaveSuccess(engine: engine, response: response)
             } catch {
                 logger.error("Decoding error details: \(error)")
                 try await sendFunctionOutput(
@@ -142,11 +140,11 @@ actor CallSession {
     }
 
     private func countAnsweredQuestions(
-        service: any QuestionnaireService,
+        engine: FHIRQuestionnaireEngine,
         response: OpenAIResponse
     ) async throws {
-        let count = await service.countAnsweredQuestions()
-        logger.info("Count of answered questions of current service: \(count)")
+        let count = await engine.answeredCount()
+        logger.info("Count of answered questions of current engine: \(count)")
         try await sendFunctionOutput(
             callId: response.callId ?? "",
             output: "The patient has answered \(count) questions."
@@ -155,43 +153,38 @@ actor CallSession {
     }
 
     private func saveQuestionnaireAnswer(
-        service: any QuestionnaireService, parsedArgs: QuestionnaireResponseArgs
-    ) async -> Bool {
+        engine: FHIRQuestionnaireEngine, parsedArgs: QuestionnaireResponseArgs
+    ) async throws {
         switch parsedArgs.answer {
         case .number(let number):
-            return await service.saveQuestionnaireAnswer(
+            try await engine.answerQuestion(
                 linkId: parsedArgs.linkId,
                 answer: number
             )
+            return
         case .text(let text):
-            return await service.saveQuestionnaireAnswer(
+            try await engine.answerQuestion(
                 linkId: parsedArgs.linkId,
                 answer: text
             )
+            return
         case .none:
-            return await service.saveQuestionnaireAnswer(
+            try await engine.answerQuestion(
                 linkId: parsedArgs.linkId,
                 answer: NSNull()
             )
+            return
         }
     }
 
-    private func handleSaveFailure(response: OpenAIResponse) async throws {
-        try await sendFunctionOutput(
-            callId: response.callId ?? "",
-            output: "The response could not be saved. Try again."
-        )
-        try await sendResponseCreate()
-    }
-
     private func handleSaveSuccess(
-        service: any QuestionnaireService,
+        engine: FHIRQuestionnaireEngine,
         response: OpenAIResponse
     ) async throws {
-        if let nextQuestion = await service.getNextQuestion(includeAllQuestions: false) {
+        if let nextQuestion = await engine.nextQuestionJSON(includeAllQuestions: false) {
             try await handleNextQuestionAvailable(nextQuestion: nextQuestion, response: response)
         } else {
-            try await handleQuestionnaireComplete(service: service, response: response)
+            try await handleQuestionnaireComplete(response: response)
         }
     }
 
@@ -202,39 +195,32 @@ actor CallSession {
     }
 
     private func handleQuestionnaireComplete(
-        service: any QuestionnaireService,
         response: OpenAIResponse
     ) async throws {
-        if let nextService = await serviceState.next(),
-            let initialQuestion = await nextService.getNextQuestion(includeAllQuestions: true),
-            let systemMessage = await Constants.getSystemMessageForService(
-                nextService, initialQuestion: initialQuestion
+        if let nextEngine = await coordinator.advanceToNextSection() {
+            let initialQuestion = await nextEngine.nextQuestionJSON(includeAllQuestions: true)
+            if let systemMessage = await coordinator.sectionSystemMessage(
+                for: nextEngine, initialQuestion: initialQuestion
             ) {
-            try await handleNextServiceAvailable(
-                nextService: nextService,
-                initialQuestion: initialQuestion,
-                systemMessage: systemMessage,
-                response: response
-            )
+                try await updateSession(systemMessage: systemMessage)
+                try await sendFunctionOutput(
+                    callId: response.callId ?? "",
+                    output: "The response was saved. Moving to the next section."
+                )
+                try await sendResponseCreate()
+            } else {
+                try await handleAllSectionsComplete(response: response)
+            }
         } else {
-            try await handleNoNextService(response: response)
+            try await handleAllSectionsComplete(response: response)
         }
     }
 
-    private func handleNextServiceAvailable(
-        nextService: any QuestionnaireService,
-        initialQuestion: String,
-        systemMessage: String,
-        response: OpenAIResponse
-    ) async throws {
-        try await updateSession(systemMessage: systemMessage)
-        try await sendFunctionOutput(callId: response.callId ?? "", output: initialQuestion)
-        try await sendResponseCreate()
-    }
-
-    private func handleNoNextService(response: OpenAIResponse) async throws {
-        let feedback = try await serviceState.getFeedback(phoneNumber: phoneNumber, logger: logger)
-        let systemMessage = Constants.feedback(content: feedback)
+    private func handleAllSectionsComplete(response: OpenAIResponse) async throws {
+        let feedback = await coordinator.generateFeedback()
+        let systemMessage = Constants.feedback(
+            content: feedback
+        )
         try await updateSession(systemMessage: systemMessage)
         try await sendFunctionOutput(
             callId: response.callId ?? "",

@@ -14,7 +14,7 @@ struct OpenAIResponse: Codable {
         case callId = "call_id"
         case error
     }
-    
+
     let type: String
     let arguments: String?
     let name: String?

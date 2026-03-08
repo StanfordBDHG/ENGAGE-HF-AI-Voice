@@ -8,7 +8,6 @@
 
 import Foundation
 
-
 /// A simplified answer option with a descriptive code instead of a numeric one
 struct SimplifiedAnswerOption: Encodable {
     /// A descriptive code derived from the display text (e.g. "extremely-limited")
@@ -18,7 +17,6 @@ struct SimplifiedAnswerOption: Encodable {
     /// An optional note providing additional context for this answer option
     let note: String?
 }
-
 
 /// A simplified question extracted from a FHIR QuestionnaireItem
 struct SimplifiedQuestion: Encodable {

@@ -35,7 +35,7 @@ actor CallRecordingService {
         decryptionKey: String?,
         encryptionKey: String?,
         logger: Logger,
-        directory: URL = URL(fileURLWithPath: Constants.callRecordingsDirectoryPath)
+        directory: URL = Constants.callRecordingsDirectory
     ) throws {
         self.api = api
         self.decryptor = try decryptionKey.map {
@@ -111,7 +111,7 @@ actor CallRecordingService {
         logger.info(
             "\(recording.sid) - Media size: \(mediaData.count) --> \(encryptedMediaData.count)"
         )
-        try encryptedMediaData.write(to: wavURL)
+        try encryptedMediaData.write(to: wavURL, options: .atomic)
 
         let metadata = CallRecordingMetadata(
             callDuration: call.duration,
@@ -133,7 +133,7 @@ actor CallRecordingService {
         logger.info(
             "\(recording.sid) - Json size: \(jsonData.count) --> \(encryptedJsonData.count)"
         )
-        try encryptedJsonData.write(to: jsonURL)
+        try encryptedJsonData.write(to: jsonURL, options: .atomic)
         return wavURL
     }
 

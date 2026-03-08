@@ -6,15 +6,17 @@
 // SPDX-License-Identifier: MIT
 //
 
-@testable import App
 import ModelsR4
 import Testing
 import VaporTesting
 
+@testable import App
 
 @Suite("App Tests")
 struct AppTests {
-    private func withApp(_ test: (Application) async throws -> Void) async throws {
+    @MainActor
+    private func withApp(_ test: @MainActor @Sendable (Application) async throws -> Void)
+        async throws {
         let app = try await Application.make(.testing)
         do {
             try await configure(app)
@@ -25,47 +27,61 @@ struct AppTests {
         }
         try await app.asyncShutdown()
     }
-    
+
     @Test("Test Health Route")
+    @MainActor
     func health() async throws {
         try await withApp { app in
-            try await app.testing().test(.GET, "health") { res in
+            try await app.testing().test(.GET, "health") { @Sendable res in
                 #expect(res.status == .ok)
             }
         }
     }
-    
+
     @Test("Test Symptom Score Calculation")
+    @MainActor
     func testSymptomScoreCalculation() async throws {
         try await withApp { app in
-            let kccq12Service = try await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
-            let score = await kccq12Service.computeSymptomScore()
-            
+            let section = KCCQ12Section(internalTestingMode: app.featureFlags.internalTestingMode)
+            let engine = try FHIRQuestionnaireEngine(
+                section: section,
+                phoneNumber: "+16502341234",
+                logger: app.logger,
+                featureFlags: app.featureFlags
+            )
+            let items = engine.currentResponse().item ?? []
+            let score = KCCQ12ScoreCalculator.computeSymptomScore(from: items)
+
             #expect(score == 50.0, "Score should be 50.0 with mocked responses")
         }
     }
-    
+
     @Test("Test User Feedback Generation")
+    @MainActor
     func testUserFeedback() async throws {
         try await withApp { app in
-            let vitalSignsService = try await VitalSignsService(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
-            let kccq12Service = try await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
-            let q17Service = try await Q17Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
-            
-            let feedbackService = await FeedbackService(
+            let featureFlags = app.featureFlags
+            let sections: [any QuestionnaireSection] = [
+                VitalSignsSection(),
+                KCCQ12Section(internalTestingMode: featureFlags.internalTestingMode),
+                Q17Section()
+            ]
+            let coordinator = try CallFlowCoordinator(
+                sections: sections,
                 phoneNumber: "+16502341234",
                 logger: app.logger,
-                vitalSignsService: vitalSignsService,
-                kccq12Service: kccq12Service,
-                q17Service: q17Service
+                featureFlags: featureFlags,
+                feedbackProvider: EngageHFFeedbackProvider()
             )
-            let feedback = await feedbackService.feedback()
-            
-            #expect(feedback == """
-            Your blood pressure and pulse are normal.
-            Your symptom score is 50.0, which means you have a lot of symptoms from your heart failure that make it hard to do everyday activities.
-            You feel worse compared to 3 months ago.
-            """)
+            let feedback = await coordinator.generateFeedback()
+
+            let expected = """
+                Your blood pressure and pulse are normal.
+                Your symptom score is 50.0, which means you have a lot of symptoms \
+                from your heart failure that make it hard to do everyday activities.
+                You feel worse compared to 3 months ago.
+                """
+            #expect(feedback == expected)
         }
     }
 }

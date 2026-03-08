@@ -49,7 +49,7 @@ To customize the conversation flow and questions, you can replace or modify thes
        init(phoneNumber: String, logger: Logger) {
            super.init(
                questionnaireName: "yourQuestionnaire",
-               directoryPath: Constants.yourQuestionnaireDirectoryPath,
+               directoryURL: Constants.yourQuestionnaireDirectoryURL,
                phoneNumber: phoneNumber,
                logger: logger
            )
@@ -61,7 +61,7 @@ To customize the conversation flow and questions, you can replace or modify thes
 
 3. **Add the directory path** to `Sources/App/constants.swift`:
    ```swift
-   static let yourQuestionnaireDirectoryPath = "\(dataDirectory)/yourQuestionnaire/"
+   static let yourQuestionnaireDirectory = dataDirectory.appendingPathComponent("yourQuestionnaire")
    ```
 
 4. **Add questionnaire instructions** to `Sources/App/constants.swift`
