@@ -77,7 +77,7 @@ enum Constants {
         "input_audio_buffer.committed",
         "input_audio_buffer.speech_stopped",
         "input_audio_buffer.speech_started",
-        "session.created",
+        "session.created"
     ]
 
     static func feedback(content: String?) -> String {

@@ -288,54 +288,6 @@ class FHIRQuestionnaireEngine: Sendable {
 }
 
 extension FHIRQuestionnaireEngine {
-    // MARK: - Question Navigation
-
-    private func nextQuestionPayload(includeAllQuestions: Bool) -> QuestionWithProgress? {
-        let items = Self.flattenItems(questionnaire.item ?? [])
-        let answeredIds = Set(response.item?.compactMap { $0.linkId.value?.string } ?? [])
-
-        let nextItem =
-            items.first { item in
-                guard let linkId = item.linkId.value?.string else {
-                    return false
-                }
-                return (item.required?.value?.bool ?? false) && !answeredIds.contains(linkId)
-            }
-            ?? items.first { item in
-                guard let linkId = item.linkId.value?.string else {
-                    return false
-                }
-                return !answeredIds.contains(linkId)
-            }
-
-        guard let nextItem else {
-            return nil
-        }
-
-        let progress = "\(answeredIds.count + 1) of \(items.count)"
-
-        let allQuestions: [SimplifiedQuestion]
-        if section.sharesAllQuestions && includeAllQuestions {
-            allQuestions =
-                items
-                .filter { item in
-                    guard let linkId = item.linkId.value?.string else {
-                        return false
-                    }
-                    return !answeredIds.contains(linkId)
-                }
-                .map { simplify($0) }
-        } else {
-            allQuestions = []
-        }
-
-        return QuestionWithProgress(
-            question: simplify(nextItem),
-            progress: progress,
-            allQuestions: allQuestions.isEmpty ? nil : allQuestions
-        )
-    }
-
     // MARK: - Code Mapping
 
     private func buildCodeMapping(for item: QuestionnaireItem) {
@@ -358,53 +310,6 @@ extension FHIRQuestionnaireEngine {
 
     private func resolveAnswer(linkId: String, answer: String) -> String {
         codeMapping[linkId]?[answer] ?? answer
-    }
-
-    // MARK: - Simplification
-
-    private func simplify(_ item: QuestionnaireItem) -> SimplifiedQuestion {
-        let linkId = item.linkId.value?.string ?? ""
-        let type = item.type.value?.rawValue ?? ""
-        let text = item.text?.value?.string ?? ""
-        let required = item.required?.value?.bool ?? false
-        let note = Self.extractNote(from: item.`extension` ?? [])
-
-        var answerOptions: [SimplifiedAnswerOption] = []
-        if let options = item.answerOption {
-            answerOptions = options.compactMap { option -> SimplifiedAnswerOption? in
-                guard case .coding(let coding) = option.value else {
-                    return nil
-                }
-                let display = coding.display?.value?.string ?? ""
-                let code = Self.descriptiveCode(from: display)
-                let optionNote = Self.extractNote(from: option.`extension` ?? [])
-                return SimplifiedAnswerOption(code: code, display: display, note: optionNote)
-            }
-        }
-
-        var minValue: Int?
-        var maxValue: Int?
-        if type == "integer", let extensions = item.`extension` {
-            for ext in extensions {
-                let url = ext.url.value?.url.absoluteString ?? ""
-                if url == Self.minValueURL, case .integer(let val) = ext.value {
-                    minValue = Int(val.value?.integer ?? 0)
-                } else if url == Self.maxValueURL, case .integer(let val) = ext.value {
-                    maxValue = Int(val.value?.integer ?? 0)
-                }
-            }
-        }
-
-        return SimplifiedQuestion(
-            linkId: linkId,
-            type: type,
-            text: text,
-            required: required,
-            note: note,
-            answerOptions: answerOptions,
-            minValue: minValue,
-            maxValue: maxValue
-        )
     }
 
     private func minValue(item: QuestionnaireItem) -> Int? {

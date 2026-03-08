@@ -38,9 +38,12 @@ func makeTestEngine(
     app: Application,
     sharesAllQuestions: Bool = false
 ) throws -> FHIRQuestionnaireEngine {
-    try FHIRQuestionnaireEngine(
+    let uniqueDir = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("test-questionnaires/\(UUID().uuidString)")
+    return try FHIRQuestionnaireEngine(
         section: TestQuestionnaireSection(
             resourceName: resourceName,
+            directoryURL: uniqueDir,
             sharesAllQuestions: sharesAllQuestions
         ),
         phoneNumber: "+10000000000",
@@ -55,20 +58,20 @@ func makeTestEngine(
 struct TestQuestionnaireSection: QuestionnaireSection {
     let resourceName: String
     let title: String
-    let directoryPath: String
+    let directoryURL: URL
     let instructions: String
     let sharesAllQuestions: Bool
 
     init(
         resourceName: String,
         title: String = "Test Section",
-        directoryPath: String = NSTemporaryDirectory() + "test-questionnaires/",
+        directoryURL: URL = URL(fileURLWithPath: NSTemporaryDirectory() + "test-questionnaires/"),
         instructions: String = "Test instructions",
         sharesAllQuestions: Bool = false
     ) {
         self.resourceName = resourceName
         self.title = title
-        self.directoryPath = directoryPath
+        self.directoryURL = directoryURL
         self.instructions = instructions
         self.sharesAllQuestions = sharesAllQuestions
     }

@@ -164,7 +164,7 @@ actor CallSession {
             return
         case .decimal(let decimal):
             try await engine.answerQuestion(
-                linkId: parsedArgs.linkId, 
+                linkId: parsedArgs.linkId,
                 answer: decimal
             )
             return
