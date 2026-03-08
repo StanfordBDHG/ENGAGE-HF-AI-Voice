@@ -28,11 +28,11 @@ class QuestionnaireResponseStore: Sendable {
         directoryPath: String,
         featureFlags: FeatureFlags,
         encryptionKey: String? = nil
-    ) {
+    ) throws {
         self.resourceName = resourceName
         self.directoryPath = directoryPath
-        self.encryptionService = encryptionKey.flatMap {
-            try? EncryptionService(encryptionKeyBase64: $0)
+        self.encryptionService = try encryptionKey.map {
+            try EncryptionService(encryptionKeyBase64: $0)
         }
         self.featureFlags = featureFlags
         self.dateTimeCreated = Date()

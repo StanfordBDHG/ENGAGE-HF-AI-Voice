@@ -76,7 +76,7 @@ class FHIRQuestionnaireEngine: Sendable {
         self.section = section
         self.phoneNumber = phoneNumber
 
-        self.store = QuestionnaireResponseStore(
+        self.store = try QuestionnaireResponseStore(
             resourceName: section.resourceName,
             directoryPath: section.directoryPath,
             featureFlags: featureFlags,
