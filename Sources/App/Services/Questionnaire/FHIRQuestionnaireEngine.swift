@@ -12,9 +12,30 @@ import ToonFormat
 import Vapor
 
 /// Errors that can occur during questionnaire engine operations.
-enum QuestionnaireEngineError: Error {
+enum QuestionnaireEngineError: Error, LocalizedError {
     case questionnaireNotFound
     case unsupportedAnswerType
+    case cannotSkipRequiredQuestion
+    case unknownLinkId(String)
+    case valueTooHigh(Int, max: Int)
+    case valueTooLow(Int, min: Int)
+    
+    var errorDescription: String? {
+        switch self {
+        case .unsupportedAnswerType:
+            return "Unsupported answer type."
+        case .questionnaireNotFound:
+            return "Questions could not be found."
+        case .cannotSkipRequiredQuestion:
+            return "This question is required and can therefore not be skipped."
+        case let .unknownLinkId(linkId):
+            return "Encountered unknown linkId: \(linkId)."
+        case let .valueTooLow(_, minValue):
+            return "Value too low, minValue is \(minValue)."
+        case let .valueTooHigh(_, maxValue):
+            return "Value too high, maxValue is \(maxValue)."
+        }
+    }
 }
 
 /// A generic FHIR R4 questionnaire engine that manages the state of answering
@@ -127,20 +148,30 @@ class FHIRQuestionnaireEngine: Sendable {
             linkId: FHIRPrimitive(FHIRString(linkId))
         )
         let answerItem = QuestionnaireResponseItemAnswer()
+        
+        guard let questionnaireItem = findQuestionnaireItem(linkId: linkId) else {
+            throw QuestionnaireEngineError.unknownLinkId(linkId)
+        }
 
         switch answer {
         case let string as String:
             let resolved = resolveAnswer(linkId: linkId, answer: string)
             answerItem.value = .string(FHIRPrimitive(FHIRString(resolved)))
         case let integer as Int:
+            if let max = maxValue(item: questionnaireItem), integer > max {
+                throw QuestionnaireEngineError.valueTooHigh(integer, max: max)
+            }
+            if let min = minValue(item: questionnaireItem), integer < min {
+                throw QuestionnaireEngineError.valueTooLow(integer, min: min)
+            }
             answerItem.value = .integer(integer.asFHIRIntegerPrimitive())
         case let double as Double:
             answerItem.value = .decimal(double.asFHIRDecimalPrimitive())
         case let bool as Bool:
             answerItem.value = .boolean(FHIRPrimitive(FHIRBool(bool)))
         case is NSNull:
-            if isQuestionRequired(linkId: linkId) {
-                throw QuestionnaireManagerError.cannotSkipRequiredQuestion
+            if questionnaireItem.required?.value?.bool ?? false {
+                throw QuestionnaireEngineError.cannotSkipRequiredQuestion
             }
             answerItem.value = .none
         default:
@@ -178,14 +209,6 @@ class FHIRQuestionnaireEngine: Sendable {
     /// Whether there are still unanswered questions.
     func hasUnansweredQuestions() -> Bool {
         !isFinished
-    }
-    
-    /// Check if a question is required
-    /// - Parameter linkId: The linkId of the question
-    /// - Returns: True if the question is required, false otherwise
-    func isQuestionRequired(linkId: String) -> Bool {
-        let questions = Self.flattenItems(questionnaire.item ?? [])
-        return questions.first { $0.linkId.value?.string == linkId }?.required?.value?.bool ?? false
     }
 
     // MARK: - Question Navigation
@@ -305,6 +328,33 @@ class FHIRQuestionnaireEngine: Sendable {
             minValue: minValue,
             maxValue: maxValue
         )
+    }
+    
+    private func minValue(item: QuestionnaireItem) -> Int? {
+        item.extensions(for: Self.minValueURL)
+            .compactMap { ext in
+                if case .integer(let value) = ext.value {
+                    return (value.value?.integer).map(Int.init)
+                }
+                return nil
+            }
+            .first
+    }
+    
+    private func maxValue(item: QuestionnaireItem) -> Int? {
+        item.extensions(for: Self.minValueURL)
+            .compactMap { ext in
+                if case .integer(let value) = ext.value {
+                    return (value.value?.integer).map(Int.init)
+                }
+                return nil
+            }
+            .first
+    }
+    
+    private func findQuestionnaireItem(linkId: String) -> QuestionnaireItem? {
+        let questions = Self.flattenItems(questionnaire.item ?? [])
+        return questions.first { $0.linkId.value?.string == linkId }
     }
 
     // MARK: - State
