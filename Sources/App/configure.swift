@@ -17,7 +17,8 @@ public func configure(_ app: Application) async throws {
     // Store keys in application storage for access in routes
     app.storage[OpenAIKeyStorageKey.self] = try requireEnvInProd(name: "OPENAI_API_KEY")
     app.storage[OpenAIWebhookSecretStorageKey.self] = try requireEnvInProd(
-        name: "OPENAI_WEBHOOK_SECRET")
+        name: "OPENAI_WEBHOOK_SECRET"
+    )
 
     app.storage[EncryptionKeyStorageKey.self] =
         try requireEnvInProd(name: "ENCRYPTION_KEY").flatMap { key in

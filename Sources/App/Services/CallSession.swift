@@ -9,12 +9,6 @@
 import Foundation
 import Vapor
 
-private enum SaveResult {
-    case saved
-    case failed
-    case skipped
-}
-
 actor CallSession {
     let phoneNumber: String
     let serviceState: ServiceState
@@ -107,30 +101,23 @@ actor CallSession {
             }
             let argumentsData = arguments.data(using: .utf8) ?? Data()
 
-            logger.debug("Received arguments: \(arguments)")
-
             do {
                 let parsedArgs = try JSONDecoder().decode(
                     QuestionnaireResponseArgs.self, from: argumentsData
                 )
-                logger.info("Parsed arguments: \(parsedArgs)")
                 let saveResult = await saveQuestionnaireAnswer(
                     service: service, parsedArgs: parsedArgs
                 )
-                switch saveResult {
-                case .saved:
+                if saveResult {
                     try await handleSaveSuccess(service: service, response: response)
-                case .failed:
+                } else {
                     try await handleSaveFailure(response: response)
-                case .skipped:
-                    try await handleSkipAttempt(service: service, response: response)
                 }
             } catch {
                 logger.error("Decoding error details: \(error)")
                 try await sendFunctionOutput(
                     callId: response.callId ?? "",
-                    output:
-                        "Failed to decode parameters; please adhere to the JSON schema definitions."
+                    output: "ERROR: [\(error.localizedDescription)]"
                 )
                 try await sendResponseCreate()
             }
@@ -169,26 +156,23 @@ actor CallSession {
 
     private func saveQuestionnaireAnswer(
         service: any QuestionnaireService, parsedArgs: QuestionnaireResponseArgs
-    ) async -> SaveResult {
+    ) async -> Bool {
         switch parsedArgs.answer {
         case .number(let number):
-            let success = await service.saveQuestionnaireAnswer(
+            return await service.saveQuestionnaireAnswer(
                 linkId: parsedArgs.linkId,
                 answer: number
             )
-            return success ? .saved : .failed
         case .text(let text):
-            let success = await service.saveQuestionnaireAnswer(
+            return await service.saveQuestionnaireAnswer(
                 linkId: parsedArgs.linkId,
                 answer: text
             )
-            return success ? .saved : .failed
         case .none:
-            let success = await service.saveQuestionnaireAnswer(
+            return await service.saveQuestionnaireAnswer(
                 linkId: parsedArgs.linkId,
                 answer: NSNull()
             )
-            return success ? .saved : .skipped
         }
     }
 
@@ -197,30 +181,6 @@ actor CallSession {
             callId: response.callId ?? "",
             output: "The response could not be saved. Try again."
         )
-        try await sendResponseCreate()
-    }
-
-    private func handleSkipAttempt(
-        service: any QuestionnaireService,
-        response: OpenAIResponse
-    ) async throws {
-        logger.info("Null answer received — asking AI to confirm skip with patient.")
-        let callId = response.callId ?? ""
-        if let currentQuestion = await service.getNextQuestion(includeAllQuestions: false) {
-            try await sendFunctionOutput(
-                callId: callId,
-                output:
-                    "The question was NOT skipped. A null answer is only allowed if the patient explicitly "
-                    + "asked to skip this question. Please re-ask the question and wait for a clear answer. "
-                    + "Current question: \(currentQuestion)"
-            )
-        } else {
-            try await sendFunctionOutput(
-                callId: callId,
-                output:
-                    "The question was NOT skipped. Please re-ask the question and wait for a clear answer from the patient."
-            )
-        }
         try await sendResponseCreate()
     }
 
@@ -276,6 +236,10 @@ actor CallSession {
         let feedback = try await serviceState.getFeedback(phoneNumber: phoneNumber, logger: logger)
         let systemMessage = Constants.feedback(content: feedback)
         try await updateSession(systemMessage: systemMessage)
+        try await sendFunctionOutput(
+            callId: response.callId ?? "",
+            output: "The response was saved. All questionnaires are complete."
+        )
         try await sendResponseCreate()
     }
 
