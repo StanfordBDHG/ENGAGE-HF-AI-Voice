@@ -13,9 +13,18 @@ import Vapor
 
 
 /// Errors that can occur during questionnaire management
-enum QuestionnaireManagerError: Error {
+enum QuestionnaireManagerError: Error, LocalizedError {
     case unsupportedAnswerType
     case cannotSkipRequiredQuestion
+    
+    var errorDescription: String? {
+        switch self {
+        case .unsupportedAnswerType:
+            return "Unsupported answer type."
+        case .cannotSkipRequiredQuestion:
+            return "This question is required and can therefore not be skipped."
+        }
+    }
 }
 
 /// A generalized questionnaire manager that handles the state and progression of answering a questionnaire.

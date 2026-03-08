@@ -9,19 +9,6 @@
 import ModelsR4
 import Vapor
 
-@MainActor
-protocol QuestionnaireService: Sendable {
-    var storage: QuestionnaireStorageService { get }
-    var manager: QuestionnaireManager { get }
-    var phoneNumber: String { get }
-    var logger: Logger { get }
-
-    func getNextQuestion(includeAllQuestions: Bool) async -> String?
-    func saveQuestionnaireAnswer<T>(linkId: String, answer: T) async -> Bool
-    func countAnsweredQuestions() -> Int
-    func unansweredQuestionsLeft() -> Bool
-}
-
 extension QuestionnaireResponseItemAnswer {
     func integerAnswerValue() -> Int? {
         guard let value else {

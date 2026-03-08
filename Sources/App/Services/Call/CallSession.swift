@@ -107,14 +107,10 @@ actor CallSession {
                 let parsedArgs = try JSONDecoder().decode(
                     QuestionnaireResponseArgs.self, from: argumentsData
                 )
-                let saveResult = await saveQuestionnaireAnswer(
+                try await saveQuestionnaireAnswer(
                     engine: engine, parsedArgs: parsedArgs
                 )
-                if saveResult {
-                    try await handleSaveSuccess(service: service, response: response)
-                } else {
-                    try await handleSaveFailure(response: response)
-                }
+                try await handleSaveSuccess(engine: engine, response: response)
             } catch {
                 logger.error("Decoding error details: \(error)")
                 try await sendFunctionOutput(
@@ -157,33 +153,28 @@ actor CallSession {
     }
 
     private func saveQuestionnaireAnswer(
-        service: any QuestionnaireService, parsedArgs: QuestionnaireResponseArgs
-    ) async -> Bool {
+        engine: FHIRQuestionnaireEngine, parsedArgs: QuestionnaireResponseArgs
+    ) async throws {
         switch parsedArgs.answer {
         case .number(let number):
-            return await service.saveQuestionnaireAnswer(
+            try await engine.answerQuestion(
                 linkId: parsedArgs.linkId,
                 answer: number
             )
+            return
         case .text(let text):
-            return await service.saveQuestionnaireAnswer(
+            try await engine.answerQuestion(
                 linkId: parsedArgs.linkId,
                 answer: text
             )
+            return
         case .none:
-            return await service.saveQuestionnaireAnswer(
+            try await engine.answerQuestion(
                 linkId: parsedArgs.linkId,
                 answer: NSNull()
             )
+            return
         }
-    }
-
-    private func handleSaveFailure(response: OpenAIResponse) async throws {
-        try await sendFunctionOutput(
-            callId: response.callId ?? "",
-            output: "The response could not be saved. Try again."
-        )
-        try await sendResponseCreate()
     }
 
     private func handleSaveSuccess(

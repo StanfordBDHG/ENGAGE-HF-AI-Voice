@@ -48,7 +48,7 @@ actor CallHandler {
         let sections: [any QuestionnaireSection] = [
             VitalSignsSection(),
             KCCQ12Section(internalTestingMode: featureFlags.internalTestingMode),
-            Q17Section(),
+            Q17Section()
         ]
         self.coordinator = try await CallFlowCoordinator.create(
             sections: sections,
@@ -73,7 +73,7 @@ actor CallHandler {
                 method: .POST,
                 headers: [
                     "Authorization": "Bearer \(openAIKey)",
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 ],
                 body: .data(configData)
             )
@@ -100,7 +100,7 @@ actor CallHandler {
                 method: .POST,
                 headers: [
                     "Authorization": "Bearer \(openAIKey)",
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 ]
             )
             _ = try await httpClient.execute(request: request).get()

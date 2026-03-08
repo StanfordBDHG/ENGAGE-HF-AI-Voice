@@ -139,6 +139,9 @@ class FHIRQuestionnaireEngine: Sendable {
         case let bool as Bool:
             answerItem.value = .boolean(FHIRPrimitive(FHIRBool(bool)))
         case is NSNull:
+            if isQuestionRequired(linkId: linkId) {
+                throw QuestionnaireManagerError.cannotSkipRequiredQuestion
+            }
             answerItem.value = .none
         default:
             throw QuestionnaireEngineError.unsupportedAnswerType
@@ -175,6 +178,14 @@ class FHIRQuestionnaireEngine: Sendable {
     /// Whether there are still unanswered questions.
     func hasUnansweredQuestions() -> Bool {
         !isFinished
+    }
+    
+    /// Check if a question is required
+    /// - Parameter linkId: The linkId of the question
+    /// - Returns: True if the question is required, false otherwise
+    func isQuestionRequired(linkId: String) -> Bool {
+        let questions = Self.flattenItems(questionnaire.item ?? [])
+        return questions.first { $0.linkId.value?.string == linkId }?.required?.value?.bool ?? false
     }
 
     // MARK: - Question Navigation
