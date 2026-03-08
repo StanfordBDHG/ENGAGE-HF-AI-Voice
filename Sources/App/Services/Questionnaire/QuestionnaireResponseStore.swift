@@ -95,7 +95,7 @@ class QuestionnaireResponseStore: Sendable {
         do {
             let jsonData = try encoder.encode(response)
             let dataToWrite = try encryptIfNeeded(jsonData, logger: logger)
-            try dataToWrite.write(to: fileURL(phoneNumber))
+            try dataToWrite.write(to: fileURL(phoneNumber), options: .atomic)
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")
         }

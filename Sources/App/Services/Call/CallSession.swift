@@ -203,6 +203,10 @@ actor CallSession {
                 for: nextEngine, initialQuestion: initialQuestion
             ) {
                 try await updateSession(systemMessage: systemMessage)
+                try await sendFunctionOutput(
+                    callId: response.callId ?? "",
+                    output: "The response was saved. Moving to the next section."
+                )
                 try await sendResponseCreate()
             } else {
                 try await handleAllSectionsComplete(response: response)
