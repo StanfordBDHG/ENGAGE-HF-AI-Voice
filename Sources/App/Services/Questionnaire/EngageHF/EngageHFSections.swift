@@ -103,7 +103,7 @@ struct Q17Section: QuestionnaireSection {
     let resourceName = "q17"
     let directoryPath = Constants.q17DirectoryPath
     let sharesAllQuestions = false
-
+    
     let instructions = """
         Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): Last Section
 

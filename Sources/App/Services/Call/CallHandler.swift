@@ -50,7 +50,7 @@ actor CallHandler {
             KCCQ12Section(internalTestingMode: featureFlags.internalTestingMode),
             Q17Section()
         ]
-        self.coordinator = try await CallFlowCoordinator.create(
+        self.coordinator = try await CallFlowCoordinator(
             sections: sections,
             phoneNumber: phoneNumber,
             logger: logger,

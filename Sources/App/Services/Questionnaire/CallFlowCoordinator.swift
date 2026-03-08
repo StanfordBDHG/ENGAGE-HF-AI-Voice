@@ -28,29 +28,16 @@ actor CallFlowCoordinator {
         engines[currentIndex]
     }
 
-    init(
-        engines: [FHIRQuestionnaireEngine],
-        logger: Logger,
-        feedbackProvider: (any FeedbackProvider)? = nil
-    ) {
-        self.engines = engines
-        self.feedbackProvider = feedbackProvider
-        self.logger = logger
-        self.currentIndex = 0
-    }
-
-    // MARK: - Convenience Factory
-
     /// Create a coordinator from section definitions.
     @MainActor
-    static func create(
+    init(
         sections: [any QuestionnaireSection],
         phoneNumber: String,
         logger: Logger,
         featureFlags: FeatureFlags,
         encryptionKey: String? = nil,
         feedbackProvider: (any FeedbackProvider)? = nil
-    ) throws -> CallFlowCoordinator {
+    ) throws {
         let engines = try sections.map { section in
             try FHIRQuestionnaireEngine(
                 section: section,
@@ -60,11 +47,10 @@ actor CallFlowCoordinator {
                 encryptionKey: encryptionKey
             )
         }
-        return CallFlowCoordinator(
-            engines: engines,
-            logger: logger,
-            feedbackProvider: feedbackProvider
-        )
+        self.engines = engines
+        self.feedbackProvider = feedbackProvider
+        self.logger = logger
+        self.currentIndex = 0
     }
 
     // MARK: - Section Navigation

@@ -19,21 +19,27 @@ import Vapor
 class QuestionnaireResponseStore: Sendable {
     private let resourceName: String
     private let directoryPath: String
+    private let phoneNumber: String
     private let encryptionService: EncryptionService?
     private let featureFlags: FeatureFlags
+    private let logger: Logger
     private let dateTimeCreated: Date
 
     init(
         resourceName: String,
         directoryPath: String,
+        phoneNumber: String,
         featureFlags: FeatureFlags,
+        logger: Logger,
         encryptionKey: String? = nil
     ) throws {
         self.resourceName = resourceName
         self.directoryPath = directoryPath
+        self.phoneNumber = phoneNumber
         self.encryptionService = try encryptionKey.map {
             try EncryptionService(encryptionKeyBase64: $0)
         }
+        self.logger = logger
         self.featureFlags = featureFlags
         self.dateTimeCreated = Date()
     }
@@ -51,7 +57,7 @@ class QuestionnaireResponseStore: Sendable {
 
     // MARK: - Response Persistence
 
-    func loadResponse(phoneNumber: String, logger: Logger) -> QuestionnaireResponse {
+    func loadResponse() -> QuestionnaireResponse {
         let path = filePath(phoneNumber)
         guard FileManager.default.fileExists(atPath: path) else {
             logger.info("No existing response at \(path)")
@@ -70,7 +76,7 @@ class QuestionnaireResponseStore: Sendable {
         }
     }
 
-    func saveResponse(phoneNumber: String, response: QuestionnaireResponse, logger: Logger) {
+    func saveResponse(_ response: QuestionnaireResponse) {
         do {
             try FileManager.default.createDirectory(
                 atPath: directoryPath,
