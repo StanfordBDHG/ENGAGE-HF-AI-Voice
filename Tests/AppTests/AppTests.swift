@@ -66,7 +66,7 @@ struct AppTests {
                 KCCQ12Section(internalTestingMode: featureFlags.internalTestingMode),
                 Q17Section()
             ]
-            let coordinator = try CallFlowCoordinator.create(
+            let coordinator = try CallFlowCoordinator(
                 sections: sections,
                 phoneNumber: "+16502341234",
                 logger: app.logger,

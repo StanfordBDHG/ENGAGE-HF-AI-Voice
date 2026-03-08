@@ -35,7 +35,7 @@ actor CallRecordingService {
         decryptionKey: String?,
         encryptionKey: String?,
         logger: Logger,
-        directory: URL = URL(fileURLWithPath: Constants.callRecordingsDirectoryPath)
+        directory: URL = Constants.callRecordingsDirectory
     ) throws {
         self.api = api
         self.decryptor = try decryptionKey.map {

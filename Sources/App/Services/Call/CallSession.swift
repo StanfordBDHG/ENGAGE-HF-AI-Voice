@@ -63,8 +63,8 @@ actor CallSession {
                 "type": "session.update",
                 "session": [
                     "type": "realtime",
-                    "instructions": systemMessage
-                ]
+                    "instructions": systemMessage,
+                ],
             ])
         } catch {
             logger.error("Failed to update session: \(error). Closing web socket.")
@@ -130,8 +130,8 @@ actor CallSession {
             "item": [
                 "type": "function_call_output",
                 "call_id": callId,
-                "output": output
-            ]
+                "output": output,
+            ],
         ])
     }
 
@@ -189,7 +189,8 @@ actor CallSession {
     }
 
     private func handleNextQuestionAvailable(nextQuestion: String, response: OpenAIResponse)
-        async throws {
+        async throws
+    {
         try await sendFunctionOutput(callId: response.callId ?? "", output: nextQuestion)
         try await sendResponseCreate()
     }
@@ -202,11 +203,8 @@ actor CallSession {
             if let systemMessage = await coordinator.sectionSystemMessage(
                 for: nextEngine, initialQuestion: initialQuestion
             ) {
-                try await handleNextSectionAvailable(
-                    initialQuestion: initialQuestion,
-                    systemMessage: systemMessage,
-                    response: response
-                )
+                try await updateSession(systemMessage: systemMessage)
+                try await sendResponseCreate()
             } else {
                 try await handleAllSectionsComplete(response: response)
             }
@@ -215,22 +213,10 @@ actor CallSession {
         }
     }
 
-    private func handleNextSectionAvailable(
-        initialQuestion: String?,
-        systemMessage: String,
-        response: OpenAIResponse
-    ) async throws {
-        try await updateSession(systemMessage: systemMessage)
-        if let initialQuestion {
-            try await sendFunctionOutput(callId: response.callId ?? "", output: initialQuestion)
-        }
-        try await sendResponseCreate()
-    }
-
     private func handleAllSectionsComplete(response: OpenAIResponse) async throws {
         let feedback = await coordinator.generateFeedback()
         let systemMessage = Constants.feedback(
-            content: feedback ?? "Feedback failed to be retrieved."
+            content: feedback
         )
         try await updateSession(systemMessage: systemMessage)
         try await sendFunctionOutput(

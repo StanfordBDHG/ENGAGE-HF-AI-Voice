@@ -49,22 +49,22 @@ enum Constants {
         """
 
     /// Directory paths for different questionnaire types
-    static let vitalSignsDirectoryPath = "\(dataDirectory)/vital_signs/"
-    static let kccq12DirectoryPath = "\(dataDirectory)/kccq12_questionnairs/"
-    static let q17DirectoryPath = "\(dataDirectory)/q17/"
-    static let callRecordingsDirectoryPath = "\(dataDirectory)/recordings/"
+    static let vitalSignsDirectory = dataDirectory.appendingPathComponent("vital_signs")
+    static let kccq12Directory = dataDirectory.appendingPathComponent("kccq12_questionnairs")
+    static let q17Directory = dataDirectory.appendingPathComponent("q17")
+    static let callRecordingsDirectory = dataDirectory.appendingPathComponent("recordings")
 
     /// Base data directory for storing questionnaire responses
-    static let dataDirectory: String = {
+    static let dataDirectory: URL = {
         #if DEBUG
             // Use the source tree MockData folder directly so changes persist across builds
             let thisFile = URL(fileURLWithPath: #filePath)
             let sourcesApp = thisFile.deletingLastPathComponent()  // Sources/App/
-            return sourcesApp.appendingPathComponent("Resources/MockData").path
+            return sourcesApp.appendingPathComponent("Resources/MockData")
         #else
             let fileManager = FileManager.default
-            let currentDirectoryPath = fileManager.currentDirectoryPath
-            return "\(currentDirectoryPath)/Data"
+            let currentDirectory = URL(fileURLWithPath: fileManager.currentDirectoryPath)
+            return currentDirectory.appendingPathComponent("Data")
         #endif
     }()
 
@@ -77,30 +77,45 @@ enum Constants {
         "input_audio_buffer.committed",
         "input_audio_buffer.speech_stopped",
         "input_audio_buffer.speech_started",
-        "session.created"
+        "session.created",
     ]
 
-    static func feedback(content: String) -> String {
-        """
-        Tell the patient that all questions for today have been answered.
+    static func feedback(content: String?) -> String {
+        guard let content else {
+            return """
+                Tell the patient that all questions for today have been answered, but unfortunately there was an issue retrieving their feedback.
 
-        Read the following feedback:
+                Remind the patient that they can call the ENGAGE-HF Voice AI system again later to retrieve their feedback or tomorrow to provide new responses.
+                After the reminder, thank the patient for their time and let them know they can now end the call.
 
-        ```
-        \(content)
-        ```
+                IMPORTANT:
+                - Never end the call before you have allowed the patient to ask follow-up questions about the conversation.
+                - Do not provide any medical advice; refer them to their clinician if needed.
+                - Do not ask any further health-related questions.
+                - Do not start an unrelated conversation with the patient.
+                """
+        }
 
-        Make sure to inform the patient of their symptom score value, omitting any decimal places in the reported score.
+        return """
+            Tell the patient that all questions for today have been answered.
 
-        Remind the patient that they can call the ENGAGE-HF Voice AI system again tomorrow.
-        After the reminder, thank the patient for their time and let them know they can now end the call.
+            Read the following feedback:
 
-        IMPORTANT:
-        - Never end the call before you didn't allow the patient to ask follow-up questions about the feedback.
-        - Do not provide any medical advice; refer them to their clinician if needed.
-        - Do not ask any further health-related questions.
-        - Do not start an unrelated conversation with the patient.
-        """
+            ```
+            \(content)
+            ```
+
+            Make sure to inform the patient of their symptom score value, omitting any decimal places in the reported score.
+
+            Remind the patient that they can call the ENGAGE-HF Voice AI system again tomorrow.
+            After the reminder, thank the patient for their time and let them know they can now end the call.
+
+            IMPORTANT:
+            - Never end the call before you have allowed the patient to ask follow-up questions about the conversation.
+            - Do not provide any medical advice; refer them to their clinician if needed.
+            - Do not ask any further health-related questions.
+            - Do not start an unrelated conversation with the patient.
+            """
     }
 
     /// Load the session config from the resources directory and inject the system prompt
