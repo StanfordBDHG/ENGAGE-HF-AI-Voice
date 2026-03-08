@@ -60,14 +60,14 @@ private func handleIncomingCall(app: Application, req: Request) async -> Respons
     guard let body = req.body.data else {
         return Response(status: .badRequest)
     }
+    let bodyData = Data(buffer: body)
 
     // Verify webhook signature per Standard Webhooks spec if secret is configured
     // https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md
     if let webhookSecret = app.storage[OpenAIWebhookSecretStorageKey.self] {
-        let bodyBytes = Data(buffer: body)
         guard
             verifyWebhookSignature(
-                payload: bodyBytes,
+                payload: bodyData,
                 headers: req.headers,
                 secret: webhookSecret,
                 logger: req.logger
@@ -82,7 +82,7 @@ private func handleIncomingCall(app: Application, req: Request) async -> Respons
 
     do {
         let logger = app.logger
-        let event = try JSONDecoder().decode(OpenAICAllIncomingEvent.self, from: body)
+        let event = try JSONDecoder().decode(OpenAICAllIncomingEvent.self, from: bodyData)
         let callId = event.data.callId
         let phoneNumber =
             extractPhoneNumberFromSIPHeaders(event.data.sipHeaders)
