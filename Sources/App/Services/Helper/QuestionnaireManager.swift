@@ -15,6 +15,7 @@ import Vapor
 /// Errors that can occur during questionnaire management
 enum QuestionnaireManagerError: Error {
     case unsupportedAnswerType
+    case cannotSkipRequiredQuestion
 }
 
 /// A generalized questionnaire manager that handles the state and progression of answering a questionnaire.
@@ -180,6 +181,9 @@ class QuestionnaireManager: Sendable {
         case let intAnswer as Int:
             answerItem.value = .integer(FHIRPrimitive(FHIRInteger(FHIRInteger.IntegerLiteralType(intAnswer))))
         case _ as NSNull:
+            if isQuestionRequired(linkId: linkId) {
+                throw QuestionnaireManagerError.cannotSkipRequiredQuestion
+            }
             answerItem.value = .none
         default:
             throw QuestionnaireManagerError.unsupportedAnswerType
@@ -211,6 +215,14 @@ class QuestionnaireManager: Sendable {
     /// - Returns: The number of answered questions
     func countAnsweredQuestions() -> Int {
         response.item?.count ?? 0
+    }
+    
+    /// Check if a question is required
+    /// - Parameter linkId: The linkId of the question
+    /// - Returns: True if the question is required, false otherwise
+    func isQuestionRequired(linkId: String) -> Bool {
+        let questions = getAllQuestions(from: questionnaire.item ?? [])
+        return questions.first { $0.linkId.value?.string == linkId }?.required?.value?.bool ?? false
     }
         
     /// Recursively get all questions from a questionnaire

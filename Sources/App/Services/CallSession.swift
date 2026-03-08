@@ -184,7 +184,11 @@ actor CallSession {
             )
             return success ? .saved : .failed
         case .none:
-            return .skipped
+            let success = await service.saveQuestionnaireAnswer(
+                linkId: parsedArgs.linkId,
+                answer: NSNull()
+            )
+            return success ? .saved : .skipped
         }
     }
 
