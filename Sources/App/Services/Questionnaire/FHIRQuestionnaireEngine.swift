@@ -168,8 +168,7 @@ class FHIRQuestionnaireEngine: Sendable {
     }
 
     private func extractAnswerItemValue<T>(from answer: T, item: QuestionnaireItem) throws
-        -> QuestionnaireResponseItemAnswer.ValueX?
-    {
+        -> QuestionnaireResponseItemAnswer.ValueX? {
         switch answer {
         case let string as String:
             let resolved = resolveAnswer(linkId: item.linkId.value?.string ?? "", answer: string)
