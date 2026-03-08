@@ -21,7 +21,7 @@ protocol QuestionnaireSection: Sendable {
     var resourceName: String { get }
 
     /// The directory path where responses for this section are stored.
-    var directoryPath: String { get }
+    var directoryURL: URL { get }
 
     /// The system prompt fragment appended when this section is active.
     var instructions: String { get }

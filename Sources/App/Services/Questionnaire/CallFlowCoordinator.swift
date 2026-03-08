@@ -16,7 +16,7 @@ import Vapor
 /// `QuestionnaireSection` definitions and a `FeedbackProvider` implementation.
 actor CallFlowCoordinator {
     private let engines: [FHIRQuestionnaireEngine]
-    private let feedbackProvider: (any FeedbackProvider)?
+    private let feedbackProvider: any FeedbackProvider
     private let logger: Logger
     private var currentIndex: Int
 
@@ -28,29 +28,16 @@ actor CallFlowCoordinator {
         engines[currentIndex]
     }
 
-    init(
-        engines: [FHIRQuestionnaireEngine],
-        logger: Logger,
-        feedbackProvider: (any FeedbackProvider)? = nil
-    ) {
-        self.engines = engines
-        self.feedbackProvider = feedbackProvider
-        self.logger = logger
-        self.currentIndex = 0
-    }
-
-    // MARK: - Convenience Factory
-
     /// Create a coordinator from section definitions.
     @MainActor
-    static func create(
+    init(
         sections: [any QuestionnaireSection],
         phoneNumber: String,
         logger: Logger,
         featureFlags: FeatureFlags,
-        encryptionKey: String? = nil,
-        feedbackProvider: (any FeedbackProvider)? = nil
-    ) throws -> CallFlowCoordinator {
+        feedbackProvider: any FeedbackProvider,
+        encryptionKey: String? = nil
+    ) throws {
         let engines = try sections.map { section in
             try FHIRQuestionnaireEngine(
                 section: section,
@@ -60,11 +47,10 @@ actor CallFlowCoordinator {
                 encryptionKey: encryptionKey
             )
         }
-        return CallFlowCoordinator(
-            engines: engines,
-            logger: logger,
-            feedbackProvider: feedbackProvider
-        )
+        self.engines = engines
+        self.feedbackProvider = feedbackProvider
+        self.logger = logger
+        self.currentIndex = 0
     }
 
     // MARK: - Section Navigation
@@ -97,7 +83,7 @@ actor CallFlowCoordinator {
             let feedback = await generateFeedback()
             return Constants.initialSystemMessage
                 + Constants.noUnansweredQuestionsLeft
-                + Constants.feedback(content: feedback ?? "Feedback failed to be retrieved.")
+                + Constants.feedback(content: feedback)
         }
 
         let engine = currentEngine
@@ -140,10 +126,7 @@ actor CallFlowCoordinator {
 
     /// Generate feedback using the registered provider.
     func generateFeedback() async -> String? {
-        guard let feedbackProvider else {
-            return nil
-        }
-        return await feedbackProvider.feedback(from: engines)
+        await feedbackProvider.feedback(from: engines)
     }
 
     /// Access all engines (e.g. for score calculations).

@@ -97,8 +97,10 @@ class FHIRQuestionnaireEngine: Sendable {
 
         self.store = try QuestionnaireResponseStore(
             resourceName: section.resourceName,
-            directoryPath: section.directoryPath,
+            directoryURL: section.directoryURL,
+            phoneNumber: phoneNumber,
             featureFlags: featureFlags,
+            logger: logger,
             encryptionKey: encryptionKey
         )
 
@@ -106,13 +108,7 @@ class FHIRQuestionnaireEngine: Sendable {
             throw QuestionnaireEngineError.questionnaireNotFound
         }
         self.questionnaire = questionnaire
-
-        // Flatten the loaded response in case it was saved with hierarchical nesting
-        let loaded = store.loadResponse(phoneNumber: phoneNumber, logger: logger)
-        if let items = loaded.item {
-            loaded.item = Self.flattenResponseItems(items)
-        }
-        self.response = loaded
+        self.response = store.loadResponse()
 
         let allItems = Self.flattenItems(questionnaire.item ?? [])
         for item in allItems {
@@ -224,6 +220,7 @@ class FHIRQuestionnaireEngine: Sendable {
         }
 
         updateFinishedState()
+        save()
     }
 
     private func extractAnswerItemValue<T>(from answer: T, item: QuestionnaireItem) throws
@@ -255,12 +252,8 @@ class FHIRQuestionnaireEngine: Sendable {
     }
 
     /// Persist the current response to disk.
-    func save(logger: Logger) {
-        store.saveResponse(
-            phoneNumber: phoneNumber,
-            response: hierarchicalResponse(),
-            logger: logger
-        )
+    func save() {
+        store.saveResponse(hierarchicalResponse())
     }
 
     /// Returns the internal flat response (e.g. for scoring calculations).

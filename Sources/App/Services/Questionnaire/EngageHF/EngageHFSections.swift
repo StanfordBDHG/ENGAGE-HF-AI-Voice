@@ -16,7 +16,7 @@ import Foundation
 struct VitalSignsSection: QuestionnaireSection {
     let title = "Vital Signs"
     let resourceName = "vitalSigns"
-    let directoryPath = Constants.vitalSignsDirectoryPath
+    let directoryURL = Constants.vitalSignsDirectory
     let sharesAllQuestions = true
 
     let instructions = """
@@ -58,7 +58,7 @@ struct VitalSignsSection: QuestionnaireSection {
 
 struct KCCQ12Section: QuestionnaireSection {
     let title = "KCCQ-12 Survey"
-    let directoryPath = Constants.kccq12DirectoryPath
+    let directoryURL = Constants.kccq12Directory
     let sharesAllQuestions = false
 
     let resourceName: String
@@ -100,7 +100,7 @@ struct KCCQ12Section: QuestionnaireSection {
 struct Q17Section: QuestionnaireSection {
     let title = "Last Section"
     let resourceName = "q17"
-    let directoryPath = Constants.q17DirectoryPath
+    let directoryURL = Constants.q17Directory
     let sharesAllQuestions = false
 
     let instructions = """

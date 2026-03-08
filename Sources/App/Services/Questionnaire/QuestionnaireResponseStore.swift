@@ -18,22 +18,28 @@ import Vapor
 @MainActor
 class QuestionnaireResponseStore: Sendable {
     private let resourceName: String
-    private let directoryPath: String
+    private let directoryURL: URL
+    private let phoneNumber: String
     private let encryptionService: EncryptionService?
     private let featureFlags: FeatureFlags
+    private let logger: Logger
     private let dateTimeCreated: Date
 
     init(
         resourceName: String,
-        directoryPath: String,
+        directoryURL: URL,
+        phoneNumber: String,
         featureFlags: FeatureFlags,
+        logger: Logger,
         encryptionKey: String? = nil
     ) throws {
         self.resourceName = resourceName
-        self.directoryPath = directoryPath
+        self.directoryURL = directoryURL
+        self.phoneNumber = phoneNumber
         self.encryptionService = try encryptionKey.map {
             try EncryptionService(encryptionKeyBase64: $0)
         }
+        self.logger = logger
         self.featureFlags = featureFlags
         self.dateTimeCreated = Date()
     }
@@ -51,15 +57,15 @@ class QuestionnaireResponseStore: Sendable {
 
     // MARK: - Response Persistence
 
-    func loadResponse(phoneNumber: String, logger: Logger) -> QuestionnaireResponse {
-        let path = filePath(phoneNumber)
-        guard FileManager.default.fileExists(atPath: path) else {
-            logger.info("No existing response at \(path)")
+    func loadResponse() -> QuestionnaireResponse {
+        let url = fileURL(phoneNumber)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            logger.info("No existing response at \(url.path)")
             return makeEmptyResponse(phoneNumber: phoneNumber)
         }
 
         do {
-            let raw = try Data(contentsOf: URL(fileURLWithPath: path))
+            let raw = try Data(contentsOf: url)
             let jsonData = try decryptIfNeeded(raw, logger: logger)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
@@ -70,10 +76,10 @@ class QuestionnaireResponseStore: Sendable {
         }
     }
 
-    func saveResponse(phoneNumber: String, response: QuestionnaireResponse, logger: Logger) {
+    func saveResponse(_ response: QuestionnaireResponse) {
         do {
             try FileManager.default.createDirectory(
-                atPath: directoryPath,
+                atPath: directoryURL.path,
                 withIntermediateDirectories: true
             )
         } catch {
@@ -89,7 +95,7 @@ class QuestionnaireResponseStore: Sendable {
         do {
             let jsonData = try encoder.encode(response)
             let dataToWrite = try encryptIfNeeded(jsonData, logger: logger)
-            try dataToWrite.write(to: URL(fileURLWithPath: filePath(phoneNumber)))
+            try dataToWrite.write(to: fileURL(phoneNumber))
         } catch {
             logger.error("Failed to save questionnaire response: \(error)")
         }
@@ -97,13 +103,13 @@ class QuestionnaireResponseStore: Sendable {
 
     // MARK: - Private Helpers
 
-    private func filePath(_ phoneNumber: String) -> String {
+    private func fileURL(_ phoneNumber: String) -> URL {
         let name = FileNaming.fileName(
             phoneNumber: phoneNumber,
             date: dateTimeCreated,
             internalTestingMode: featureFlags.internalTestingMode
         )
-        return "\(directoryPath)\(name).json"
+        return directoryURL.appendingPathComponent("\(name).json")
     }
 
     private func decryptIfNeeded(_ data: Data, logger: Logger) throws -> Data {
@@ -124,7 +130,7 @@ class QuestionnaireResponseStore: Sendable {
 
     private func makeEmptyResponse(phoneNumber: String) -> QuestionnaireResponse {
         let response = QuestionnaireResponse(
-            status: FHIRPrimitive(QuestionnaireResponseStatus.completed)
+            status: FHIRPrimitive(QuestionnaireResponseStatus.inProgress)
         )
         response.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
         return response
