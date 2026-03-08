@@ -19,7 +19,7 @@ enum QuestionnaireEngineError: Error, LocalizedError {
     case unknownLinkId(String)
     case valueTooHigh(Int, max: Int)
     case valueTooLow(Int, min: Int)
-    
+
     var errorDescription: String? {
         switch self {
         case .unsupportedAnswerType:
@@ -28,11 +28,11 @@ enum QuestionnaireEngineError: Error, LocalizedError {
             return "Questions could not be found."
         case .cannotSkipRequiredQuestion:
             return "This question is required and can therefore not be skipped."
-        case let .unknownLinkId(linkId):
+        case .unknownLinkId(let linkId):
             return "Encountered unknown linkId: \(linkId)."
-        case let .valueTooLow(_, minValue):
+        case .valueTooLow(_, let minValue):
             return "Value too low, minValue is \(minValue)."
-        case let .valueTooHigh(_, maxValue):
+        case .valueTooHigh(_, let maxValue):
             return "Value too high, maxValue is \(maxValue)."
         }
     }
@@ -148,36 +148,12 @@ class FHIRQuestionnaireEngine: Sendable {
             linkId: FHIRPrimitive(FHIRString(linkId))
         )
         let answerItem = QuestionnaireResponseItemAnswer()
-        
+
         guard let questionnaireItem = findQuestionnaireItem(linkId: linkId) else {
             throw QuestionnaireEngineError.unknownLinkId(linkId)
         }
 
-        switch answer {
-        case let string as String:
-            let resolved = resolveAnswer(linkId: linkId, answer: string)
-            answerItem.value = .string(FHIRPrimitive(FHIRString(resolved)))
-        case let integer as Int:
-            if let max = maxValue(item: questionnaireItem), integer > max {
-                throw QuestionnaireEngineError.valueTooHigh(integer, max: max)
-            }
-            if let min = minValue(item: questionnaireItem), integer < min {
-                throw QuestionnaireEngineError.valueTooLow(integer, min: min)
-            }
-            answerItem.value = .integer(integer.asFHIRIntegerPrimitive())
-        case let double as Double:
-            answerItem.value = .decimal(double.asFHIRDecimalPrimitive())
-        case let bool as Bool:
-            answerItem.value = .boolean(FHIRPrimitive(FHIRBool(bool)))
-        case is NSNull:
-            if questionnaireItem.required?.value?.bool ?? false {
-                throw QuestionnaireEngineError.cannotSkipRequiredQuestion
-            }
-            answerItem.value = .none
-        default:
-            throw QuestionnaireEngineError.unsupportedAnswerType
-        }
-
+        answerItem.value = try extractAnswerItemValue(from: answer, item: questionnaireItem)
         responseItem.answer = [answerItem]
 
         if let index = response.item?.firstIndex(where: { $0.linkId.value?.string == linkId }) {
@@ -189,6 +165,34 @@ class FHIRQuestionnaireEngine: Sendable {
         }
 
         updateFinishedState()
+    }
+
+    private func extractAnswerItemValue<T>(from answer: T, item: QuestionnaireItem) throws
+        -> QuestionnaireResponseItemAnswer.ValueX? {
+        switch answer {
+        case let string as String:
+            let resolved = resolveAnswer(linkId: item.linkId.value?.string ?? "", answer: string)
+            return .string(FHIRPrimitive(FHIRString(resolved)))
+        case let integer as Int:
+            if let max = maxValue(item: item), integer > max {
+                throw QuestionnaireEngineError.valueTooHigh(integer, max: max)
+            }
+            if let min = minValue(item: item), integer < min {
+                throw QuestionnaireEngineError.valueTooLow(integer, min: min)
+            }
+            return .integer(integer.asFHIRIntegerPrimitive())
+        case let double as Double:
+            return .decimal(double.asFHIRDecimalPrimitive())
+        case let bool as Bool:
+            return .boolean(FHIRPrimitive(FHIRBool(bool)))
+        case is NSNull:
+            if item.required?.value?.bool ?? false {
+                throw QuestionnaireEngineError.cannotSkipRequiredQuestion
+            }
+            return .none
+        default:
+            throw QuestionnaireEngineError.unsupportedAnswerType
+        }
     }
 
     /// Persist the current response to disk.
@@ -210,7 +214,9 @@ class FHIRQuestionnaireEngine: Sendable {
     func hasUnansweredQuestions() -> Bool {
         !isFinished
     }
+}
 
+extension FHIRQuestionnaireEngine {
     // MARK: - Question Navigation
 
     private func nextQuestionPayload(includeAllQuestions: Bool) -> QuestionWithProgress? {
@@ -329,7 +335,7 @@ class FHIRQuestionnaireEngine: Sendable {
             maxValue: maxValue
         )
     }
-    
+
     private func minValue(item: QuestionnaireItem) -> Int? {
         item.extensions(for: Self.minValueURL)
             .compactMap { ext in
@@ -340,7 +346,7 @@ class FHIRQuestionnaireEngine: Sendable {
             }
             .first
     }
-    
+
     private func maxValue(item: QuestionnaireItem) -> Int? {
         item.extensions(for: Self.minValueURL)
             .compactMap { ext in
@@ -351,7 +357,7 @@ class FHIRQuestionnaireEngine: Sendable {
             }
             .first
     }
-    
+
     private func findQuestionnaireItem(linkId: String) -> QuestionnaireItem? {
         let questions = Self.flattenItems(questionnaire.item ?? [])
         return questions.first { $0.linkId.value?.string == linkId }
