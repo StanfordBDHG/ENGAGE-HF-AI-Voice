@@ -63,27 +63,13 @@ class FeedbackService {
         return tree.decide(data: patientDataMap)
     }
     
-    private func getAnswerValue(_ item: QuestionnaireResponseItemAnswer) -> Int? {
-        guard let value = item.value else {
-            return nil
-        }
-        switch value {
-        case .integer(let integerValue):
-            return Int(integerValue.value?.integer ?? 0)
-        case .string(let stringValue):
-            return Int(stringValue.value?.string ?? "")
-        default:
-            return nil
-        }
-    }
-    
     private func loadVitalSignsFromFile() async -> VitalSigns? {
         let questionnaireResponse = vitalSignsService.storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         var vitalSigns: [String: Int] = [:]
         for item in questionnaireResponse.item ?? [] {
             guard let linkId = item.linkId.value?.string,
                   let answer = item.answer?.first,
-                  let value = getAnswerValue(answer) else {
+                  let value = answer.integerAnswerValue() else {
                 continue
             }
             
@@ -106,7 +92,7 @@ class FeedbackService {
         let questionnaireResponse = q17Service.storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
         let conditionChange = questionnaireResponse.item?.first?.answer?.first
         if let conditionChange = conditionChange {
-            if let value = getAnswerValue(conditionChange) {
+            if let value = conditionChange.integerAnswerValue() {
                 return PatientData.ConditionChange.categorize(condition: value)
             }
         }

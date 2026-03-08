@@ -41,7 +41,7 @@
                             { "type": "number" },
                             { "type": "null" }
                         ],
-                        "description": "The patient's answer. If the patient is allowed to skip the question, a `null` answer can be used to indicate a skipped question."
+                        "description": "The patient's answer. A `null` value must ONLY be used if the patient explicitly asks to skip the question or clearly states they do not have the information. Never use `null` because of silence, filler words, or unclear responses."
                     }
                 },
                 "required": [

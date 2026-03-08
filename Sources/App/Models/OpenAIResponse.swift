@@ -9,8 +9,6 @@
 struct OpenAIResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case type
-        case delta
-        case itemId = "item_id"
         case arguments
         case name
         case callId = "call_id"
@@ -18,8 +16,6 @@ struct OpenAIResponse: Codable {
     }
     
     let type: String
-    let delta: String?
-    let itemId: String?
     let arguments: String?
     let name: String?
     let callId: String?

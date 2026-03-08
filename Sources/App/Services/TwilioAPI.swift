@@ -87,20 +87,6 @@ actor TwilioAPI {
         return body.recordings
     }
     
-    func fetchRecording(sid: String) async throws -> TwilioRecording {
-        let request = try HTTPClient.Request(
-            url: baseURL.appending(path: "Recordings/\(sid).json"),
-            headers: [
-                "Authorization": authorizationHeaderValue
-            ]
-        )
-        let response = try await httpClient.execute(request: request).get()
-        guard let responseBody = response.body else {
-            throw Abort(.badRequest, reason: "Twilio response body was nil")
-        }
-        return try decoder.decode(TwilioRecording.self, from: responseBody)
-    }
-    
     func fetchMediaFile(sid: String) async throws -> Data {
         let request = try HTTPClient.Request(
             url: baseURL.appending(path: "Recordings/\(sid).wav"),

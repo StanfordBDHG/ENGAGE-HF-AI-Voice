@@ -39,10 +39,3 @@ extension Application {
         }
     }
 }
-
-/// Extension to make feature flags easily accessible from Request
-extension Request {
-    var featureFlags: FeatureFlags {
-        application.featureFlags
-    }
-}

@@ -38,7 +38,7 @@ struct AppTests {
     @Test("Test Symptom Score Calculation")
     func testSymptomScoreCalculation() async throws {
         try await withApp { app in
-            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            let kccq12Service = try await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
             let score = await kccq12Service.computeSymptomScore()
             
             #expect(score == 50.0, "Score should be 50.0 with mocked responses")
@@ -48,9 +48,9 @@ struct AppTests {
     @Test("Test User Feedback Generation")
     func testUserFeedback() async throws {
         try await withApp { app in
-            let vitalSignsService = await VitalSignsService(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
-            let kccq12Service = await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
-            let q17Service = await Q17Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            let vitalSignsService = try await VitalSignsService(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            let kccq12Service = try await KCCQ12Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
+            let q17Service = try await Q17Service(phoneNumber: "+16502341234", logger: app.logger, featureFlags: app.featureFlags)
             
             let feedbackService = await FeedbackService(
                 phoneNumber: "+16502341234",

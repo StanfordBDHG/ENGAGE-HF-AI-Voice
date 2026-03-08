@@ -14,8 +14,8 @@ import Vapor
 /// Service for managing vital signs questionnaire
 @MainActor
 class VitalSignsService: BaseQuestionnaireService, Sendable {
-    init(phoneNumber: String, logger: Logger, featureFlags: FeatureFlags, encryptionKey: String? = nil) {
-        super.init(
+    init(phoneNumber: String, logger: Logger, featureFlags: FeatureFlags, encryptionKey: String? = nil) throws {
+        try super.init(
             questionnaireName: "vitalSigns",
             directoryPath: Constants.vitalSignsDirectoryPath,
             phoneNumber: phoneNumber,

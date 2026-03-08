@@ -54,7 +54,7 @@ struct PatientData {
         case same
         case better
         
-        static func categorize(condition: Int) -> ConditionChange {
+        static func categorize(condition: Int) -> ConditionChange? {
             switch condition {
             case 1:
                 return .worse
@@ -64,15 +64,12 @@ struct PatientData {
                 return .same
             case 4:
                 return .better
-            default:
+            case 5:
                 return .better
+            default:
+                return nil
             }
         }
-    }
-    
-    struct Feedback {
-        let vitals: String
-        let survey: String
     }
     
     let systolicBP: Int

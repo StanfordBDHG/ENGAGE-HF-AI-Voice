@@ -13,55 +13,52 @@ public func configure(_ app: Application) async throws {
     // Initialize feature flags
     let featureFlags = FeatureFlags()
     app.featureFlags = featureFlags
-    
-    // Environment variables
-    let openAIKey: String
-    if app.environment == .testing {
-        openAIKey = "dummy-key-for-testing"
-    } else {
-        guard let key = Environment.get("OPENAI_API_KEY") else {
-            app.logger.error("Missing OpenAI API key. Please set it in the .env file.")
-            exit(1)
-        }
-        openAIKey = key
-    }
-    
-    // Encryption key (optional for development)
-    var encryptionKey: String?
-    if app.environment == .testing {
-        encryptionKey = nil // No encryption in testing
-    } else {
-        encryptionKey = Environment.get("ENCRYPTION_KEY")
-        if encryptionKey == nil {
-            app.logger.warning("No encryption key provided. Questionnaire responses will be stored unencrypted.")
-        } else {
-            // swiftlint:disable:next force_unwrapping
-            guard let keyData = Data(base64Encoded: encryptionKey!),
-                  keyData.count == 32 else {
-                app.logger.warning(
-                    """
-                    Invalid encryption key provided (must be base64-encoded and 32 bytes when decoded).
-                    Questionnaire responses will be stored unencrypted.
-                    """
-                )
-                encryptionKey = nil
-                return
-            }
-        }
-    }
-    
+
     // Store keys in application storage for access in routes
-    app.storage[OpenAIKeyStorageKey.self] = openAIKey
-    app.storage[EncryptionKeyStorageKey.self] = encryptionKey
-    app.storage[RecordingsDecryptionKeyStorageKey.self] = Environment.get("RECORDINGS_DECRYPTION_KEY")
-    
+    app.storage[OpenAIKeyStorageKey.self] = try requireEnvInProd(name: "OPENAI_API_KEY")
+    app.storage[OpenAIWebhookSecretStorageKey.self] = try requireEnvInProd(
+        name: "OPENAI_WEBHOOK_SECRET"
+    )
+
+    app.storage[EncryptionKeyStorageKey.self] =
+        try requireEnvInProd(name: "ENCRYPTION_KEY").flatMap { key in
+            guard let keyData = Data(base64Encoded: key), keyData.count == 32 else {
+                throw Abort(
+                    .internalServerError,
+                    reason:
+                        "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
+                )
+            }
+            return key
+        }
+    app.storage[RecordingsDecryptionKeyStorageKey.self] = Environment.get(
+        "RECORDINGS_DECRYPTION_KEY"
+    )
+
     app.storage[TwilioAccountSidStorageKey.self] = Environment.get("TWILIO_ACCOUNT_SID")
-    app.storage[TwilioAPIKeyStorageKey.self] = Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")
+    app.storage[TwilioAPIKeyStorageKey.self] =
+        Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")
     app.storage[TwilioSecretStorageKey.self] = Environment.get("TWILIO_SECRET")
-    
+
     // Configure server
     app.http.server.configuration.port = Environment.get("PORT").flatMap(Int.init) ?? 5000
-    
+
     // Register routes
     try routes(app)
+}
+
+private func requireEnvInProd(name: String) throws -> String? {
+    if let value = Environment.get(name), !value.isEmpty {
+        return value
+    } else {
+        #if !DEBUG
+            throw Abort(
+                .internalServerError,
+                reason:
+                    "Missing required environment variable \(name). Please set it in the .env file."
+            )
+        #else
+            return nil
+        #endif
+    }
 }
