@@ -168,7 +168,8 @@ class FHIRQuestionnaireEngine: Sendable {
     }
 
     private func extractAnswerItemValue<T>(from answer: T, item: QuestionnaireItem) throws
-        -> QuestionnaireResponseItemAnswer.ValueX? {
+        -> QuestionnaireResponseItemAnswer.ValueX?
+    {
         switch answer {
         case let string as String:
             let resolved = resolveAnswer(linkId: item.linkId.value?.string ?? "", answer: string)
@@ -348,7 +349,7 @@ extension FHIRQuestionnaireEngine {
     }
 
     private func maxValue(item: QuestionnaireItem) -> Int? {
-        item.extensions(for: Self.minValueURL)
+        item.extensions(for: Self.maxValueURL)
             .compactMap { ext in
                 if case .integer(let value) = ext.value {
                     return (value.value?.integer).map(Int.init)
