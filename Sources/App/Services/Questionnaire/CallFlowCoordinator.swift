@@ -35,8 +35,8 @@ actor CallFlowCoordinator {
         phoneNumber: String,
         logger: Logger,
         featureFlags: FeatureFlags,
-        encryptionKey: String? = nil,
-        feedbackProvider: any FeedbackProvider
+        feedbackProvider: any FeedbackProvider,
+        encryptionKey: String? = nil
     ) throws {
         let engines = try sections.map { section in
             try FHIRQuestionnaireEngine(
@@ -126,7 +126,7 @@ actor CallFlowCoordinator {
 
     /// Generate feedback using the registered provider.
     func generateFeedback() async -> String? {
-        return await feedbackProvider.feedback(from: engines)
+        await feedbackProvider.feedback(from: engines)
     }
 
     /// Access all engines (e.g. for score calculations).

@@ -55,8 +55,8 @@ actor CallHandler {
             phoneNumber: phoneNumber,
             logger: logger,
             featureFlags: featureFlags,
-            encryptionKey: encryptionKey,
-            feedbackProvider: EngageHFFeedbackProvider()
+            feedbackProvider: EngageHFFeedbackProvider(),
+            encryptionKey: encryptionKey
         )
     }
 
