@@ -41,7 +41,7 @@ private func handleUpdateRecordings(app: Application, req: Request) async -> Res
             httpClient: app.http.client.shared
         )
 
-        let recordingService = CallRecordingService(
+        let recordingService = try CallRecordingService(
             api: twilioAPI,
             decryptionKey: app.storage[RecordingsDecryptionKeyStorageKey.self],
             encryptionKey: app.storage[EncryptionKeyStorageKey.self],
@@ -60,21 +60,23 @@ private func handleIncomingCall(app: Application, req: Request) async -> Respons
     guard let body = req.body.data else {
         return Response(status: .badRequest)
     }
-    
+
     // Verify webhook signature per Standard Webhooks spec if secret is configured
     // https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md
     if let webhookSecret = app.storage[OpenAIWebhookSecretStorageKey.self] {
         let bodyBytes = Data(buffer: body)
-        guard verifyWebhookSignature(
-            payload: bodyBytes,
-            headers: req.headers,
-            secret: webhookSecret,
-            logger: req.logger
-        ) else {
-            req.logger.error("Invalid webhook signature encounterd.")
+        guard
+            verifyWebhookSignature(
+                payload: bodyBytes,
+                headers: req.headers,
+                secret: webhookSecret,
+                logger: req.logger
+            )
+        else {
+            req.logger.error("Invalid webhook signature encountered.")
             return Response(status: .unauthorized)
         }
-        
+
         req.logger.info("Successfully verified webhook signature")
     }
 
@@ -82,7 +84,9 @@ private func handleIncomingCall(app: Application, req: Request) async -> Respons
         let logger = app.logger
         let event = try JSONDecoder().decode(OpenAICAllIncomingEvent.self, from: body)
         let callId = event.data.callId
-        let phoneNumber = extractPhoneNumberFromSIPHeaders(event.data.sipHeaders) ?? ""
+        let phoneNumber =
+            extractPhoneNumberFromSIPHeaders(event.data.sipHeaders)
+            ?? "Unknown-\(UUID().uuidString)"
 
         logger.info(
             "About to create session handler for call \"\(callId)\" from \"\(phoneNumber)\""
@@ -132,17 +136,21 @@ private func verifyWebhookSignature(
         let timestampString = headers.first(name: "webhook-timestamp"),
         let signatureHeader = headers.first(name: "webhook-signature")
     else {
-        logger.warning("Missing Standard Webhooks headers (webhook-id, webhook-timestamp, webhook-signature).")
+        logger.warning(
+            "Missing Standard Webhooks headers (webhook-id, webhook-timestamp, webhook-signature)."
+        )
         return false
     }
 
+    guard let timestamp = TimeInterval(timestampString) else {
+        logger.warning("Invalid webhook-timestamp header value: \(timestampString)")
+        return false
+    }
     // Reject timestamps older than 5 minutes to prevent replay attacks
-    if let timestamp = TimeInterval(timestampString) {
-        let age = Date().timeIntervalSince1970 - timestamp
-        if abs(age) > 300 {
-            logger.warning("Webhook timestamp too old or too far in the future (age: \(age)s).")
-            return false
-        }
+    let age = Date().timeIntervalSince1970 - timestamp
+    if abs(age) > 300 {
+        logger.warning("Webhook timestamp too old or too far in the future (age: \(age)s).")
+        return false
     }
 
     // The secret from OpenAI is base64-encoded with a "whsec_" prefix

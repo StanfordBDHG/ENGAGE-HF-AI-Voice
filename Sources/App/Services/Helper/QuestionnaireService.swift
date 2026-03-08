@@ -30,9 +30,9 @@ extension QuestionnaireResponseItemAnswer {
         }
         switch value {
         case .integer(let integerValue):
-            return Int(integerValue.value?.integer ?? 0)
+            return (integerValue.value?.integer).flatMap(Int.init)
         case .string(let stringValue):
-            return Int(stringValue.value?.string ?? "")
+            return (stringValue.value?.string).flatMap(Int.init)
         default:
             return nil
         }

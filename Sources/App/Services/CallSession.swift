@@ -90,6 +90,7 @@ actor CallSession {
                 callId: response.callId ?? "",
                 output: "Call end acknowledged."
             )
+            try await sendResponseCreate()
         default:
             logger.error("Unknown function call: \(String(describing: response.name))")
         }
@@ -131,6 +132,7 @@ actor CallSession {
                     output:
                         "Failed to decode parameters; please adhere to the JSON schema definitions."
                 )
+                try await sendResponseCreate()
             }
         } catch {
             try await handleProcessingError(error: error, response: response)
@@ -279,5 +281,6 @@ actor CallSession {
             callId: response.callId ?? "",
             output: "Failed to process questionnaire"
         )
+        try await sendResponseCreate()
     }
 }

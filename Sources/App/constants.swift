@@ -131,7 +131,7 @@ enum Constants {
 
     /// Directory paths for different questionnaire types
     static let vitalSignsDirectoryPath = "\(dataDirectory)/vital_signs/"
-    static let kccq12DirectoryPath = "\(dataDirectory)/kccq12_questionnaires/"
+    static let kccq12DirectoryPath = "\(dataDirectory)/kccq12_questionnairs/"
     static let q17DirectoryPath = "\(dataDirectory)/q17/"
     static let callRecordingsDirectoryPath = "\(dataDirectory)/recordings/"
 

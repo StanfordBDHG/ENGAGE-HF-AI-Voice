@@ -29,23 +29,14 @@ class QuestionnaireStorageService: Sendable {
         directoryPath: String,
         featureFlags: FeatureFlags,
         encryptionKey: String? = nil
-    ) {
+    ) throws {
         self.questionnaireName = questionnaireName
         self.directoryPath = directoryPath
-
-        // Initialize encryption service if key is provided
-        if let encryptionKey = encryptionKey {
-            do {
-                self.encryptionService = try EncryptionService(encryptionKeyBase64: encryptionKey)
-            } catch {
-                self.encryptionService = nil
-            }
-        } else {
-            self.encryptionService = nil
+        self.encryptionService = try encryptionKey.map {
+            try EncryptionService(encryptionKeyBase64: $0)
         }
-
         self.featureFlags = featureFlags
-
+        
         // save the timestamp when the storage service has been created to load the correct questionnaire response files during a internal testing session
         self.dateTimeCreated = Date()
     }

@@ -25,7 +25,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DECRYPTED_DIR="$(dirname "$SCRIPT_DIR")/Decrypted Sessions"
 
 # Source folders to process
-FOLDERS=("vital_signs" "kccq12_questionnaires" "q17" "recordings")
+FOLDERS=("vital_signs" "kccq12_questionnairs" "q17" "recordings")
 
 # Check if Python3 and cryptography are available
 if ! command -v python3 &> /dev/null; then

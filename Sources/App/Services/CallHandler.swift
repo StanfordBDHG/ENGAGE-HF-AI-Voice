@@ -194,7 +194,7 @@ actor CallHandler {
                 httpClient: httpClient
             )
             
-            let recordingService = await CallRecordingService(
+            let recordingService = try await CallRecordingService(
                 api: twilioAPI,
                 decryptionKey: recordingsDecryptionKey,
                 encryptionKey: encryptionKey,

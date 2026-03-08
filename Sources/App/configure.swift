@@ -15,41 +15,41 @@ public func configure(_ app: Application) async throws {
     app.featureFlags = featureFlags
 
     // Environment variables
-    let openAIKey: String
-    if app.environment == .testing {
-        openAIKey = "dummy-key-for-testing"
-    } else {
-        guard let key = Environment.get("OPENAI_API_KEY") else {
-            throw Abort(
-                .internalServerError,
-                reason: "Missing OpenAI API key. Please set it in the .env file."
-            )
-        }
-        openAIKey = key
+    guard let openAIKey = Environment.get("OPENAI_API_KEY") else {
+        throw Abort(
+            .internalServerError,
+            reason: "Missing OpenAI API key. Please set it in the .env file."
+        )
     }
 
     // Encryption key (optional for development)
     var encryptionKey: String?
-    if app.environment == .testing {
-        encryptionKey = nil  // No encryption in testing
-    } else {
-        if let key = Environment.get("ENCRYPTION_KEY") {
-            guard let keyData = Data(base64Encoded: key),
-                keyData.count == 32
-            else {
-                throw Abort(
-                    .internalServerError,
-                    reason:
-                        "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
-                )
-            }
-            encryptionKey = key
+    if let key = Environment.get("ENCRYPTION_KEY"), !key.isEmpty {
+        guard let keyData = Data(base64Encoded: key), keyData.count == 32 else {
+            throw Abort(
+                .internalServerError,
+                reason:
+                    "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
+            )
         }
+        encryptionKey = key
+    } else if app.environment != .testing {
+        throw Abort(
+            .internalServerError,
+            reason: "Missing ENCRYPTION_KEY. Please set it in the .env file."
+        )
+    }
+
+    guard let openAIWebhookSecret = Environment.get("OPENAI_WEBHOOK_SECRET") else {
+        throw Abort(
+            .internalServerError,
+            reason: "Missing OpenAI webhook secret. Please set it in the .env file."
+        )
     }
 
     // Store keys in application storage for access in routes
     app.storage[OpenAIKeyStorageKey.self] = openAIKey
-    app.storage[OpenAIWebhookSecretStorageKey.self] = Environment.get("OPENAI_WEBHOOK_SECRET")
+    app.storage[OpenAIWebhookSecretStorageKey.self] = openAIWebhookSecret
 
     app.storage[EncryptionKeyStorageKey.self] = encryptionKey
     app.storage[RecordingsDecryptionKeyStorageKey.self] = Environment.get(

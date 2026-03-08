@@ -8,14 +8,13 @@
 
 import Vapor
 
-
 @MainActor
 class BaseQuestionnaireService: QuestionnaireService, Sendable {
     let storage: QuestionnaireStorageService
     let manager: QuestionnaireManager
     let phoneNumber: String
     let logger: Logger
-    
+
     /// Initialize a new questionnaire service
     /// - Parameters:
     ///   - questionnaireName: The name of the questionnaire
@@ -34,7 +33,7 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
     ) throws {
         self.phoneNumber = phoneNumber
         self.logger = logger
-        self.storage = QuestionnaireStorageService(
+        self.storage = try QuestionnaireStorageService(
             questionnaireName: questionnaireName,
             directoryPath: directoryPath,
             featureFlags: featureFlags,
@@ -43,16 +42,18 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         self.manager = try QuestionnaireManager(
             questionnaire: storage.loadQuestionnaire(),
             sharesAllQuestionsIfNeeded: sharesAllQuestionsIfNeeded,
-            initialResponse: storage.loadQuestionnaireResponse(phoneNumber: phoneNumber, logger: logger)
+            initialResponse: storage.loadQuestionnaireResponse(
+                phoneNumber: phoneNumber, logger: logger
+            )
         )
     }
-    
+
     /// Get the next question from the questionnaire
     /// - Returns: The next question as a JSON string if available, nil if no more questions
     func getNextQuestion(includeAllQuestions: Bool) async -> String? {
         manager.getNextQuestionString(includeAllQuestions: includeAllQuestions)
     }
-    
+
     /// Save the answer to a question to the questionnaire response managed by the manager
     /// - Parameters:
     ///   - linkId: The question's identifier
@@ -68,24 +69,26 @@ class BaseQuestionnaireService: QuestionnaireService, Sendable {
         }
         return false
     }
-    
+
     /// Count the number of answered questions
     /// - Returns: The number of answered questions
     func countAnsweredQuestions() -> Int {
         manager.countAnsweredQuestions()
     }
-    
+
     /// Check if there are any unanswered questions left
     /// - Returns: True if there are any unanswered questions left, false otherwise
     func unansweredQuestionsLeft() -> Bool {
         !manager.isFinished
     }
-    
+
     // Helpers
-    
+
     /// Save the questionnaire response to the file by delegating to the storage service
     private func saveQuestionnaireResponseToFile() async {
         let response = manager.getCurrentResponse()
-        await storage.saveQuestionnaireResponse(phoneNumber: phoneNumber, response: response, logger: logger)
+        await storage.saveQuestionnaireResponse(
+            phoneNumber: phoneNumber, response: response, logger: logger
+        )
     }
 }
