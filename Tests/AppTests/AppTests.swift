@@ -84,4 +84,54 @@ struct AppTests {
             #expect(feedback == expected)
         }
     }
+
+    @Test(
+        "extractPhoneNumberFromSIPHeader extracts E.164 numbers",
+        arguments: [
+            // Standard E.164 in SIP From header
+            ("<sip:+14155551234@gateway.twilio.com>;tag=abc123", "+14155551234"),
+            // Minimal — just the SIP URI
+            ("<sip:+14155551234@10.0.0.1>", "+14155551234"),
+            // International numbers
+            ("<sip:+442071234567@gateway.twilio.com>;tag=xyz", "+442071234567"),
+            ("<sip:+4930123456@gateway.twilio.com>", "+4930123456"),
+            ("<sip:+61291234567@gateway.twilio.com>", "+61291234567"),
+            // Short numbers (some countries)
+            ("<sip:+1234@gateway.twilio.com>", "+1234"),
+            // Maximum length E.164 (15 digits)
+            ("<sip:+123456789012345@gateway.twilio.com>", "+123456789012345")
+        ]
+    )
+    func extractPhoneNumberValid(input: String, expected: String) {
+        #expect(extractPhoneNumberFromSIPHeader(value: input) == expected)
+    }
+
+    @Test(
+        "extractPhoneNumberFromSIPHeader returns nil for anonymous/invalid callers",
+        arguments: [
+            // Anonymous per RFC 3323
+            "<sip:anonymous@anonymous.invalid>",
+            // Common carrier-specific anonymous values
+            "<sip:anonymous@gateway.twilio.com>;tag=abc",
+            "<sip:restricted@gateway.twilio.com>",
+            "<sip:unknown@gateway.twilio.com>",
+            "<sip:unavailable@gateway.twilio.com>",
+            "<sip:private@gateway.twilio.com>",
+            "<sip:blocked@gateway.twilio.com>",
+            "<sip:withheld@gateway.twilio.com>",
+            // Missing + prefix (not E.164)
+            "<sip:14155551234@gateway.twilio.com>",
+            // Number too long (16+ digits)
+            "<sip:+1234567890123456@gateway.twilio.com>",
+            // Number with only + (no digits)
+            "<sip:+@gateway.twilio.com>",
+            // Leading zero after + (not valid E.164)
+            "<sip:+0123456789@gateway.twilio.com>",
+            // Empty string
+            ""
+        ]
+    )
+    func extractPhoneNumberNil(input: String) {
+        #expect(extractPhoneNumberFromSIPHeader(value: input) == nil)
+    }
 }
