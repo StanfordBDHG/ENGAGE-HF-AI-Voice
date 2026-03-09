@@ -178,8 +178,12 @@ private func verifyWebhookSignature(
 
 private func extractPhoneNumberFromSIPHeaders(_ headers: [OpenAICAllIncomingEvent.SIPHeader])
     -> String? {
-    headers
-        .first { $0.name == "From" }?.value
+    (headers.first { $0.name == "From" }?.value)
+        .flatMap(extractPhoneNumberFromSIPHeader)
+}
+
+func extractPhoneNumberFromSIPHeader(value: String) -> String? {
+    value
         .components(separatedBy: ";")
         .first?
         .trimmingPrefix { $0 != "<" }
@@ -187,4 +191,6 @@ private func extractPhoneNumberFromSIPHeaders(_ headers: [OpenAICAllIncomingEven
         .trimmingPrefix("sip:")
         .components(separatedBy: "@")
         .first
+        .flatMap { try? /^\+[1-9]\d{1,14}$/.wholeMatch(in: $0)?.output }
+        .flatMap { $0.isEmpty ? nil : String($0) }
 }
