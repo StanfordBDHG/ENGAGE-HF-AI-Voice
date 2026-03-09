@@ -7,19 +7,26 @@
 //
 
 import Foundation
+import SpeziLLMOpenAI
 import Vapor
 
 actor CallSession {
     let phoneNumber: String
     let coordinator: CallFlowCoordinator
+    let functions: [String: any LLMFunction]
     let logger: Logger
     let webSocket: WebSocket
 
     init(
-        phoneNumber: String, coordinator: CallFlowCoordinator, webSocket: WebSocket, logger: Logger
+        phoneNumber: String,
+        coordinator: CallFlowCoordinator,
+        functions: [String: any LLMFunction],
+        webSocket: WebSocket,
+        logger: Logger
     ) {
         self.phoneNumber = phoneNumber
         self.coordinator = coordinator
+        self.functions = functions
         self.webSocket = webSocket
         self.logger = logger
     }
@@ -73,55 +80,37 @@ actor CallSession {
     }
 
     private func handleFunctionCall(response: OpenAIResponse) async throws {
-        logger.debug("Function call \"\(response.name ?? "")\"")
-        let engine = await coordinator.currentEngine
-        switch response.name {
-        case "save_response":
-            try await saveResponse(engine: engine, response: response)
-        case "count_answered_questions":
-            try await countAnsweredQuestions(engine: engine, response: response)
-        case "end_call":
-            // Closing the web socket is currently disabled due to https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/issues/45
+        let name = response.name ?? ""
+        logger.debug("Function call \"\(name)\"")
+
+        guard let function = functions[name] else {
+            logger.error("Unknown function call: \(name)")
+            try await sendFunctionOutput(callId: response.callId ?? "", output: "Unknown function.")
+            try await sendResponseCreate()
+            return
+        }
+
+        do {
+            if let saveResponseFn = function as? SaveResponseFunction {
+                saveResponseFn.rawArguments = response.arguments ?? "{}"
+            }
+
+            let output: String
+            if let result = try await function.execute() {
+                output = result
+            } else {
+                // SaveResponseFunction returns nil when the current section is complete
+                output = try await handleSectionCompletion(response: response)
+            }
+            try await sendFunctionOutput(callId: response.callId ?? "", output: output)
+        } catch {
+            logger.error("Error processing function call: \(error)")
             try await sendFunctionOutput(
                 callId: response.callId ?? "",
-                output: "Call end acknowledged."
+                output: "ERROR: \(error.localizedDescription)"
             )
-            try await sendResponseCreate()
-        default:
-            logger.error("Unknown function call: \(String(describing: response.name))")
         }
-    }
-
-    private func saveResponse(
-        engine: FHIRQuestionnaireEngine,
-        response: OpenAIResponse
-    ) async throws {
-        do {
-            logger.info("Attempting to save response...")
-            guard let arguments = response.arguments else {
-                throw Abort(.badRequest, reason: "No arguments provided")
-            }
-            let argumentsData = arguments.data(using: .utf8) ?? Data()
-
-            do {
-                let parsedArgs = try JSONDecoder().decode(
-                    QuestionnaireResponseArgs.self, from: argumentsData
-                )
-                try await saveQuestionnaireAnswer(
-                    engine: engine, parsedArgs: parsedArgs
-                )
-                try await handleSaveSuccess(engine: engine, response: response)
-            } catch {
-                logger.error("Decoding error details: \(error)")
-                try await sendFunctionOutput(
-                    callId: response.callId ?? "",
-                    output: "ERROR: [\(error.localizedDescription)]"
-                )
-                try await sendResponseCreate()
-            }
-        } catch {
-            try await handleProcessingError(error: error, response: response)
-        }
+        try await sendResponseCreate()
     }
 
     private func sendFunctionOutput(callId: String, output: String) async throws {
@@ -139,102 +128,19 @@ actor CallSession {
         try await sendJSON(["type": "response.create"])
     }
 
-    private func countAnsweredQuestions(
-        engine: FHIRQuestionnaireEngine,
-        response: OpenAIResponse
-    ) async throws {
-        let count = await engine.answeredCount()
-        logger.info("Count of answered questions of current engine: \(count)")
-        try await sendFunctionOutput(
-            callId: response.callId ?? "",
-            output: "The patient has answered \(count) questions."
-        )
-        try await sendResponseCreate()
-    }
-
-    private func saveQuestionnaireAnswer(
-        engine: FHIRQuestionnaireEngine, parsedArgs: QuestionnaireResponseArgs
-    ) async throws {
-        switch parsedArgs.answer {
-        case .number(let number):
-            try await engine.answerQuestion(
-                linkId: parsedArgs.linkId,
-                answer: number
-            )
-            return
-        case .text(let text):
-            try await engine.answerQuestion(
-                linkId: parsedArgs.linkId,
-                answer: text
-            )
-            return
-        case .none:
-            try await engine.answerQuestion(
-                linkId: parsedArgs.linkId,
-                answer: NSNull()
-            )
-            return
-        }
-    }
-
-    private func handleSaveSuccess(
-        engine: FHIRQuestionnaireEngine,
-        response: OpenAIResponse
-    ) async throws {
-        if let nextQuestion = await engine.nextQuestionJSON(includeAllQuestions: false) {
-            try await handleNextQuestionAvailable(nextQuestion: nextQuestion, response: response)
-        } else {
-            try await handleQuestionnaireComplete(response: response)
-        }
-    }
-
-    private func handleNextQuestionAvailable(nextQuestion: String, response: OpenAIResponse)
-        async throws {
-        try await sendFunctionOutput(callId: response.callId ?? "", output: nextQuestion)
-        try await sendResponseCreate()
-    }
-
-    private func handleQuestionnaireComplete(
-        response: OpenAIResponse
-    ) async throws {
+    private func handleSectionCompletion(response: OpenAIResponse) async throws -> String {
         if let nextEngine = await coordinator.advanceToNextSection() {
             let initialQuestion = await nextEngine.nextQuestionJSON(includeAllQuestions: true)
             if let systemMessage = await coordinator.sectionSystemMessage(
                 for: nextEngine, initialQuestion: initialQuestion
             ) {
                 try await updateSession(systemMessage: systemMessage)
-                try await sendFunctionOutput(
-                    callId: response.callId ?? "",
-                    output: "The response was saved. Moving to the next section."
-                )
-                try await sendResponseCreate()
-            } else {
-                try await handleAllSectionsComplete(response: response)
+                return "The response was saved. Moving to the next section."
             }
-        } else {
-            try await handleAllSectionsComplete(response: response)
         }
-    }
-
-    private func handleAllSectionsComplete(response: OpenAIResponse) async throws {
+        // All sections complete (or no section system message available)
         let feedback = await coordinator.generateFeedback()
-        let systemMessage = Constants.feedback(
-            content: feedback
-        )
-        try await updateSession(systemMessage: systemMessage)
-        try await sendFunctionOutput(
-            callId: response.callId ?? "",
-            output: "The response was saved. All questionnaires are complete."
-        )
-        try await sendResponseCreate()
-    }
-
-    private func handleProcessingError(error: any Error, response: OpenAIResponse) async throws {
-        logger.error("Error processing questionnaire: \(error)")
-        try await sendFunctionOutput(
-            callId: response.callId ?? "",
-            output: "Failed to process questionnaire"
-        )
-        try await sendResponseCreate()
+        try await updateSession(systemMessage: Constants.feedback(content: feedback))
+        return "The response was saved. All questionnaires are complete."
     }
 }

@@ -118,22 +118,4 @@ enum Constants {
             """
     }
 
-    /// Load the session config from the resources directory and inject the system prompt
-    static func loadSessionConfig(systemMessage: String) throws -> String {
-        guard let url = Bundle.module.url(forResource: "sessionConfig", withExtension: "json"),
-            let jsonString = try? String(contentsOf: url, encoding: .utf8)
-        else {
-            throw Abort(.internalServerError, reason: "Could not load sessionConfig.json")
-        }
-
-        // Escape newlines and quotes in the system message
-        let escapedMessage =
-            systemMessage
-            .replacingOccurrences(of: "\n", with: "\\n")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return jsonString.replacingOccurrences(
-            of: "{{SYSTEM_PROMPT}}",
-            with: escapedMessage
-        )
-    }
 }

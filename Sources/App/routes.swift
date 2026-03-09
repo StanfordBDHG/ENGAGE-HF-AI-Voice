@@ -8,6 +8,7 @@
 
 import Crypto
 import Foundation
+import SpeziVapor
 import Vapor
 
 func routes(_ app: Application) throws {
@@ -25,9 +26,10 @@ func routes(_ app: Application) throws {
 }
 
 private func handleUpdateRecordings(app: Application, req: Request) async -> Response {
-    guard let twilioAccountSid = app.storage[TwilioAccountSidStorageKey.self],
-        let twilioAPIKey = app.storage[TwilioAPIKeyStorageKey.self],
-        let twilioSecret = app.storage[TwilioSecretStorageKey.self]
+    let config = app.spezi[AppConfigModule.self]
+    guard let twilioAccountSid = config.twilioAccountSid,
+        let twilioAPIKey = config.twilioAPIKey,
+        let twilioSecret = config.twilioSecret
     else {
         req.logger.warning("Couldn't update newest recordings due to missing Twilio credentials.")
         return Response(status: .internalServerError)
@@ -43,8 +45,8 @@ private func handleUpdateRecordings(app: Application, req: Request) async -> Res
 
         let recordingService = try CallRecordingService(
             api: twilioAPI,
-            decryptionKey: app.storage[RecordingsDecryptionKeyStorageKey.self],
-            encryptionKey: app.storage[EncryptionKeyStorageKey.self],
+            decryptionKey: config.recordingsDecryptionKey,
+            encryptionKey: config.encryptionKey,
             logger: req.logger
         )
         try await recordingService.storeNewestRecordings()
@@ -64,7 +66,8 @@ private func handleIncomingCall(app: Application, req: Request) async -> Respons
 
     // Verify webhook signature per Standard Webhooks spec if secret is configured
     // https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md
-    if let webhookSecret = app.storage[OpenAIWebhookSecretStorageKey.self] {
+    let config = app.spezi[AppConfigModule.self]
+    if let webhookSecret = config.openAIWebhookSecret {
         guard
             verifyWebhookSignature(
                 payload: bodyData,

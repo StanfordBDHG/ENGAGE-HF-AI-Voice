@@ -7,6 +7,8 @@
 //
 
 import Foundation
+import SpeziLLMOpenAI
+import SpeziVapor
 import Vapor
 
 actor CallHandler {
@@ -24,50 +26,60 @@ actor CallHandler {
     let httpClient: HTTPClient
     let logger: Logger
     let coordinator: CallFlowCoordinator
+    let functions: [String: any LLMFunction]
 
     init(
         callId: String,
         phoneNumber: String,
         app: Application
     ) async throws {
-        self.encryptionKey = app.storage[EncryptionKeyStorageKey.self]
-        self.recordingsDecryptionKey = app.storage[RecordingsDecryptionKeyStorageKey.self]
+        let config = app.spezi[AppConfigModule.self]
+
+        self.encryptionKey = config.encryptionKey
+        self.recordingsDecryptionKey = config.recordingsDecryptionKey
 
         self.callId = callId
         self.phoneNumber = phoneNumber
-        self.openAIKey = app.storage[OpenAIKeyStorageKey.self] ?? ""
-        self.twilioAccountSid = app.storage[TwilioAccountSidStorageKey.self]
-        self.twilioAPIKey = app.storage[TwilioAPIKeyStorageKey.self]
-        self.twilioSecret = app.storage[TwilioSecretStorageKey.self]
+        self.openAIKey = config.openAIKey ?? ""
+        self.twilioAccountSid = config.twilioAccountSid
+        self.twilioAPIKey = config.twilioAPIKey
+        self.twilioSecret = config.twilioSecret
 
         self.eventLoopGroup = app.eventLoopGroup
         self.httpClient = app.http.client.shared
         self.logger = app.logger
 
-        let featureFlags = app.featureFlags
+        let featureFlags = config.featureFlags
         let sections: [any QuestionnaireSection] = [
             VitalSignsSection(),
             KCCQ12Section(internalTestingMode: featureFlags.internalTestingMode),
             Q17Section()
         ]
-        self.coordinator = try await CallFlowCoordinator(
+        let coordinator = try await CallFlowCoordinator(
             sections: sections,
             phoneNumber: phoneNumber,
-            logger: logger,
+            logger: app.logger,
             featureFlags: featureFlags,
             feedbackProvider: EngageHFFeedbackProvider(),
             encryptionKey: encryptionKey
         )
+        self.coordinator = coordinator
+
+        let saveResponseFn = SaveResponseFunction(coordinator: coordinator, logger: app.logger)
+        let countFn = CountAnsweredQuestionsFunction(coordinator: coordinator, logger: app.logger)
+        let endCallFn = EndCallFunction()
+        self.functions = [
+            SaveResponseFunction.name: saveResponseFn,
+            CountAnsweredQuestionsFunction.name: countFn,
+            EndCallFunction.name: endCallFn
+        ]
     }
 
     func accept() async throws {
         do {
             let systemMessage = await coordinator.initialSystemMessage()
-            let config = try Constants.loadSessionConfig(systemMessage: systemMessage)
-            let configObject = try JSONSerialization.jsonObject(
-                with: config.data(using: .utf8) ?? Data()
-            )
-            let configData = try JSONSerialization.data(withJSONObject: configObject)
+            let payload = buildAcceptPayload(systemMessage: systemMessage)
+            let configData = try JSONSerialization.data(withJSONObject: payload)
             let request = try HTTPClient.Request(
                 url: "https://api.openai.com/v1/realtime/calls/\(callId)/accept",
                 method: .POST,
@@ -123,6 +135,7 @@ actor CallHandler {
                 let session = CallSession(
                     phoneNumber: phoneNumber,
                     coordinator: coordinator,
+                    functions: functions,
                     webSocket: webSocket,
                     logger: logger
                 )
@@ -170,6 +183,49 @@ actor CallHandler {
             logger.error("Error connecting to the OpenAI Realtime API: \(error)")
             throw error
         }
+    }
+
+    private func buildAcceptPayload(systemMessage: String) -> [String: Any] {
+        [
+            "type": "realtime",
+            "model": "gpt-realtime",
+            "instructions": systemMessage,
+            "audio": [
+                "input": [
+                    "format": ["type": "audio/pcmu"],
+                    "turn_detection": ["type": "semantic_vad", "eagerness": "high"],
+                    "noise_reduction": ["type": "far_field"]
+                ],
+                "output": [
+                    "format": ["type": "audio/pcmu"],
+                    "voice": "alloy",
+                    "speed": 1.0
+                ]
+            ],
+            "tools": buildToolDefinitions(),
+            "tool_choice": "auto"
+        ]
+    }
+
+    private func buildToolDefinitions() -> [[String: Any]] {
+        [
+            [
+                "type": "function",
+                "name": SaveResponseFunction.name,
+                "description": SaveResponseFunction.description,
+                "parameters": SaveResponseFunction.parameterSchema
+            ],
+            [
+                "type": "function",
+                "name": CountAnsweredQuestionsFunction.name,
+                "description": CountAnsweredQuestionsFunction.description
+            ],
+            [
+                "type": "function",
+                "name": EndCallFunction.name,
+                "description": EndCallFunction.description
+            ]
+        ]
     }
 
     private func updateCallRecordings() async {

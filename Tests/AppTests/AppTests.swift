@@ -11,21 +11,18 @@ import Testing
 import VaporTesting
 
 @testable import App
+import SpeziVaporTesting
 
 @Suite("App Tests")
 struct AppTests {
     @MainActor
     private func withApp(_ test: @MainActor @Sendable (Application) async throws -> Void)
         async throws {
-        let app = try await Application.make(.testing)
-        do {
-            try await configure(app)
+        try await withSpeziVaporApp(routes: routes) {
+            AppConfigModule()
+        } _: { app in
             try await test(app)
-        } catch {
-            try await app.asyncShutdown()
-            throw error
         }
-        try await app.asyncShutdown()
     }
 
     @Test("Test Health Route")
