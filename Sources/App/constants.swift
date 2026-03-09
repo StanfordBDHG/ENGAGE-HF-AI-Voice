@@ -13,7 +13,7 @@ import Vapor
 
 enum Constants {
     static let initialInstructionsPlaceholder = "{{INITIAL_INSTRUCTION}}"
-    static let sectionIndexPlaceholder = "{{SECTION_INDEX}}"
+    static let sectionNumberPlaceholder = "{{SECTION_NUMBER}}"
     static let sectionCountPlaceholder = "{{SECTION_COUNT}}"
 
     /// The system prompt

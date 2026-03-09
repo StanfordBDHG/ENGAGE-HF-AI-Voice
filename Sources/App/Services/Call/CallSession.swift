@@ -124,7 +124,7 @@ actor CallSession {
         }
     }
 
-    private func sendFunctionOutput(callId: String, output: String) async throws {
+    func sendFunctionOutput(callId: String, output: String) async throws {
         try await sendJSON([
             "type": "conversation.item.create",
             "item": [
@@ -135,7 +135,7 @@ actor CallSession {
         ])
     }
 
-    private func sendResponseCreate() async throws {
+    func sendResponseCreate() async throws {
         try await sendJSON(["type": "response.create"])
     }
 
@@ -162,6 +162,12 @@ actor CallSession {
                 answer: number
             )
             return
+        case .decimal(let decimal):
+            try await engine.answerQuestion(
+                linkId: parsedArgs.linkId,
+                answer: decimal
+            )
+            return
         case .text(let text):
             try await engine.answerQuestion(
                 linkId: parsedArgs.linkId,
@@ -181,7 +187,7 @@ actor CallSession {
         engine: FHIRQuestionnaireEngine,
         response: OpenAIResponse
     ) async throws {
-        if let nextQuestion = await engine.nextQuestionJSON(includeAllQuestions: false) {
+        if let nextQuestion = await engine.nextQuestionString(includeAllQuestions: false) {
             try await handleNextQuestionAvailable(nextQuestion: nextQuestion, response: response)
         } else {
             try await handleQuestionnaireComplete(response: response)
@@ -191,50 +197,6 @@ actor CallSession {
     private func handleNextQuestionAvailable(nextQuestion: String, response: OpenAIResponse)
         async throws {
         try await sendFunctionOutput(callId: response.callId ?? "", output: nextQuestion)
-        try await sendResponseCreate()
-    }
-
-    private func handleQuestionnaireComplete(
-        response: OpenAIResponse
-    ) async throws {
-        if let nextEngine = await coordinator.advanceToNextSection() {
-            let initialQuestion = await nextEngine.nextQuestionJSON(includeAllQuestions: true)
-            if let systemMessage = await coordinator.sectionSystemMessage(
-                for: nextEngine, initialQuestion: initialQuestion
-            ) {
-                try await updateSession(systemMessage: systemMessage)
-                try await sendFunctionOutput(
-                    callId: response.callId ?? "",
-                    output: "The response was saved. Moving to the next section."
-                )
-                try await sendResponseCreate()
-            } else {
-                try await handleAllSectionsComplete(response: response)
-            }
-        } else {
-            try await handleAllSectionsComplete(response: response)
-        }
-    }
-
-    private func handleAllSectionsComplete(response: OpenAIResponse) async throws {
-        let feedback = await coordinator.generateFeedback()
-        let systemMessage = Constants.feedback(
-            content: feedback
-        )
-        try await updateSession(systemMessage: systemMessage)
-        try await sendFunctionOutput(
-            callId: response.callId ?? "",
-            output: "The response was saved. All questionnaires are complete."
-        )
-        try await sendResponseCreate()
-    }
-
-    private func handleProcessingError(error: any Error, response: OpenAIResponse) async throws {
-        logger.error("Error processing questionnaire: \(error)")
-        try await sendFunctionOutput(
-            callId: response.callId ?? "",
-            output: "Failed to process questionnaire"
-        )
         try await sendResponseCreate()
     }
 }

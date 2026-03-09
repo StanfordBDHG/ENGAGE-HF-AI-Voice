@@ -38,6 +38,21 @@ enum QuestionnaireEngineError: Error, LocalizedError {
     }
 }
 
+/// Validation errors returned when an answer fails constraint checks.
+enum AnswerValidationError: Error, CustomStringConvertible {
+    case belowMinimum(Double)
+    case aboveMaximum(Double)
+    case exceedsMaxLength(Int)
+
+    var description: String {
+        switch self {
+        case .belowMinimum(let min): return "Value must be at least \(min)"
+        case .aboveMaximum(let max): return "Value must be at most \(max)"
+        case .exceedsMaxLength(let max): return "Text must be at most \(max) characters"
+        }
+    }
+}
+
 /// A generic FHIR R4 questionnaire engine that manages the state of answering
 /// any compliant questionnaire.
 ///
@@ -49,9 +64,13 @@ enum QuestionnaireEngineError: Error, LocalizedError {
 class FHIRQuestionnaireEngine: Sendable {
     // MARK: - Constants
 
-    private static let noteExtensionURL = "http://bdh.stanford.edu/fhir/StructureDefinition/note"
-    private static let minValueURL = "http://hl7.org/fhir/StructureDefinition/minValue"
-    private static let maxValueURL = "http://hl7.org/fhir/StructureDefinition/maxValue"
+    static let noteExtensionURL = "http://bdh.stanford.edu/fhir/StructureDefinition/note"
+    static let minValueURL = "http://hl7.org/fhir/StructureDefinition/minValue"
+    static let maxValueURL = "http://hl7.org/fhir/StructureDefinition/maxValue"
+    static let unitURL = "http://hl7.org/fhir/StructureDefinition/questionnaire-unit"
+    static let hiddenURL = "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden"
+    static let itemControlURL =
+        "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl"
 
     // MARK: - Properties
 
@@ -59,9 +78,9 @@ class FHIRQuestionnaireEngine: Sendable {
     let section: any QuestionnaireSection
     let phoneNumber: String
 
-    private let questionnaire: Questionnaire
-    private var response: QuestionnaireResponse
-    private var codeMapping: [String: [String: String]] = [:]
+    let questionnaire: Questionnaire
+    var response: QuestionnaireResponse
+    var codeMapping: [String: [String: String]] = [:]
     private(set) var isFinished: Bool = false
 
     // MARK: - Initializer
@@ -95,6 +114,7 @@ class FHIRQuestionnaireEngine: Sendable {
         for item in allItems {
             buildCodeMapping(for: item)
         }
+        prePopulateInitialValues()
         updateFinishedState()
     }
 
@@ -102,16 +122,44 @@ class FHIRQuestionnaireEngine: Sendable {
 
     static func flattenItems(_ items: [QuestionnaireItem]) -> [QuestionnaireItem] {
         items.flatMap { item -> [QuestionnaireItem] in
-            if let subItems = item.item {
+            if let subItems = item.item, !subItems.isEmpty {
                 return flattenItems(subItems)
-            } else if item.type.value?.rawValue != "display" {
+            } else if item.type.value?.rawValue != "display" && !isHidden(item) {
                 return [item]
             }
             return []
         }
     }
 
-    private static func extractNote(from extensions: [ModelsR4.Extension]) -> String? {
+    /// Recursively flattens nested QuestionnaireResponseItems into a single-level array.
+    static func flattenResponseItems(
+        _ items: [QuestionnaireResponseItem]
+    ) -> [QuestionnaireResponseItem] {
+        items.flatMap { item -> [QuestionnaireResponseItem] in
+            if let subItems = item.item, !subItems.isEmpty {
+                return flattenResponseItems(subItems)
+            } else if item.answer != nil {
+                return [item]
+            }
+            return []
+        }
+    }
+
+    static func isHidden(_ item: QuestionnaireItem) -> Bool {
+        guard let extensions = item.`extension` else {
+            return false
+        }
+        return extensions.contains { ext in
+            guard ext.url.value?.url.absoluteString == hiddenURL,
+                case .boolean(let val) = ext.value
+            else {
+                return false
+            }
+            return val.value?.bool ?? false
+        }
+    }
+
+    static func extractNote(from extensions: [ModelsR4.Extension]) -> String? {
         extensions
             .first { $0.url.value?.url.absoluteString == noteExtensionURL }
             .flatMap { ext in
@@ -122,7 +170,7 @@ class FHIRQuestionnaireEngine: Sendable {
             }
     }
 
-    private static func descriptiveCode(from display: String) -> String {
+    static func descriptiveCode(from display: String) -> String {
         display.lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
@@ -131,21 +179,26 @@ class FHIRQuestionnaireEngine: Sendable {
 
     // MARK: - Public Interface
 
-    /// Returns the next unanswered question as a JSON string, or nil if finished.
-    func nextQuestionJSON(includeAllQuestions: Bool) -> String? {
+    /// Returns the next unanswered question as an encoded string, or nil if finished.
+    func nextQuestionString(includeAllQuestions: Bool) -> String? {
         guard let payload = nextQuestionPayload(includeAllQuestions: includeAllQuestions) else {
             return nil
         }
         guard let data = try? TOONEncoder().encode(payload),
-            let json = String(data: data, encoding: .utf8)
+            let result = String(data: data, encoding: .utf8)
         else {
             return nil
         }
-        return json
+        return result
     }
 
     /// Record an answer for a given linkId.
     func answerQuestion<T>(linkId: String, answer: T) throws {
+        // Validate the answer against questionnaire constraints before saving
+        if let validationError = validateAnswer(linkId: linkId, answer: answer) {
+            throw validationError
+        }
+
         let responseItem = QuestionnaireResponseItem(
             linkId: FHIRPrimitive(FHIRString(linkId))
         )
@@ -200,12 +253,27 @@ class FHIRQuestionnaireEngine: Sendable {
 
     /// Persist the current response to disk.
     func save() {
-        store.saveResponse(response)
+        store.saveResponse(hierarchicalResponse())
     }
 
-    /// Returns the raw FHIR response (e.g. for scoring calculations).
+    /// Returns the internal flat response (e.g. for scoring calculations).
     func currentResponse() -> QuestionnaireResponse {
         response
+    }
+
+    /// Returns a FHIR-compliant QuestionnaireResponse with hierarchically nested items
+    /// matching the questionnaire structure.
+    func hierarchicalResponse() -> QuestionnaireResponse {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        guard let data = try? encoder.encode(response),
+            let result = try? decoder.decode(QuestionnaireResponse.self, from: data)
+        else {
+            return response
+        }
+        let lookup = buildAnswerLookup()
+        result.item = buildResponseHierarchy(for: questionnaire.item ?? [], lookup: lookup)
+        return result
     }
 
     /// Number of questions that have been answered.
@@ -220,54 +288,6 @@ class FHIRQuestionnaireEngine: Sendable {
 }
 
 extension FHIRQuestionnaireEngine {
-    // MARK: - Question Navigation
-
-    private func nextQuestionPayload(includeAllQuestions: Bool) -> QuestionWithProgress? {
-        let items = Self.flattenItems(questionnaire.item ?? [])
-        let answeredIds = Set(response.item?.compactMap { $0.linkId.value?.string } ?? [])
-
-        let nextItem =
-            items.first { item in
-                guard let linkId = item.linkId.value?.string else {
-                    return false
-                }
-                return (item.required?.value?.bool ?? false) && !answeredIds.contains(linkId)
-            }
-            ?? items.first { item in
-                guard let linkId = item.linkId.value?.string else {
-                    return false
-                }
-                return !answeredIds.contains(linkId)
-            }
-
-        guard let nextItem else {
-            return nil
-        }
-
-        let progress = "\(answeredIds.count + 1) of \(items.count)"
-
-        let allQuestions: [SimplifiedQuestion]
-        if section.sharesAllQuestions && includeAllQuestions {
-            allQuestions =
-                items
-                .filter { item in
-                    guard let linkId = item.linkId.value?.string else {
-                        return false
-                    }
-                    return !answeredIds.contains(linkId)
-                }
-                .map { simplify($0) }
-        } else {
-            allQuestions = []
-        }
-
-        return QuestionWithProgress(
-            question: simplify(nextItem),
-            progress: progress,
-            allQuestions: allQuestions.isEmpty ? nil : allQuestions
-        )
-    }
-
     // MARK: - Code Mapping
 
     private func buildCodeMapping(for item: QuestionnaireItem) {
@@ -290,53 +310,6 @@ extension FHIRQuestionnaireEngine {
 
     private func resolveAnswer(linkId: String, answer: String) -> String {
         codeMapping[linkId]?[answer] ?? answer
-    }
-
-    // MARK: - Simplification
-
-    private func simplify(_ item: QuestionnaireItem) -> SimplifiedQuestion {
-        let linkId = item.linkId.value?.string ?? ""
-        let type = item.type.value?.rawValue ?? ""
-        let text = item.text?.value?.string ?? ""
-        let required = item.required?.value?.bool ?? false
-        let note = Self.extractNote(from: item.`extension` ?? [])
-
-        var answerOptions: [SimplifiedAnswerOption] = []
-        if let options = item.answerOption {
-            answerOptions = options.compactMap { option -> SimplifiedAnswerOption? in
-                guard case .coding(let coding) = option.value else {
-                    return nil
-                }
-                let display = coding.display?.value?.string ?? ""
-                let code = Self.descriptiveCode(from: display)
-                let optionNote = Self.extractNote(from: option.`extension` ?? [])
-                return SimplifiedAnswerOption(code: code, display: display, note: optionNote)
-            }
-        }
-
-        var minValue: Int?
-        var maxValue: Int?
-        if type == "integer", let extensions = item.`extension` {
-            for ext in extensions {
-                let url = ext.url.value?.url.absoluteString ?? ""
-                if url == Self.minValueURL, case .integer(let val) = ext.value {
-                    minValue = Int(val.value?.integer ?? 0)
-                } else if url == Self.maxValueURL, case .integer(let val) = ext.value {
-                    maxValue = Int(val.value?.integer ?? 0)
-                }
-            }
-        }
-
-        return SimplifiedQuestion(
-            linkId: linkId,
-            type: type,
-            text: text,
-            required: required,
-            note: note,
-            answerOptions: answerOptions,
-            minValue: minValue,
-            maxValue: maxValue
-        )
     }
 
     private func minValue(item: QuestionnaireItem) -> Int? {
@@ -373,6 +346,10 @@ extension FHIRQuestionnaireEngine {
         let answeredIds = Set(response.item?.compactMap { $0.linkId.value?.string } ?? [])
         isFinished = items.allSatisfy { item in
             guard let linkId = item.linkId.value?.string else {
+                return true
+            }
+            let isReadOnly = item.readOnly?.value?.bool ?? false
+            if !isEnabled(item) || isReadOnly {
                 return true
             }
             return !(item.required?.value?.bool ?? false) || answeredIds.contains(linkId)

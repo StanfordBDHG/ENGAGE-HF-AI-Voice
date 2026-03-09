@@ -9,6 +9,7 @@
 import Foundation
 
 // swiftlint:disable file_types_order
+// swiftlint:disable line_length
 
 // MARK: - Vital Signs Section
 
@@ -18,9 +19,8 @@ struct VitalSignsSection: QuestionnaireSection {
     let directoryURL = Constants.vitalSignsDirectory
     let sharesAllQuestions = true
 
-    // swiftlint:disable line_length
     let instructions = """
-        Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): Vital Signs
+        Section \(Constants.sectionNumberPlaceholder) of \(Constants.sectionCountPlaceholder): Vital Signs
 
         Instructions:
         - When you receive the initial question, it will include an `allQuestions` field listing all questions in this section.
@@ -52,7 +52,6 @@ struct VitalSignsSection: QuestionnaireSection {
         - If the patient does not respond clearly, re-ask the question. Do NOT skip or save a null answer unless the patient explicitly requests it.
         - The function will show progress (e.g., "Question 1 of 4") to help track section completion.
         """
-    // swiftlint:enable line_length
 }
 
 // MARK: - KCCQ-12 Section
@@ -65,7 +64,7 @@ struct KCCQ12Section: QuestionnaireSection {
     let resourceName: String
 
     let instructions = """
-        Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): KCCQ-12 Survey
+        Section \(Constants.sectionNumberPlaceholder) of \(Constants.sectionCountPlaceholder): KCCQ-12 Survey
 
         Instructions:
         - Inform the patient that you need to ask some questions about how their heart failure affects their daily life.
@@ -105,7 +104,7 @@ struct Q17Section: QuestionnaireSection {
     let sharesAllQuestions = false
 
     let instructions = """
-        Section \(Constants.sectionIndexPlaceholder) of \(Constants.sectionCountPlaceholder): Last Section
+        Section \(Constants.sectionNumberPlaceholder) of \(Constants.sectionCountPlaceholder): Last Section
 
         Instructions:
         - Inform the patient that you need to ask one final question.

@@ -14,24 +14,10 @@ import VaporTesting
 
 @Suite("App Tests")
 struct AppTests {
-    @MainActor
-    private func withApp(_ test: @MainActor @Sendable (Application) async throws -> Void)
-        async throws {
-        let app = try await Application.make(.testing)
-        do {
-            try await configure(app)
-            try await test(app)
-        } catch {
-            try await app.asyncShutdown()
-            throw error
-        }
-        try await app.asyncShutdown()
-    }
-
     @Test("Test Health Route")
     @MainActor
     func health() async throws {
-        try await withApp { app in
+        try await withTestApp { app in
             try await app.testing().test(.GET, "health") { @Sendable res in
                 #expect(res.status == .ok)
             }
@@ -41,7 +27,7 @@ struct AppTests {
     @Test("Test Symptom Score Calculation")
     @MainActor
     func testSymptomScoreCalculation() async throws {
-        try await withApp { app in
+        try await withTestApp { app in
             let section = KCCQ12Section(internalTestingMode: app.featureFlags.internalTestingMode)
             let engine = try FHIRQuestionnaireEngine(
                 section: section,
@@ -59,7 +45,7 @@ struct AppTests {
     @Test("Test User Feedback Generation")
     @MainActor
     func testUserFeedback() async throws {
-        try await withApp { app in
+        try await withTestApp { app in
             let featureFlags = app.featureFlags
             let sections: [any QuestionnaireSection] = [
                 VitalSignsSection(),

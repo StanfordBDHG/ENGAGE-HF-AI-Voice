@@ -87,7 +87,7 @@ actor CallFlowCoordinator {
         }
 
         let engine = currentEngine
-        let question = await engine.nextQuestionJSON(includeAllQuestions: true)
+        let question = await engine.nextQuestionString(includeAllQuestions: true)
         let sectionMessage = await sectionSystemMessage(for: engine, initialQuestion: question)
         return Constants.initialSystemMessage
             + (sectionMessage ?? Constants.noUnansweredQuestionsLeft)
@@ -112,7 +112,7 @@ actor CallFlowCoordinator {
                 with: initialInstruction
             )
             .replacingOccurrences(
-                of: Constants.sectionIndexPlaceholder,
+                of: Constants.sectionNumberPlaceholder,
                 with: String(sectionNumber)
             )
             .replacingOccurrences(
