@@ -7,6 +7,9 @@
 //
 
 import Foundation
+import SpeziLLMOpenAI
+import SpeziLLMOpenAIRealtime
+import SpeziVapor
 import Vapor
 
 actor CallHandler {
@@ -20,31 +23,32 @@ actor CallHandler {
     let encryptionKey: String?
     let recordingsDecryptionKey: String?
 
-    let eventLoopGroup: any EventLoopGroup
     let httpClient: HTTPClient
     let logger: Logger
     let coordinator: CallFlowCoordinator
+    let session: LLMOpenAIRealtimeSession
 
     init(
         callId: String,
         phoneNumber: String,
         app: Application
     ) async throws {
-        self.encryptionKey = app.storage[EncryptionKeyStorageKey.self]
-        self.recordingsDecryptionKey = app.storage[RecordingsDecryptionKeyStorageKey.self]
+        let config = app.spezi[AppConfigModule.self]
+
+        self.encryptionKey = config.encryptionKey
+        self.recordingsDecryptionKey = config.recordingsDecryptionKey
 
         self.callId = callId
         self.phoneNumber = phoneNumber
-        self.openAIKey = app.storage[OpenAIKeyStorageKey.self] ?? ""
-        self.twilioAccountSid = app.storage[TwilioAccountSidStorageKey.self]
-        self.twilioAPIKey = app.storage[TwilioAPIKeyStorageKey.self]
-        self.twilioSecret = app.storage[TwilioSecretStorageKey.self]
+        self.openAIKey = config.openAIKey ?? ""
+        self.twilioAccountSid = config.twilioAccountSid
+        self.twilioAPIKey = config.twilioAPIKey
+        self.twilioSecret = config.twilioSecret
 
-        self.eventLoopGroup = app.eventLoopGroup
         self.httpClient = app.http.client.shared
         self.logger = app.logger
 
-        let featureFlags = app.featureFlags
+        let featureFlags = config.featureFlags
         let sections: [any QuestionnaireSection] = [
             VitalSignsSection(),
             KCCQ12Section(internalTestingMode: featureFlags.internalTestingMode),
@@ -53,21 +57,46 @@ actor CallHandler {
         self.coordinator = try await CallFlowCoordinator(
             sections: sections,
             phoneNumber: phoneNumber,
-            logger: logger,
+            logger: app.logger,
             featureFlags: featureFlags,
             feedbackProvider: EngageHFFeedbackProvider(),
             encryptionKey: encryptionKey
         )
+        let saveResponseFn = SaveResponseFunction(coordinator: coordinator, logger: app.logger)
+        let countFn = CountAnsweredQuestionsFunction(coordinator: coordinator, logger: app.logger)
+        let endCallFn = EndCallFunction()
+
+        let escapedCallId = callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? callId
+        let wsURL = URL(string: "wss://api.openai.com/v1/realtime?call_id=\(escapedCallId)")
+        let schema = LLMOpenAIRealtimeSchema(
+            parameters: LLMOpenAIRealtimeParameters(
+                modelType: .gptRealtime1_5,
+                systemPrompt: nil, // system prompt is configured via the /accept endpoint
+                turnDetectionSettings: .semantic(.init(eagerness: .high)),
+                transcriptionSettings: nil,
+                voice: .alloy,
+                webSocketURL: wsURL
+            )
+        ) {
+            saveResponseFn
+            countFn
+            endCallFn
+        }
+
+        let platform = await MainActor.run { app.spezi[LLMOpenAIRealtimePlatform.self] }
+        let session = platform(with: schema)
+        self.session = session
+
+        endCallFn.onEnd = { [session] in
+            session.cancel()
+        }
     }
 
     func accept() async throws {
         do {
             let systemMessage = await coordinator.initialSystemMessage()
-            let config = try Constants.loadSessionConfig(systemMessage: systemMessage)
-            let configObject = try JSONSerialization.jsonObject(
-                with: config.data(using: .utf8) ?? Data()
-            )
-            let configData = try JSONSerialization.data(withJSONObject: configObject)
+            let payload = buildAcceptPayload(systemMessage: systemMessage)
+            let configData = try JSONSerialization.data(withJSONObject: payload)
             let request = try HTTPClient.Request(
                 url: "https://api.openai.com/v1/realtime/calls/\(callId)/accept",
                 method: .POST,
@@ -111,65 +140,56 @@ actor CallHandler {
         }
     }
 
-    // swiftlint:disable:next function_body_length
-    func openWebsocket() async throws {
+    func openSession() async throws {
         do {
-            try await WebSocket.connect(
-                to:
-                    "wss://api.openai.com/v1/realtime?call_id=\(callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? callId)",
-                headers: ["Authorization": "Bearer \(openAIKey)"],
-                on: eventLoopGroup
-            ) { [self] webSocket async in
-                let session = CallSession(
-                    phoneNumber: phoneNumber,
-                    coordinator: coordinator,
-                    webSocket: webSocket,
-                    logger: logger
-                )
-                // Handle incoming messages from OpenAI
-                webSocket.onText { _, text async in
-                    await session.handleMessage(text)
-                }
+            try await session.ensureSetup()
 
-                webSocket.onClose.whenComplete { [self] result in
-                    switch result {
-                    case .success:
-                        logger.info("OpenAI WebSocket closed successfully")
-                    case .failure(let error):
-                        logger.error("OpenAI WebSocket closed with error: \(error)")
-                    }
-                    Task { [self] in
-                        do {
-                            try await hangup()
-                            logger.info("Successfully hung up")
-                        } catch {
-                            logger.error("Failed to hang up: \(error)")
-                        }
-                    }
-                }
-
-                Task {
-                    try? await Task.sleep(for: .seconds(1))
-                    do {
-                        try await session.sendJSON([
-                            "type": "response.create"
-                        ])
-                    } catch {
-                        logger.error("Couldn't send initial message to OpenAI \(error)")
-                    }
+            // Trigger the initial AI greeting after a brief delay
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                do {
+                    try await session.endUserTurn()
+                } catch {
+                    logger.error("Couldn't trigger initial AI response: \(error)")
                 }
             }
-        } catch let error as WebSocketClient.Error {
-            if case .invalidResponseStatus(let head) = error {
-                logger.error("OpenAI Realtime API returned \(head.status.code).")
-            } else {
-                logger.error("Error connecting to the OpenAI Realtime API: \(error)")
+
+            // Monitor session lifecycle: hang up when the WebSocket closes
+            Task { [self] in
+                do {
+                    for try await _ in await session.listen() { }
+                } catch {
+                    logger.error("Session listen error: \(error)")
+                }
+                do {
+                    try await hangup()
+                } catch {
+                    logger.error("Failed to hang up: \(error)")
+                }
             }
-            throw error
         } catch {
-            logger.error("Error connecting to the OpenAI Realtime API: \(error)")
+            logger.error("Error setting up OpenAI Realtime session: \(error)")
             throw error
         }
+    }
+
+    private func buildAcceptPayload(systemMessage: String) -> [String: Any] {
+        [
+            "type": "realtime",
+            "model": "gpt-realtime",
+            "instructions": systemMessage,
+            "audio": [
+                "input": [
+                    "format": ["type": "audio/pcmu"],
+                    "noise_reduction": ["type": "far_field"]
+                ],
+                "output": [
+                    "format": ["type": "audio/pcmu"],
+                    "speed": 1.0
+                ]
+            ],
+            "tool_choice": "auto"
+        ]
     }
 
     private func updateCallRecordings() async {

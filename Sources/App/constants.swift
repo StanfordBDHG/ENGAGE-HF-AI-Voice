@@ -68,18 +68,6 @@ enum Constants {
         #endif
     }()
 
-    /// The event types to log
-    static let logEventTypes = [
-        "error",
-        "response.content.done",
-        "rate_limits.updated",
-        "response.done",
-        "input_audio_buffer.committed",
-        "input_audio_buffer.speech_stopped",
-        "input_audio_buffer.speech_started",
-        "session.created"
-    ]
-
     static func feedback(content: String?) -> String {
         guard let content else {
             return """
@@ -116,24 +104,5 @@ enum Constants {
             - Do not ask any further health-related questions.
             - Do not start an unrelated conversation with the patient.
             """
-    }
-
-    /// Load the session config from the resources directory and inject the system prompt
-    static func loadSessionConfig(systemMessage: String) throws -> String {
-        guard let url = Bundle.module.url(forResource: "sessionConfig", withExtension: "json"),
-            let jsonString = try? String(contentsOf: url, encoding: .utf8)
-        else {
-            throw Abort(.internalServerError, reason: "Could not load sessionConfig.json")
-        }
-
-        // Escape newlines and quotes in the system message
-        let escapedMessage =
-            systemMessage
-            .replacingOccurrences(of: "\n", with: "\\n")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return jsonString.replacingOccurrences(
-            of: "{{SYSTEM_PROMPT}}",
-            with: escapedMessage
-        )
     }
 }

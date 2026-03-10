@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SpeziVapor
 import Vapor
 
 /// Feature flags for controlling application behavior
@@ -16,26 +17,21 @@ struct FeatureFlags {
     /// Environment variable: INTERNAL_TESTING_MODE
     /// Default: false
     let internalTestingMode: Bool
-    
+
     /// Initialize feature flags from environment variables
     init() {
         self.internalTestingMode = Environment.get("INTERNAL_TESTING_MODE")?.lowercased() == "true"
     }
-    
+
     /// Initialize feature flags with custom values (useful for testing)
     init(internalTestingMode: Bool = false) {
         self.internalTestingMode = internalTestingMode
     }
 }
 
-/// Extension to make feature flags easily accessible from Application
+/// Extension to make feature flags easily accessible from Application via the Spezi module.
 extension Application {
     var featureFlags: FeatureFlags {
-        get {
-            storage[FeatureFlagsStorageKey.self] ?? FeatureFlags()
-        }
-        set {
-            storage[FeatureFlagsStorageKey.self] = newValue
-        }
+        spezi[AppConfigModule.self].featureFlags
     }
 }

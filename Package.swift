@@ -15,14 +15,16 @@ import PackageDescription
 let package = Package(
     name: "ENGAGE-HF-AI-Voice",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v14)
     ],
     dependencies: [
         .package(url: "https://github.com/vapor/vapor.git", from: "4.110.1"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", from: "4.0.0"),
         .package(url: "https://github.com/apple/FHIRModels.git", .upToNextMajor(from: "0.6.0")),
-        .package(url: "https://github.com/toon-format/toon-swift.git", from: "0.4.0")
+        .package(url: "https://github.com/toon-format/toon-swift.git", from: "0.4.0"),
+        .package(url: "https://github.com/StanfordSpezi/SpeziVapor.git", from: "0.1.0"),
+        .package(url: "https://github.com/StanfordSpezi/SpeziLLM.git", branch: "voice-improvements")
     ] + swiftLintPackage(),
     targets: [
         .executableTarget(
@@ -34,14 +36,15 @@ let package = Package(
                 .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "CryptoExtras", package: "swift-crypto"),
                 .product(name: "ModelsR4", package: "FHIRModels"),
-                .product(name: "ToonFormat", package: "toon-swift")
+                .product(name: "ToonFormat", package: "toon-swift"),
+                .product(name: "SpeziVapor", package: "SpeziVapor"),
+                .product(name: "SpeziLLMOpenAIRealtime", package: "SpeziLLM")
             ],
             resources: [
                 .process("Resources/vitalSigns.json"),
                 .process("Resources/kccq12.json"),
                 .process("Resources/kccq12Short.json"),
                 .process("Resources/q17.json"),
-                .process("Resources/sessionConfig.json"),
                 .copy("Resources/MockData")
             ],
             swiftSettings: [.enableUpcomingFeature("ExistentialAny")],
@@ -51,7 +54,8 @@ let package = Package(
             name: "AppTests",
             dependencies: [
                 .target(name: "App"),
-                .product(name: "VaporTesting", package: "vapor")
+                .product(name: "VaporTesting", package: "vapor"),
+                .product(name: "SpeziVaporTesting", package: "SpeziVapor")
             ],
             swiftSettings: [.enableUpcomingFeature("ExistentialAny")],
             plugins: [] + swiftLintPlugin()

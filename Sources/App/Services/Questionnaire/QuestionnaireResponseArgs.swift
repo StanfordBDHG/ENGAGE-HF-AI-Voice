@@ -6,6 +6,36 @@
 // SPDX-License-Identifier: MIT
 //
 
+import SpeziLLMOpenAI
+
+
+struct QuestionnaireAnswerParameter: LLMFunctionParameter {
+    static var schema: LLMFunctionParameterPropertySchema {
+        let anyOf = [["type": "string"], ["type": "number"], ["type": "null"]]
+        // swiftlint:disable:next force_try
+        return try! LLMFunctionParameterPropertySchema(unvalidatedValue: ["anyOf": anyOf])
+    }
+    
+    let value: QuestionnaireResponseAnswer?
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let number = try? container.decode(Int.self) {
+            value = .number(number)
+        } else if let text = try? container.decode(String.self) {
+            value = .text(text)
+        } else if container.decodeNil() {
+            value = nil
+        } else {
+            throw DecodingError.typeMismatch(
+                QuestionnaireAnswerParameter.self,
+                .init(codingPath: container.codingPath, debugDescription: "Expected string, number, or null")
+            )
+        }
+    }
+}
+
+
 enum QuestionnaireResponseAnswer {
     case number(Int)
     case text(String)

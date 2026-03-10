@@ -6,39 +6,52 @@
 // SPDX-License-Identifier: MIT
 //
 
+import SpeziLLMOpenAI
+import SpeziLLMOpenAIRealtime
+import SpeziVapor
 import Vapor
 
 /// Configure the application
 public func configure(_ app: Application) async throws {
-    // Initialize feature flags
     let featureFlags = FeatureFlags()
-    app.featureFlags = featureFlags
 
-    // Store keys in application storage for access in routes
-    app.storage[OpenAIKeyStorageKey.self] = try requireEnvInProd(name: "OPENAI_API_KEY")
-    app.storage[OpenAIWebhookSecretStorageKey.self] = try requireEnvInProd(
-        name: "OPENAI_WEBHOOK_SECRET"
-    )
+    let openAIKey = try requireEnvInProd(name: "OPENAI_API_KEY")
+    let openAIWebhookSecret = try requireEnvInProd(name: "OPENAI_WEBHOOK_SECRET")
 
-    app.storage[EncryptionKeyStorageKey.self] =
-        try requireEnvInProd(name: "ENCRYPTION_KEY").flatMap { key in
-            guard let keyData = Data(base64Encoded: key), keyData.count == 32 else {
-                throw Abort(
-                    .internalServerError,
-                    reason:
-                        "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
-                )
-            }
-            return key
+    let encryptionKey = try requireEnvInProd(name: "ENCRYPTION_KEY").flatMap { key -> String? in
+        guard let keyData = Data(base64Encoded: key), keyData.count == 32 else {
+            throw Abort(
+                .internalServerError,
+                reason: "Invalid ENCRYPTION_KEY (must be base64-encoded and 32 bytes when decoded)."
+            )
         }
-    app.storage[RecordingsDecryptionKeyStorageKey.self] = Environment.get(
-        "RECORDINGS_DECRYPTION_KEY"
-    )
+        return key
+    }
 
-    app.storage[TwilioAccountSidStorageKey.self] = Environment.get("TWILIO_ACCOUNT_SID")
-    app.storage[TwilioAPIKeyStorageKey.self] =
-        Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")
-    app.storage[TwilioSecretStorageKey.self] = Environment.get("TWILIO_SECRET")
+    let recordingsDecryptionKey = Environment.get("RECORDINGS_DECRYPTION_KEY")
+    let twilioAccountSid = Environment.get("TWILIO_ACCOUNT_SID")
+    let twilioAPIKey = Environment.get("TWILIO_API_KEY") ?? Environment.get("TWILIO_ACCOUNT_SID")
+    let twilioSecret = Environment.get("TWILIO_SECRET")
+
+    await MainActor.run {
+        app.spezi.configure {
+            AppConfigModule(
+                openAIKey: openAIKey,
+                openAIWebhookSecret: openAIWebhookSecret,
+                encryptionKey: encryptionKey,
+                recordingsDecryptionKey: recordingsDecryptionKey,
+                twilioAccountSid: twilioAccountSid,
+                twilioAPIKey: twilioAPIKey,
+                twilioSecret: twilioSecret,
+                featureFlags: featureFlags
+            )
+            LLMOpenAIRealtimePlatform(
+                configuration: LLMOpenAIPlatformConfiguration(
+                    authToken: .constant(openAIKey ?? "")
+                )
+            )
+        }
+    }
 
     // Configure server
     app.http.server.configuration.port = Environment.get("PORT").flatMap(Int.init) ?? 5000
