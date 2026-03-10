@@ -97,8 +97,8 @@ private func handleIncomingCall(app: Application, req: Request) async -> Respons
         let handler = try await CallHandler(callId: callId, phoneNumber: phoneNumber, app: app)
         logger.info("About to accept call \"\(callId)\" from \"\(phoneNumber)\".")
         try await handler.accept()
-        logger.info("About to open websocket for call \"\(callId)\" from \"\(phoneNumber)\".")
-        try await handler.openWebsocket()
+        logger.info("About to open session for call \"\(callId)\" from \"\(phoneNumber)\".")
+        try await handler.openSession()
     } catch {
         req.logger.error("Failed to accept call: \(error)")
         return Response(status: .internalServerError)

@@ -6,6 +6,8 @@
 // SPDX-License-Identifier: MIT
 //
 
+import SpeziLLMOpenAI
+import SpeziLLMOpenAIRealtime
 import SpeziVapor
 import Vapor
 
@@ -42,6 +44,11 @@ public func configure(_ app: Application) async throws {
                 twilioAPIKey: twilioAPIKey,
                 twilioSecret: twilioSecret,
                 featureFlags: featureFlags
+            )
+            LLMOpenAIRealtimePlatform(
+                configuration: LLMOpenAIPlatformConfiguration(
+                    authToken: .constant(openAIKey ?? "")
+                )
             )
         }
     }

@@ -19,33 +19,16 @@ final class SaveResponseFunction: LLMFunction, @unchecked Sendable {
         Calling this function multiple times for the same linkId will override the answer value.
         """
 
-    nonisolated(unsafe) static let parameterSchema: [String: Any] = [
-        "type": "object",
-        "properties": [
-            "linkId": [
-                "type": "string",
-                "description": "The question's linkId"
-            ],
-            "answer": [
-                "anyOf": [
-                    ["type": "string"],
-                    ["type": "number"],
-                    ["type": "null"]
-                ],
-                "description": """
-                    The patient's answer. \
-                    A `null` value must ONLY be used if the patient explicitly asks to skip the \
-                    question or clearly states they do not have the information. \
-                    Never use `null` because of silence, filler words, or unclear responses.
-                    """
-            ]
-        ],
-        "required": ["linkId", "answer"],
-        "additionalProperties": false
-    ]
+    @Parameter(description: "The question's linkId")
+    var linkId: String
 
-    /// Raw JSON arguments set by `CallSession` before each `execute()` call.
-    nonisolated(unsafe) var rawArguments: String = ""
+    @Parameter(description: """
+        The patient's answer. \
+        A `null` value must ONLY be used if the patient explicitly asks to skip the \
+        question or clearly states they do not have the information. \
+        Never use `null` because of silence, filler words, or unclear responses.
+        """)
+    var answer: QuestionnaireAnswerParameter
 
     private let coordinator: CallFlowCoordinator
     private let logger: Logger
@@ -56,21 +39,35 @@ final class SaveResponseFunction: LLMFunction, @unchecked Sendable {
     }
 
     func execute() async throws -> String? {
-        let argumentsData = Data(rawArguments.utf8)
-        let parsedArgs = try JSONDecoder().decode(QuestionnaireResponseArgs.self, from: argumentsData)
-
-        logger.info("Attempting to save response for linkId: \(parsedArgs.linkId)")
+        logger.info("Attempting to save response for linkId: \(linkId)")
 
         let engine = await coordinator.currentEngine
-        switch parsedArgs.answer {
+        switch answer.value {
         case .number(let number):
-            try await engine.answerQuestion(linkId: parsedArgs.linkId, answer: number)
+            try await engine.answerQuestion(linkId: linkId, answer: number)
         case .text(let text):
-            try await engine.answerQuestion(linkId: parsedArgs.linkId, answer: text)
+            try await engine.answerQuestion(linkId: linkId, answer: text)
         case .none:
-            try await engine.answerQuestion(linkId: parsedArgs.linkId, answer: NSNull())
+            try await engine.answerQuestion(linkId: linkId, answer: NSNull())
         }
 
-        return await engine.nextQuestionJSON(includeAllQuestions: false)
+        if let nextQuestion = await engine.nextQuestionJSON(includeAllQuestions: false) {
+            return nextQuestion
+        }
+
+        return await handleSectionCompletion()
+    }
+
+    private func handleSectionCompletion() async -> String {
+        if let nextEngine = await coordinator.advanceToNextSection() {
+            let initialQuestion = await nextEngine.nextQuestionJSON(includeAllQuestions: true)
+            if let systemMessage = await coordinator.sectionSystemMessage(
+                for: nextEngine, initialQuestion: initialQuestion
+            ) {
+                return "Response saved. Please now follow these updated instructions:\n\n\(systemMessage)"
+            }
+        }
+        let feedback = await coordinator.generateFeedback()
+        return "Response saved. All questionnaires complete. Please now follow these updated instructions:\n\n\(Constants.feedback(content: feedback))"
     }
 }

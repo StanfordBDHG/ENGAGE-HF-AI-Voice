@@ -68,18 +68,6 @@ enum Constants {
         #endif
     }()
 
-    /// The event types to log
-    static let logEventTypes = [
-        "error",
-        "response.content.done",
-        "rate_limits.updated",
-        "response.done",
-        "input_audio_buffer.committed",
-        "input_audio_buffer.speech_stopped",
-        "input_audio_buffer.speech_started",
-        "session.created"
-    ]
-
     static func feedback(content: String?) -> String {
         guard let content else {
             return """

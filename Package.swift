@@ -24,7 +24,7 @@ let package = Package(
         .package(url: "https://github.com/apple/FHIRModels.git", .upToNextMajor(from: "0.6.0")),
         .package(url: "https://github.com/toon-format/toon-swift.git", from: "0.4.0"),
         .package(url: "https://github.com/StanfordSpezi/SpeziVapor.git", from: "0.1.0"),
-        .package(url: "https://github.com/StanfordSpezi/SpeziLLM.git", from: "0.13.6")
+        .package(url: "https://github.com/StanfordSpezi/SpeziLLM.git", branch: "voice-improvements")
     ] + swiftLintPackage(),
     targets: [
         .executableTarget(

@@ -14,7 +14,16 @@ final class EndCallFunction: LLMFunction, @unchecked Sendable {
     static let name = "end_call"
     static let description = "Acknowledge the end of the call."
 
+    /// Called after a delay once the AI signals end-of-call, allowing the AI to finish its goodbye before the session is torn down.
+    nonisolated(unsafe) var onEnd: (@Sendable () async -> Void)?
+
     func execute() async throws -> String? {
-        "Call end acknowledged."
+        if let onEnd {
+            Task {
+                try? await Task.sleep(for: .seconds(15))
+                await onEnd()
+            }
+        }
+        return "Call end acknowledged."
     }
 }
