@@ -10,13 +10,13 @@ import SpeziLLMOpenAI
 
 
 struct QuestionnaireAnswerParameter: LLMFunctionParameter {
-    let value: QuestionnaireResponseAnswer?
-
     static var schema: LLMFunctionParameterPropertySchema {
-        // anyOf: [string, number, null]
-        let anyOf: any Sendable = [["type": "string"], ["type": "number"], ["type": "null"]] as [[String: String]]
-        return (try? LLMFunctionParameterPropertySchema(unvalidatedValue: ["anyOf": anyOf]))!
+        let anyOf = [["type": "string"], ["type": "number"], ["type": "null"]]
+        // swiftlint:disable:next force_try
+        return try! LLMFunctionParameterPropertySchema(unvalidatedValue: ["anyOf": anyOf])
     }
+    
+    let value: QuestionnaireResponseAnswer?
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()

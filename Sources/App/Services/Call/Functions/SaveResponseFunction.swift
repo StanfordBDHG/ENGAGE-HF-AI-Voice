@@ -18,17 +18,16 @@ final class SaveResponseFunction: LLMFunction, @unchecked Sendable {
         This function should be called after a response is recorded to save it. \
         Calling this function multiple times for the same linkId will override the answer value.
         """
-
-    @Parameter(description: "The question's linkId")
-    var linkId: String
-
-    @Parameter(description: """
+    static let answerDescription = """
         The patient's answer. \
         A `null` value must ONLY be used if the patient explicitly asks to skip the \
         question or clearly states they do not have the information. \
         Never use `null` because of silence, filler words, or unclear responses.
-        """)
-    var answer: QuestionnaireAnswerParameter
+        """
+
+    @Parameter(description: "The question's linkId") var linkId: String
+
+    @Parameter(description: answerDescription) var answer: QuestionnaireAnswerParameter
 
     private let coordinator: CallFlowCoordinator
     private let logger: Logger

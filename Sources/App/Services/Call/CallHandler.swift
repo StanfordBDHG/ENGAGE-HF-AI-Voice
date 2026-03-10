@@ -54,7 +54,7 @@ actor CallHandler {
             KCCQ12Section(internalTestingMode: featureFlags.internalTestingMode),
             Q17Section()
         ]
-        let coordinator = try await CallFlowCoordinator(
+        self.coordinator = try await CallFlowCoordinator(
             sections: sections,
             phoneNumber: phoneNumber,
             logger: app.logger,
@@ -62,18 +62,15 @@ actor CallHandler {
             feedbackProvider: EngageHFFeedbackProvider(),
             encryptionKey: encryptionKey
         )
-        self.coordinator = coordinator
-
         let saveResponseFn = SaveResponseFunction(coordinator: coordinator, logger: app.logger)
         let countFn = CountAnsweredQuestionsFunction(coordinator: coordinator, logger: app.logger)
         let endCallFn = EndCallFunction()
 
-        let wsURL = URL(
-            string: "wss://api.openai.com/v1/realtime?call_id=\(callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? callId)"
-        )
+        let escapedCallId = callId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? callId
+        let wsURL = URL(string: "wss://api.openai.com/v1/realtime?call_id=\(escapedCallId)")
         let schema = LLMOpenAIRealtimeSchema(
             parameters: LLMOpenAIRealtimeParameters(
-                modelType: .gptRealtime,
+                modelType: .gptRealtime1_5,
                 systemPrompt: nil, // system prompt is configured via the /accept endpoint
                 turnDetectionSettings: .semantic(.init(eagerness: .high)),
                 transcriptionSettings: nil,

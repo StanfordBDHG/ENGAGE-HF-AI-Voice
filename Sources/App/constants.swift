@@ -105,5 +105,4 @@ enum Constants {
             - Do not start an unrelated conversation with the patient.
             """
     }
-
 }

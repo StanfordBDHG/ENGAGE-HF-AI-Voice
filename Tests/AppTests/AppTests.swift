@@ -6,20 +6,28 @@
 // SPDX-License-Identifier: MIT
 //
 
-import ModelsR4
+import Foundation
+// import ModelsR4
+import SpeziLLMOpenAI
+import SpeziLLMOpenAIRealtime
+import SpeziVapor
+import SpeziVaporTesting
 import Testing
-import VaporTesting
 
 @testable import App
-import SpeziVaporTesting
 
-@Suite("App Tests")
+@Suite("App Tests", .serialized)
 struct AppTests {
     @MainActor
     private func withApp(_ test: @MainActor @Sendable (Application) async throws -> Void)
         async throws {
         try await withSpeziVaporApp(routes: routes) {
             AppConfigModule()
+            LLMOpenAIRealtimePlatform(
+                configuration: LLMOpenAIPlatformConfiguration(
+                    authToken: .constant("")
+                )
+            )
         } _: { app in
             try await test(app)
         }
