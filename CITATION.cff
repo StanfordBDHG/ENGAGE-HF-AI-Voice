@@ -1,5 +1,5 @@
 #
-# This source file is part of the ENGAGE-HF-AI-Voice open source project
+# This source file is part of the ENGAGE-HF AI-Voice open-source project
 #
 # SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 #
@@ -8,15 +8,18 @@
 
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
+type: software
 authors:
-- family-names: "Schmiedmayer"
-  given-names: "Paul"
-  orcid: "https://orcid.org/0000-0002-8607-9148"
+- family-names: "Kraft"
+  given-names: "Paul Johannes"
+  orcid: "https://orcid.org/0000-0001-8157-8151"
 - family-names: "Madlener"
   given-names: "Nikolai"
   orcid: "https://orcid.org/0009-0006-5059-6617"
-- family-names: "Kraft"
-  given-names: "Paul Johannes"
+- family-names: "Schmiedmayer"
+  given-names: "Paul"
+  orcid: "https://orcid.org/0000-0002-8607-9148"
 title: "ENGAGE-HF-AI-Voice"
-doi: 10.5281/zenodo.7538165
-url: "https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice"
+license: MIT
+url: "https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice"
+repository-code: "https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice"
