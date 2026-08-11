@@ -34,6 +34,9 @@ jobs:
     uses: SchmiedmayerLab/.github/.github/workflows/docker-compose-test.yml@v0.5
   uploadcoveragereport:
     name: Upload Coverage Report
+    permissions:
+      actions: read
+      contents: read
     needs: [buildandtestmacos]
     uses: SchmiedmayerLab/.github/.github/workflows/coverage.yml@v0.5
     with:

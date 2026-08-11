@@ -19,5 +19,8 @@ concurrency:
 jobs:
   buildandtest:
     name: Build and Test
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/build-and-test.yml
     secrets: inherit

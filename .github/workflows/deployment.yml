@@ -21,6 +21,10 @@ concurrency:
 jobs:
   buildandpush:
     name: Build and Push to Container Registry
+    permissions:
+      actions: read
+      contents: read
+      packages: write
     uses: SchmiedmayerLab/.github/.github/workflows/docker-build-and-push.yml@v0.5
     secrets: inherit
     with:

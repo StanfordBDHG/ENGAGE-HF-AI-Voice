@@ -21,10 +21,17 @@ concurrency:
 jobs:
   buildandtest:
     name: Build and Test
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/build-and-test.yml
     secrets: inherit
   deployment:
     name: Deployment
+    permissions:
+      actions: read
+      contents: read
+      packages: write
     needs: buildandtest
     uses: ./.github/workflows/deployment.yml
     secrets: inherit
