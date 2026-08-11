@@ -14,7 +14,7 @@ SPDX-License-Identifier: MIT
 [![Deployment](https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice/actions/workflows/deployment.yml/badge.svg)](https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice/actions/workflows/deployment.yml)
 [![Codecov](https://codecov.io/gh/SchmiedmayerLab/ENGAGE-HF-AI-Voice/graph/badge.svg?token=UqiQBJqfZY)](https://codecov.io/gh/SchmiedmayerLab/ENGAGE-HF-AI-Voice)
 [![REUSE status](https://api.reuse.software/badge/github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice)](https://api.reuse.software/info/github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice/blob/main/LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 
 **Engage HF AI-Voice** is a [Vapor](https://vapor.codes/) server that integrates Twilio with OpenAI's real-time API (ChatGPT-4o) to enable voice-based conversations for healthcare data collection.
 
