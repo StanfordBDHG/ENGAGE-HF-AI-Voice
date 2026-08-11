@@ -77,6 +77,7 @@ class QuestionnaireResponseStore: Sendable {
     }
 
     func saveResponse(_ response: QuestionnaireResponse) {
+        var response = response
         do {
             try FileManager.default.createDirectory(
                 atPath: directoryURL.path,
@@ -129,7 +130,7 @@ class QuestionnaireResponseStore: Sendable {
     }
 
     private func makeEmptyResponse(phoneNumber: String) -> QuestionnaireResponse {
-        let response = QuestionnaireResponse(
+        var response = QuestionnaireResponse(
             status: FHIRPrimitive(QuestionnaireResponseStatus.inProgress)
         )
         response.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
