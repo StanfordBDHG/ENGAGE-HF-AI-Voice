@@ -1,5 +1,5 @@
 #
-# This source file is part of the ENGAGE-HF-AI-Voice open source project
+# This source file is part of the ENGAGE-HF AI-Voice open-source project
 #
 # SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 #
@@ -15,13 +15,13 @@ on:
 jobs:
   reuse_action:
     name: REUSE Compliance Check
-    uses: StanfordBDHG/.github/.github/workflows/reuse.yml@v2
+    uses: SchmiedmayerLab/.github/.github/workflows/reuse.yml@v0.5
   swiftlint:
     name: SwiftLint
-    uses: StanfordBDHG/.github/.github/workflows/swiftlint.yml@v2
+    uses: SchmiedmayerLab/.github/.github/workflows/swiftlint.yml@v0.5
   buildandtestmacos:
     name: Build and Test
-    uses: StanfordBDHG/.github/.github/workflows/xcodebuild-or-fastlane.yml@v2
+    uses: SchmiedmayerLab/.github/.github/workflows/xcodebuild-or-fastlane.yml@v0.5
     permissions:
       contents: read
     with:
@@ -31,11 +31,14 @@ jobs:
       artifactname: ENGAGE-HF-AI-Voice.xcresult
   dockercomposetest:
     name: Docker Compose Test
-    uses: StanfordBDHG/.github/.github/workflows/docker-compose-test.yml@v2
+    uses: SchmiedmayerLab/.github/.github/workflows/docker-compose-test.yml@v0.5
   uploadcoveragereport:
     name: Upload Coverage Report
+    permissions:
+      actions: read
+      contents: read
     needs: [buildandtestmacos]
-    uses: StanfordBDHG/.github/.github/workflows/create-and-upload-coverage-report.yml@v2
+    uses: SchmiedmayerLab/.github/.github/workflows/coverage.yml@v0.5
     with:
       coveragereports: ENGAGE-HF-AI-Voice.xcresult
     secrets:

@@ -1,17 +1,20 @@
 <!--
-                  
-This source file is part of the ENGAGE-HF-AI-Voice open source project
+
+This source file is part of the ENGAGE-HF AI-Voice open-source project
 
 SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 
 SPDX-License-Identifier: MIT
-             
+
 -->
 
 # ENGAGE HF AI-Voice
 
-[![Main](https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/actions/workflows/main.yml/badge.svg)](https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/actions/workflows/main.yml)
-[![codecov](https://codecov.io/gh/StanfordBDHG/ENGAGE-HF-AI-Voice/graph/badge.svg?token=UqiQBJqfZY)](https://codecov.io/gh/StanfordBDHG/ENGAGE-HF-AI-Voice)
+[![Build and Test](https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice/actions/workflows/build-and-test.yml)
+[![Deployment](https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice/actions/workflows/deployment.yml/badge.svg)](https://github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice/actions/workflows/deployment.yml)
+[![Codecov](https://codecov.io/gh/SchmiedmayerLab/ENGAGE-HF-AI-Voice/graph/badge.svg?token=UqiQBJqfZY)](https://codecov.io/gh/SchmiedmayerLab/ENGAGE-HF-AI-Voice)
+[![REUSE status](https://api.reuse.software/badge/github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice)](https://api.reuse.software/info/github.com/SchmiedmayerLab/ENGAGE-HF-AI-Voice)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 
 **Engage HF AI-Voice** is a [Vapor](https://vapor.codes/) server that integrates Twilio with OpenAI's real-time API (ChatGPT-4o) to enable voice-based conversations for healthcare data collection.
 
@@ -281,15 +284,21 @@ The script will decrypt all files from `./vital_signs/`, `./kccq12_questionnairs
 
 ---
 
+## Contributing
+
+Contributions to this project are welcome. Please make sure to read the [contribution guidelines](https://github.com/SchmiedmayerLab/.github/blob/main/CONTRIBUTING.md) and the [contributor covenant code of conduct](https://github.com/SchmiedmayerLab/.github/blob/main/CODE_OF_CONDUCT.md) first. You can find a list of contributors in the [CONTRIBUTORS.md](CONTRIBUTORS.md) file.
+
 ## License
-This project is licensed under the MIT License. See [Licenses](https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/tree/main/LICENSES) for more information.
 
----
+This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for more information.
 
-## Contributors
-This project is developed as part of the Stanford Byers Center for Biodesign at Stanford University.
-See [CONTRIBUTORS.md](https://github.com/StanfordBDHG/ENGAGE-HF-AI-Voice/tree/main/CONTRIBUTORS.md) for a full list of all ENGAGE-HF-AI-Voice contributors.
+## Citation
 
-![Stanford Byers Center for Biodesign Logo](https://raw.githubusercontent.com/StanfordBDHG/.github/main/assets/biodesign-footer-light.png#gh-light-mode-only)
-![Stanford Byers Center for Biodesign Logo](https://raw.githubusercontent.com/StanfordBDHG/.github/main/assets/biodesign-footer-dark.png#gh-dark-mode-only)
+If you use this software, please cite it using the metadata in [CITATION.cff](CITATION.cff), which GitHub surfaces through the [*Cite this repository*](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files) button.
 
+## Our Research
+
+For more information, visit the [Schmiedmayer Lab GitHub organization](https://github.com/SchmiedmayerLab).
+
+![Schmiedmayer Lab](https://raw.githubusercontent.com/SchmiedmayerLab/.github/main/assets/footer-light.png#gh-light-mode-only)
+![Schmiedmayer Lab](https://raw.githubusercontent.com/SchmiedmayerLab/.github/main/assets/footer-dark.png#gh-dark-mode-only)

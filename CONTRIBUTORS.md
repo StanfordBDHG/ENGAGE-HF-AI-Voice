@@ -1,7 +1,7 @@
 <!--
                   
 #
-# This source file is part of the ENGAGE-HF-AI-Voice open source project
+# This source file is part of the ENGAGE-HF AI-Voice open-source project
 #
 # SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 #
@@ -10,9 +10,7 @@
              
 -->
 
-ENGAGE-HF-AI-Voice contributors
-====================
-
-* [Paul Schmiedmayer](https://github.com/PSchmiedmayer)
-* [Nikolai Madlener](https://github.com/NikolaiMadlener)
+# ENGAGE-HF AI-Voice Contributors
 * [Paul Johannes Kraft](https://github.com/pauljohanneskraft)
+* [Nikolai Madlener](https://github.com/NikolaiMadlener)
+* [Paul Schmiedmayer](https://github.com/PSchmiedmayer)

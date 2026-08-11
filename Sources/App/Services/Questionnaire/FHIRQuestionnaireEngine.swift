@@ -1,5 +1,5 @@
 //
-// This source file is part of the ENGAGE-HF-AI-Voice open source project
+// This source file is part of the ENGAGE-HF AI-Voice open-source project
 //
 // SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 //
@@ -146,10 +146,10 @@ class FHIRQuestionnaireEngine: Sendable {
 
     /// Record an answer for a given linkId.
     func answerQuestion<T>(linkId: String, answer: T) throws {
-        let responseItem = QuestionnaireResponseItem(
+        var responseItem = QuestionnaireResponseItem(
             linkId: FHIRPrimitive(FHIRString(linkId))
         )
-        let answerItem = QuestionnaireResponseItemAnswer()
+        var answerItem = QuestionnaireResponseItemAnswer()
 
         guard let questionnaireItem = findQuestionnaireItem(linkId: linkId) else {
             throw QuestionnaireEngineError.unknownLinkId(linkId)

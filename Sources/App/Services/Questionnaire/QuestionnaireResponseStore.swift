@@ -1,5 +1,5 @@
 //
-// This source file is part of the ENGAGE-HF-AI-Voice open source project
+// This source file is part of the ENGAGE-HF AI-Voice open-source project
 //
 // SPDX-FileCopyrightText: 2022 Stanford University and the project authors (see CONTRIBUTORS.md)
 //
@@ -77,6 +77,7 @@ class QuestionnaireResponseStore: Sendable {
     }
 
     func saveResponse(_ response: QuestionnaireResponse) {
+        var response = response
         do {
             try FileManager.default.createDirectory(
                 atPath: directoryURL.path,
@@ -129,7 +130,7 @@ class QuestionnaireResponseStore: Sendable {
     }
 
     private func makeEmptyResponse(phoneNumber: String) -> QuestionnaireResponse {
-        let response = QuestionnaireResponse(
+        var response = QuestionnaireResponse(
             status: FHIRPrimitive(QuestionnaireResponseStatus.inProgress)
         )
         response.subject = .init(reference: FHIRPrimitive(FHIRString(phoneNumber)))
