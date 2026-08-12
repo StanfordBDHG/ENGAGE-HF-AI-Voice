@@ -28,4 +28,4 @@ jobs:
     uses: SchmiedmayerLab/.github/.github/workflows/docker-build-and-push.yml@v0.5
     secrets: inherit
     with:
-      imageName: ghcr.io/stanfordbdhg/engage-hf-ai-voice
+      imageName: schmiedmayerlab/engage-hf-ai-voice

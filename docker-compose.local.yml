@@ -11,7 +11,7 @@ version: '3.8'
 
 services:
   app:
-    image: ghcr.io/stanfordbdhg/engage-hf-ai-voice:main
+    image: ghcr.io/schmiedmayerlab/engage-hf-ai-voice:main
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:?OPENAI_API_KEY is required}
       - OPENAI_WEBHOOK_SECRET=${OPENAI_WEBHOOK_SECRET:?OPENAI_WEBHOOK_SECRET is required}
